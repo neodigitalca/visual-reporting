@@ -11,6 +11,7 @@ class Neo_Pulse_App_Teams_Store {
 
 	const ACCESS_AREAS = array(
 		'properties',
+		'hosting',
 		'api-keys',
 		'master-rules',
 		'ai-generation',
@@ -137,7 +138,7 @@ class Neo_Pulse_App_Teams_Store {
 				return $all_write;
 			case 'editor':
 				$perms = $all_read;
-				foreach ( array( 'properties', 'content-optimizer', 'generator', 'gsc-report', 'sitemap', 'communication' ) as $area ) {
+				foreach ( array( 'properties', 'hosting', 'content-optimizer', 'generator', 'gsc-report', 'sitemap', 'communication' ) as $area ) {
 					$perms[ $area ] = array( 'read' => true, 'write' => true );
 				}
 				return $perms;

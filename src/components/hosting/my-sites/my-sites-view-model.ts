@@ -119,14 +119,14 @@ export function inventoryRows(groups: HostedSiteGroup[], kind: "plugins" | "them
 }
 
 export function formatBytes(bytes: number | null): string {
-  if (bytes === null || !Number.isFinite(bytes)) return "—";
+  if (bytes === null || !Number.isFinite(bytes)) return "–";
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
 export function formatCount(n: number | null): string {
-  if (n === null || !Number.isFinite(n)) return "—";
+  if (n === null || !Number.isFinite(n)) return "–";
   return new Intl.NumberFormat("en-US").format(n);
 }
 

@@ -108,7 +108,7 @@ class Neo_Pulse_Wp_Host_Report {
 	}
 
 	public static function rest_purge_cache( WP_REST_Request $request ): WP_REST_Response {
-		$result = class_exists( 'Neo_Pulse_Wp_Speed', false ) ? Neo_Pulse_Wp_Speed::flush_all_wordpress() : array();
+		$result = Neo_Pulse_Wp_Speed::flush_all_wordpress();
 		wp_cache_flush();
 		return new WP_REST_Response( array( 'ok' => true, 'result' => $result ), 200 );
 	}

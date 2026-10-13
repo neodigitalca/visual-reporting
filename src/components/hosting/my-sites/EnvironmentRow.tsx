@@ -29,7 +29,7 @@ export function EnvironmentRow({ env, canAdmin, onAction }: EnvironmentRowProps)
   const domain = env.primaryDomain || (env.siteUrl ? env.siteUrl.replace(/^https?:\/\//, "").replace(/\/$/, "") : "");
   const s = env.stats;
   const updates = envUpdateCount(env);
-  const wpValue = s?.wpVersion ?? "—";
+  const wpValue = s?.wpVersion ?? "–";
   const statusLine = env.statusMessage ?? (env.status === "active" ? null : env.status);
 
   return (
@@ -55,7 +55,7 @@ export function EnvironmentRow({ env, canAdmin, onAction }: EnvironmentRowProps)
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-x-5 gap-y-1 pl-[3.25rem]">
-        <Stat label="PHP" value={s?.phpVersion ?? "—"} />
+        <Stat label="PHP" value={s?.phpVersion ?? "–"} />
         <Stat
           label="WordPress"
           value={wpValue}

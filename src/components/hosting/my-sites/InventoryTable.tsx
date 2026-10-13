@@ -43,7 +43,7 @@ export function InventoryTable({ kind, rows, loading }: InventoryTableProps) {
               <td className={TD}>
                 <span className={ENV_PILL_CLASS[row.environment]}>{ENVIRONMENT_LABEL[row.environment]}</span>
               </td>
-              <td className={`${TD} tabular-nums`}>{row.version || "—"}</td>
+              <td className={`${TD} tabular-nums`}>{row.version || "–"}</td>
               <td className={`${TD} tabular-nums ${row.updateVersion ? "text-amber-200" : "text-muted-foreground"}`}>
                 {row.updateVersion ?? "Up to date"}
               </td>

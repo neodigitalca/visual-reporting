@@ -90,7 +90,7 @@ describe("my-sites view model", () => {
   });
 
   it("formats bytes and builds CSV with one row per environment", () => {
-    expect(formatBytes(null)).toBe("—");
+    expect(formatBytes(null)).toBe("–");
     expect(formatBytes(2 * 1024 * 1024 * 1024)).toBe("2.00 GB");
     const csv = csvForGroups(groups);
     const lines = csv.split("\n");

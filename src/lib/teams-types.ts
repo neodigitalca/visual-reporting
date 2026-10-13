@@ -2,6 +2,7 @@ export type TeamAccessRole = "owner" | "admin" | "lead" | "editor" | "viewer" | 
 
 export type TeamPermissionArea =
   | "properties"
+  | "hosting"
   | "api-keys"
   | "master-rules"
   | "ai-generation"

@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { getPool } from "../db/pool.mjs";
-import { getOwnerId, createDockerService, addCustomDomain } from "../render-client.mjs";
+import { getOwnerId, createDockerService, addCustomDomain, deleteService } from "../render-client.mjs";
 
 function payload(job) {
   const p = job.payload_json;
@@ -41,6 +41,16 @@ export async function runProvisionJob(job) {
     ownerId = await getOwnerId();
   } catch (err) {
     return fail(pool, siteId, err instanceof Error ? err.message : String(err));
+  }
+
+  // Retry after a partial failure: the earlier DB service has a password we never stored, so replace it.
+  if (site.render_db_service_id) {
+    try {
+      await deleteService(site.render_db_service_id);
+    } catch (err) {
+      return fail(pool, siteId, `Could not remove previous MariaDB service: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    await pool.query(`UPDATE hosted_sites SET render_db_service_id = NULL, updated_at = NOW() WHERE id = $1`, [siteId]);
   }
 
   let dbSvc;
