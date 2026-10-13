@@ -78,6 +78,15 @@ export async function handleTagsRoute(req, res, subpath, method, body, auth) {
       sendJson(res, 400, { ok: false, error: "name is required." });
       return;
     }
+    const exists = await pool.query(`SELECT id FROM hosted_tags WHERE tenant_id = $1 AND name = $2 AND id <> $3`, [
+      tenantId,
+      name,
+      tagId,
+    ]);
+    if (exists.rows[0]) {
+      sendJson(res, 409, { ok: false, error: "Tag already exists." });
+      return;
+    }
     const updated = await pool.query(
       `UPDATE hosted_tags SET name = $3 WHERE id = $1 AND tenant_id = $2 RETURNING id, name`,
       [tagId, tenantId, name],

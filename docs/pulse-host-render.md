@@ -43,7 +43,11 @@ Schema lives in `hosting/neo-host-api/db/schema.sql` and is applied on API start
 1. `pulse-host-db-<slug>` (private service, `hosting/docker/mariadb/Dockerfile`, disk at `/var/lib/mysql`)
 2. `pulse-host-wp-<slug>` (web service, `hosting/docker/wordpress/Dockerfile`, disk at `/var/www/html`, env includes `WORDPRESS_DB_HOST=<db>:3306`, admin credentials, and `PULSE_HOST_REPORT_TOKEN`)
 
-Optional custom domain is added to the WP service. On success the row gets `render_service_id`, `site_url`, `wp_admin_url`, status `active`. On failure status is `failed` with the message, and **Retry provision** re-runs the job.
+Optional custom domain is added to the WP service. On success the row gets `render_service_id`, `site_url`, `wp_admin_url`, status `active`. On failure status is `failed` with the message, and **Retry provision** replaces any half-created MariaDB service and re-runs the job.
+
+Each service gets a Render **build filter** so it only redeploys when its own paths change (`hosting/docker/mariadb/**` for DB; `hosting/docker/wordpress/**` and both plugins for WP; `hosting/neo-host-api/**`, `hosting/agents/**`, `Dockerfile.neo-host-api`, `package*.json` for the API). MariaDB is always a **private service**: Render health-checks web services over HTTP, which MariaDB cannot answer.
+
+On every WP boot `hosting/docker/wordpress/docker-entrypoint.sh` copies both plugins, waits for MariaDB (up to 10 minutes), runs `wp core install` once (site URL, title, admin from env), activates `neo-pulse-wp`, sets `/%postname%/` permalinks if none are set, and hard-flushes rewrite rules so `/wp-json/` routes through WordPress.
 
 Required env on `pulse-host-api`: `PULSE_HOST_RENDER_REPO`, `PULSE_HOST_RENDER_BRANCH`, `RENDER_OWNER_ID`, `PULSE_HOST_ADMIN_EMAIL`, `RENDER_API_KEY`.
 
@@ -66,7 +70,9 @@ The staging environment uses `PULSE_HOST_STAGING_REPORT_TOKEN` on `pulse-host-ap
 npm run provision:render-pulse-host
 ```
 
-Requires `RENDER_API_KEY` or `Downloads/Render API.txt`. Creates Postgres, MariaDB, WP staging, and pulse-host-api if missing. DNS: CNAME `host-staging` to `pulse-host-wp-staging.onrender.com`.
+Requires `RENDER_API_KEY` or `Downloads/Render API.txt`. Creates Postgres, MariaDB (private service), WP staging, and pulse-host-api if missing.
+
+DNS (Cloudflare, manual): CNAME `host-staging` to `pulse-host-wp-staging.onrender.com`, DNS only (grey cloud) so Render can issue the certificate. Until this exists the staging row shows **degraded** with "wp-json HTTP unreachable" because the API checks `https://host-staging.neodigital.ca`.
 
 ## Hub secrets (neodigital.ca and local)
 

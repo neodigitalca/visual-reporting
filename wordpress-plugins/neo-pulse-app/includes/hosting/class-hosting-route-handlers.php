@@ -109,31 +109,19 @@ class Neo_Pulse_App_Hosting_Route_Handlers {
 		Neo_Pulse_App_Api_Dispatcher::send_json( $data, $code > 0 ? $code : 200 );
 	}
 
+	/** Constant from neo-pulse-app-secrets.php, else process env (Docker/Render). */
+	private static function setting( string $name ): string {
+		if ( defined( $name ) && is_string( constant( $name ) ) ) {
+			return trim( constant( $name ) );
+		}
+		return trim( (string) getenv( $name ) );
+	}
+
 	private static function host_api_base(): string {
-		if ( defined( 'PULSE_HOST_API_BASE' ) && is_string( PULSE_HOST_API_BASE ) ) {
-			return trim( PULSE_HOST_API_BASE );
-		}
-		if ( defined( 'NEO_HOST_API_BASE' ) && is_string( NEO_HOST_API_BASE ) ) {
-			return trim( NEO_HOST_API_BASE );
-		}
-		$env = trim( (string) getenv( 'PULSE_HOST_API_BASE' ) );
-		if ( $env !== '' ) {
-			return $env;
-		}
-		return trim( (string) getenv( 'NEO_HOST_API_BASE' ) );
+		return self::setting( 'PULSE_HOST_API_BASE' );
 	}
 
 	private static function host_api_token(): string {
-		if ( defined( 'PULSE_HOST_API_TOKEN' ) && is_string( PULSE_HOST_API_TOKEN ) ) {
-			return trim( PULSE_HOST_API_TOKEN );
-		}
-		if ( defined( 'NEO_HOST_API_TOKEN' ) && is_string( NEO_HOST_API_TOKEN ) ) {
-			return trim( NEO_HOST_API_TOKEN );
-		}
-		$env = trim( (string) getenv( 'PULSE_HOST_API_TOKEN' ) );
-		if ( $env !== '' ) {
-			return $env;
-		}
-		return trim( (string) getenv( 'NEO_HOST_API_TOKEN' ) );
+		return self::setting( 'PULSE_HOST_API_TOKEN' );
 	}
 }
