@@ -206,7 +206,7 @@ services:
       - key: PULSE_HOST_REPORT_TOKEN
         sync: false
 
-  - type: web
+  - type: pserv
     name: pulse-host-db-staging
     runtime: docker
     dockerfilePath: ./hosting/docker/mariadb/Dockerfile
@@ -215,6 +215,10 @@ services:
     branch: main
     plan: starter
     region: ohio
+    disk:
+      name: pulse-host-db-staging-disk
+      mountPath: /var/lib/mysql
+      sizeGB: 10
     envVars:
       - key: MARIADB_ROOT_PASSWORD
         sync: false

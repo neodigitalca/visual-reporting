@@ -232,12 +232,21 @@ export async function bootstrapStagingSiteFromEnv() {
   const reportToken = (process.env.PULSE_HOST_STAGING_REPORT_TOKEN || "").trim() || null;
   const existing = await pool.query(`SELECT id FROM hosted_sites WHERE slug = 'host-staging' AND tenant_id = $1`, [tenantId]);
   if (existing.rows[0]) {
-    if (reportToken) {
-      await pool.query(`UPDATE hosted_sites SET report_token = $2 WHERE id = $1 AND report_token IS DISTINCT FROM $2`, [
+    // Env is the source of truth for the staging bench: keep token and Render ids in sync.
+    await pool.query(
+      `UPDATE hosted_sites SET
+         report_token = COALESCE($2, report_token),
+         render_service_id = COALESCE($3, render_service_id),
+         render_db_service_id = COALESCE($4, render_db_service_id),
+         updated_at = NOW()
+       WHERE id = $1`,
+      [
         existing.rows[0].id,
         reportToken,
-      ]);
-    }
+        process.env.NEO_HOST_STAGING_WP_SERVICE_ID || null,
+        process.env.NEO_HOST_STAGING_DB_SERVICE_ID || null,
+      ],
+    );
     return;
   }
   const domain = (process.env.NEO_HOST_STAGING_DOMAIN || "host-staging.neodigital.ca").trim();

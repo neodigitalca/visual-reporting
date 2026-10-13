@@ -60,12 +60,18 @@ async function getOwnerId() {
   return preferred.id;
 }
 
-async function ensureWebService(ownerId, { name, dockerfilePath, dockerContext, plan = "standard", envVars = [] }) {
+async function ensureWebService(
+  ownerId,
+  { name, type = "web_service", dockerfilePath, dockerContext, plan = "standard", envVars = [], disk },
+) {
   const existing = (await listServices()).find((s) => s.name === name);
   let svc = existing;
+  if (svc?.id && svc.type !== type) {
+    throw new Error(`${name} exists as ${svc.type} but must be ${type}. Delete it in Render and re-run.`);
+  }
   if (!svc?.id) {
     const created = await api("POST", "/services", {
-      type: "web_service",
+      type,
       name,
       ownerId,
       repo: REPO,
@@ -76,6 +82,7 @@ async function ensureWebService(ownerId, { name, dockerfilePath, dockerContext, 
         plan,
         region: REGION,
         envSpecificDetails: { dockerfilePath, dockerContext },
+        ...(disk ? { disk } : {}),
       },
     });
     svc = created.service ?? created;
@@ -129,11 +136,14 @@ async function main() {
   const mariaPass = process.env.NEO_HOST_MARIADB_PASSWORD || crypto.randomBytes(16).toString("hex");
   const wpAdminPass = process.env.NEO_HOST_WP_ADMIN_PASSWORD || crypto.randomBytes(16).toString("hex");
 
+  // MariaDB must be a private service: Render only health-checks web services over HTTP.
   const dbSvc = await ensureWebService(ownerId, {
     name: "pulse-host-db-staging",
+    type: "private_service",
     dockerfilePath: "./hosting/docker/mariadb/Dockerfile",
     dockerContext: ".",
     plan: "starter",
+    disk: { name: "pulse-host-db-staging-disk", mountPath: "/var/lib/mysql", sizeGB: 10 },
     envVars: [
       { key: "MARIADB_ROOT_PASSWORD", value: mariaPass },
       { key: "MARIADB_PASSWORD", value: mariaPass },
