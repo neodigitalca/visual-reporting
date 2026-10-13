@@ -294,11 +294,6 @@ class Neo_Pulse_App_Api_Dispatcher {
 			return;
 		}
 
-		if ( 0 === strpos( $route, 'wpengine/' ) ) {
-			Neo_Pulse_App_Wpengine_Route_Handlers::dispatch_http( substr( $route, 9 ), $method, $body );
-			return;
-		}
-
 		if ( $route === 'bulk/validate-internal-links' && $method === 'POST' ) {
 			Neo_Pulse_App_Bulk_Validate_Links::stream( $body );
 			return;

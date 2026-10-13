@@ -155,19 +155,4 @@ class Neo_Pulse_App_Data_Paths {
 	public static function task_execution_progress_path( int $team_id, int $execution_id ): string {
 		return self::file( 'teams/' . (string) $team_id . '/executions', (string) $execution_id . '.json' );
 	}
-
-	public static function wpengine_sftp_catalog_path(): string {
-		return self::root() . '/wpengine-sftp-catalog.json';
-	}
-
-	public static function wpengine_plugin_staging_dir(): string {
-		$dir = self::root() . '/wpengine/plugin/neo-pulse-wp';
-		if ( ! is_dir( $dir ) ) {
-			wp_mkdir_p( $dir );
-			if ( ! file_exists( $dir . '/index.php' ) ) {
-				file_put_contents( $dir . '/index.php', '<?php // silence' );
-			}
-		}
-		return $dir;
-	}
 }

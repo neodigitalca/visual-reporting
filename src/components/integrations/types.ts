@@ -113,14 +113,6 @@ export interface WordPressSite {
   slackLastTestAt?: number;
   /** Legacy persisted flag; ignored by current properties UI. */
   postBankEnabled?: boolean;
-  /** WP Engine SFTP credentials (from Customer List CSV push). */
-  wpEngineHost?: string;
-  wpEnginePort?: number;
-  wpEngineUsername?: string;
-  wpEnginePassword?: string;
-  /** CSV domain key (Website Link column). */
-  wpEngineDomain?: string;
-  wpEngineIsStaging?: boolean;
 }
 
 /** Bulk / keyword flows: `siteUrl` is the WordPress connection base; optional production URL for display. */

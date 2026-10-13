@@ -5,7 +5,7 @@ This runbook describes how **Flowbie One / NEO Pulse** moves from offline local 
 Use it as the map. Detail lives in:
 
 - [local-wp-staging-dev.md](local-wp-staging-dev.md) — machine setup, plugins, Vite, troubleshooting
-- [deploy-neo-pulse.md](deploy-neo-pulse.md) — SFTP production deploy, smoke tests, WP Engine in-app deploy
+- [deploy-neo-pulse.md](deploy-neo-pulse.md) — SFTP production deploy, smoke tests
 
 ---
 
@@ -17,7 +17,7 @@ Use it as the map. Detail lives in:
 | **Local API + WP** | `https://neopulse.local` | WordPress + `neo-pulse-app` + `neo-pulse-wp` (offline) |
 | **Production** | `https://neodigital.ca/app/` + `/api/*` | Live product |
 
-Client WordPress sites (WP Engine) are a **fourth track**: deploy `neo-pulse-wp` only via SFTP or in-app WP Engine tooling. That does not replace the neodigital.ca app deploy.
+Client WordPress sites (WP Engine) are a **fourth track**: deploy `neo-pulse-wp` only via SFTP. That does not replace the neodigital.ca app deploy.
 
 ---
 
@@ -187,7 +187,6 @@ npm run smoke:neo-pulse
 |----------|--------------|-------------------------|
 | React SPA | `dist/` (built with `VITE_BASE_PATH=/app/`) | `./app/` |
 | API plugin | `wordpress-plugins/neo-pulse-app/` | `./wp-content/plugins/neo-pulse-app/` |
-| Staged client plugin (in-app deploy) | `wordpress-plugins/neo-pulse-wp/` | `./wp-content/uploads/neo-pulse-data/wpengine/plugin/neo-pulse-wp/` |
 
 Production secrets stay on the server (`neo-pulse-app-secrets.php`, wp-config). Deploy scripts do not upload repo `.env` or local `neo-pulse-app-secrets.php`.
 
@@ -210,7 +209,6 @@ Separate from the neodigital.ca app. Use after the plugin change works on local 
 |--------|---------|
 | WP Engine **1stg** rows in Customer CSV | `npm run deploy:wp-staging` |
 | Production client sites (interactive) | `npm run deploy:wp-clients` |
-| In-app batch from neodigital UI | `npm run sync:wpengine-catalog` then Dashboard → WP Engine |
 
 Requires `wordpress-plugins/Customer List/SFTP Users_Clients List.csv` and `npm run embed:neo-pulse-wp-secrets` (runs inside deploy scripts).
 
@@ -256,7 +254,6 @@ Typical timing: local iteration seconds to minutes; production deploy minutes (b
 | `deploy:neodigital-app` | C — build + SFTP to neodigital.ca |
 | `deploy:wp-staging` | D — client plugin to 1stg |
 | `deploy:wp-clients` | D — client plugin to production CSV rows |
-| `sync:wpengine-catalog` | D — SFTP catalog for in-app deploy |
 | `smoke:neo-pulse` | C — post-deploy live checks |
 
 ---

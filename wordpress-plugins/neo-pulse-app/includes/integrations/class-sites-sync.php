@@ -60,11 +60,6 @@ class Neo_Pulse_App_Sites_Sync {
 			if ( empty( $site['googleAdsCustomerId'] ) && ! empty( $prev['googleAdsCustomerId'] ) ) {
 				$sites[ $i ]['googleAdsCustomerId'] = (string) $prev['googleAdsCustomerId'];
 			}
-			foreach ( array( 'wpEngineHost', 'wpEnginePort', 'wpEngineUsername', 'wpEnginePassword', 'wpEngineDomain', 'wpEngineIsStaging' ) as $field ) {
-				if ( empty( $site[ $field ] ) && ! empty( $prev[ $field ] ) ) {
-					$sites[ $i ][ $field ] = $prev[ $field ];
-				}
-			}
 		}
 		return $sites;
 	}

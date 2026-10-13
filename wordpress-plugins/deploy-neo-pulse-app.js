@@ -18,7 +18,6 @@ import SftpClient from "ssh2-sftp-client";
 import { buildDirZip } from "./deploy/lib/zip-dir.js";
 import { uploadZipAndInstall } from "./deploy/lib/deploy-zip.js";
 import { loadSites } from "./deploy/lib/csv-sites.js";
-import { buildWpEngineCatalogPayload } from "./deploy/lib/wpengine-catalog-payload.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, "..");
@@ -291,27 +290,6 @@ async function ensureRootHtaccessSpaBypass(site, spaBase, cacheBust) {
   }
 }
 
-async function uploadWpEngineCatalog(site) {
-  if (!existsSync(csvPath)) {
-    console.log("\n(WP Engine catalog skipped: Customer List CSV not found)");
-    return;
-  }
-  const payload = buildWpEngineCatalogPayload(csvPath);
-  const localJson = join(deployDir, "wpengine-sftp-catalog.json");
-  writeFileSync(localJson, JSON.stringify(payload, null, 2), "utf8");
-  const remotePath = "./wp-content/uploads/neo-pulse-data/wpengine-sftp-catalog.json";
-  console.log("\n=== WP Engine SFTP catalog ===");
-  console.log(`  rows: ${payload.count}`);
-  const sftp = await connectSftp(site);
-  try {
-    await sftp.mkdir("./wp-content/uploads/neo-pulse-data", true);
-    await sftp.put(Buffer.from(JSON.stringify(payload, null, 2), "utf8"), remotePath);
-  } finally {
-    await sftp.end();
-  }
-  console.log("  catalog uploaded");
-}
-
 async function main() {
   if (!existsSync(distDir)) {
     console.error("dist/ missing. Run build first.");
@@ -405,23 +383,6 @@ RewriteRule . /${spaBase}/index.html [L]
     console.log("\n(plugin upload skipped for mobile dist-only deploy)");
   } else {
     console.log("\n(plugin upload skipped)");
-  }
-
-  if (deploySite === "neodigital.ca" && deployPlugin && !deployMobile) {
-    const wpClientDir = join(__dirname, "neo-pulse-wp");
-    const wpZip = join(deployDir, "neo-pulse-wp-server-staging.zip");
-    console.log("\n=== neo-pulse-wp server staging (in-app SFTP deploy) ===");
-    buildDirZip(wpClientDir, wpZip);
-    await uploadZipAndInstall(site, {
-      zipPath: wpZip,
-      localDir: wpClientDir,
-      remoteZipPath: "./wp-content/uploads/neo-pulse-data/wpengine/neo-pulse-wp-staging.zip",
-      installRoot: "./wp-content/uploads/neo-pulse-data/wpengine/plugin/neo-pulse-wp",
-      verifyRelPath: "neo-pulse-wp.php",
-      onProgress: progress("wpengine-staging"),
-    });
-
-    await uploadWpEngineCatalog(site);
   }
 
   const doneUrl = `${mobileProfile?.publicUrl ?? site.publicUrl ?? `https://${site.site}/${spaBase}/`}?v=${cacheBust}`;

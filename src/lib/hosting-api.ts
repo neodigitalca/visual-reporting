@@ -49,7 +49,7 @@ export type HostedEnvironment = {
 
 export type HostedTag = { id: number; name: string };
 
-/** WP Engine "site": a named group of environments. */
+/** Site group: a named site with one or more environments. */
 export type HostedSiteGroup = {
   id: string;
   name: string;

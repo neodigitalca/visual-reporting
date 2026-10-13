@@ -282,24 +282,6 @@ Do **not** use `deploy:neo-pulse-plugin` for the headless NEO Pulse One app; use
 
 ---
 
-## In-app WP Engine deploy (neo-pulse-wp to clients)
-
-1. After editing `wordpress-plugins/Customer List/SFTP Users_Clients List.csv`, sync catalog to server:
-   ```bash
-   npm run sync:wpengine-catalog
-   ```
-   Set `NEO_PULSE_SESSION_TOKEN` to a logged-in session Bearer token if not running against localhost with cookies.
-
-2. Deploy neodigital (stages neo-pulse-wp under `wp-content/uploads/neo-pulse-data/wpengine/plugin/neo-pulse-wp/`):
-   ```bash
-   npm run build:neodigital-app
-   npm run deploy:neodigital-app
-   ```
-
-3. In the app: **Dashboard → WP Engine** to sync matches and batch deploy, or open a property profile → **Settings → Hosting** → **Install neo-pulse-wp**.
-
----
-
 ## Agent checklist
 
 1. **Git backup:** commit and push (exclude deploy zips; hooks enabled via `core.hooksPath`)

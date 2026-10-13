@@ -51,8 +51,6 @@
     "deploy:wp-clients": "node wordpress-plugins/deploy-wp-clients.js",
     "deploy:wp-staging": "node wordpress-plugins/deploy-wp-staging.js",
     "deploy:wp-production": "node wordpress-plugins/deploy-wp-production.js",
-    "sync:wpengine-catalog": "node scripts/sync-wpengine-sftp-catalog.mjs",
-    "push:wpengine-credentials": "node scripts/push-wpengine-credentials.mjs",
     "localdominator:login": "node scripts/research/local-dominator/login.mjs",
     "localdominator:login:headed": "node scripts/research/local-dominator/login.mjs --headed",
     "localdominator:export": "node scripts/research/local-dominator/export-grid.mjs --headed",

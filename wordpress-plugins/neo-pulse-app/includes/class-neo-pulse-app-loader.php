@@ -52,7 +52,6 @@ class Neo_Pulse_App_Loader {
 		Neo_Pulse_App_Data_Paths::subdir( 'vertical-benchmarks' );
 		Neo_Pulse_App_Data_Paths::subdir( 'knowledge-model-jobs' );
 		Neo_Pulse_App_Data_Paths::subdir( 'support' );
-		Neo_Pulse_App_Data_Paths::subdir( 'wpengine/plugin' );
 		Neo_Pulse_App_Api_Dispatcher::register_rewrites();
 		Neo_Pulse_App_Task_Trigger_Cron::activate();
 		Neo_Pulse_App_Task_Schedule_Cron::activate();
@@ -155,10 +154,6 @@ class Neo_Pulse_App_Loader {
 		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/integrations/class-sites-sync.php';
 		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/integrations/class-integrations-route-handlers.php';
 		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/integrations/class-manager-route-handlers.php';
-
-		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/wpengine/class-wpengine-catalog.php';
-		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/wpengine/class-wpengine-sftp-deploy.php';
-		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/wpengine/class-wpengine-route-handlers.php';
 
 		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/teams/class-teams-store.php';
 		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/chat/class-chat-typing.php';

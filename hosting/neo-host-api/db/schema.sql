@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS hosting_tenants (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- WP Engine "site": a named group that owns one or more environments (installs).
+-- Site group: a named site that owns one or more environments (installs).
 CREATE TABLE IF NOT EXISTS hosted_site_groups (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id INTEGER NOT NULL REFERENCES hosting_tenants(id) ON DELETE CASCADE,

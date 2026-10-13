@@ -145,12 +145,6 @@ export function minimalSiteForLocalStorage(site: WordPressSite): WordPressSite {
     slackConnectionStatus: slim.slackConnectionStatus,
     slackLastTestAt: slim.slackLastTestAt,
     postBankEnabled: slim.postBankEnabled,
-    wpEngineHost: slim.wpEngineHost,
-    wpEnginePort: slim.wpEnginePort,
-    wpEngineUsername: slim.wpEngineUsername,
-    wpEnginePassword: slim.wpEnginePassword,
-    wpEngineDomain: slim.wpEngineDomain,
-    wpEngineIsStaging: slim.wpEngineIsStaging,
     sitemaps: slim.sitemaps
       ? {
           mainSitemapUrl: slim.sitemaps.mainSitemapUrl,
@@ -356,42 +350,6 @@ export async function mergeServerGbpLocationIdsIntoLocalSites(): Promise<boolean
       changed = true;
     }
     return next;
-  });
-  if (!changed) return false;
-  saveSites(merged);
-  return true;
-}
-
-/** Merge server-mirrored WP Engine SFTP credentials onto local sites. */
-export async function mergeServerWpEngineCredentialsIntoLocalSites(): Promise<boolean> {
-  const serverSites = await fetchWordPressSitesMirror();
-  if (serverSites.length === 0) return false;
-
-  const local = getStoredSites();
-  if (local.length === 0) return false;
-
-  let changed = false;
-  const merged = local.map((site) => {
-    const row = findMirrorSiteRow(site, serverSites);
-    if (!row?.wpEngineHost?.trim()) return site;
-    const patch = {
-      wpEngineHost: row.wpEngineHost,
-      wpEnginePort: row.wpEnginePort,
-      wpEngineUsername: row.wpEngineUsername,
-      wpEnginePassword: row.wpEnginePassword,
-      wpEngineDomain: row.wpEngineDomain,
-      wpEngineIsStaging: row.wpEngineIsStaging,
-    };
-    const same =
-      site.wpEngineHost === patch.wpEngineHost &&
-      site.wpEnginePort === patch.wpEnginePort &&
-      site.wpEngineUsername === patch.wpEngineUsername &&
-      site.wpEnginePassword === patch.wpEnginePassword &&
-      site.wpEngineDomain === patch.wpEngineDomain &&
-      site.wpEngineIsStaging === patch.wpEngineIsStaging;
-    if (same) return site;
-    changed = true;
-    return { ...site, ...patch };
   });
   if (!changed) return false;
   saveSites(merged);

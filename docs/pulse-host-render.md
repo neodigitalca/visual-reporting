@@ -1,6 +1,6 @@
 # Pulse Host on Render
 
-Pulse Host is Neo Digital's own managed WordPress hosting, built on Render. The Pulse app shows it as **Dashboard > Pulse Host** (`/#pulse-host`), a WP Engine style **My Sites** page that lists only Pulse Host sites. The **pulse-host-api** service stores site records in Postgres, provisions WordPress + MariaDB pairs on Render, and collects per-environment stats.
+Pulse Host is Neo Digital's own managed WordPress hosting, built on Render. The Pulse app shows it as **Dashboard > Pulse Host** (`/#pulse-host`), a **My Sites** page that lists only Pulse Host sites. The **pulse-host-api** service stores site records in Postgres, provisions WordPress + MariaDB pairs on Render, and collects per-environment stats.
 
 ## Architecture
 

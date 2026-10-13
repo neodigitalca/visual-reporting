@@ -35,7 +35,7 @@ import { MY_SITES_CARD, MY_SITES_STATUS_LINE } from "./my-sites/my-sites-theme";
 
 type DialogState = { kind: "none" } | { kind: "add"; group: HostedSiteGroup | null } | { kind: "tags"; group: HostedSiteGroup | null };
 
-/** Pulse Host "My Sites": WP Engine layout, Pulse dark theme, Render-hosted sites only. */
+/** Pulse Host "My Sites": Pulse dark theme, Render-hosted sites only. */
 export function PulseHostTabContent() {
   const { activeTeam, permissions } = useTeam();
   const canAdmin = Boolean(permissions?.hosting?.write);

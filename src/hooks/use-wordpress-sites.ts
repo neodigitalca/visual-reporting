@@ -24,7 +24,7 @@ import {
 } from "@/lib/wordpress-api";
 import { readSiteServiceCity, readSiteServiceState, readSiteServiceCountry, buildSiteLocationsPatch } from "@/lib/wordpress-api/site-service-area";
 import { persistGbpLocationIdInput } from "@/lib/gbp-post/normalize-gbp-location-id";
-import { getStoredSites, mergeServerGbpLocationIdsIntoLocalSites, mergeServerWpEngineCredentialsIntoLocalSites, restoreSitesFromServerMirrorIfEmpty, saveSites } from "@/components/integrations/storage";
+import { getStoredSites, mergeServerGbpLocationIdsIntoLocalSites, restoreSitesFromServerMirrorIfEmpty, saveSites } from "@/components/integrations/storage";
 import { type WordPressSite } from "@/components/integrations/types";
 import { isOptimizationPackageTier } from "@/lib/wordpress-optimization-package";
 import { normalizeProfileTags } from "@/lib/wordpress-property-profile-tags";
@@ -75,9 +75,6 @@ function useWordPressSitesState() {
       if (restored.length > 0) setSites(restored);
     });
     void mergeServerGbpLocationIdsIntoLocalSites().then((merged) => {
-      if (merged) setSites(getStoredSites());
-    });
-    void mergeServerWpEngineCredentialsIntoLocalSites().then((merged) => {
       if (merged) setSites(getStoredSites());
     });
   }, []);

@@ -1,5 +1,5 @@
 /**
- * True when building for https://neodigital.ca/neo-pulse/ (WP Engine headless deploy).
+ * True when building for https://neodigital.ca/neo-pulse/ (headless deploy).
  */
 const viteEnv =
   typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : undefined;

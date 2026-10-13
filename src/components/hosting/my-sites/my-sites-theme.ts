@@ -1,6 +1,6 @@
 import type { HostedEnvironmentKind, HostedSiteStatus } from "@/lib/hosting-api";
 
-/** Flat dark surfaces for the Pulse Host My Sites page (WP Engine layout, Pulse colors). */
+/** Flat dark surfaces for the Pulse Host My Sites page. */
 export const MY_SITES_HEADER_BAND = "flex h-14 shrink-0 items-center justify-between gap-3";
 export const MY_SITES_TABS_BAND = "flex h-10 shrink-0 items-end gap-1 border-b border-white/10";
 export const MY_SITES_TOOLBAR_BAND = "flex h-10 shrink-0 items-center gap-2";
