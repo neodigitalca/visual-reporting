@@ -114,6 +114,9 @@ All colors MUST be HSL.
     --gradient-neural: linear-gradient(135deg, hsl(78 100% 37% / 0.18), hsl(88 70% 28% / 0.08));
     --shadow-glow: 0 0 20px hsl(78 100% 37% / 0.35);
     --shadow-glow-intense: 0 0 30px hsl(78 100% 45% / 0.45);
+
+    --neo-pulse-shortcut-rail-width: 5rem;
+    --neo-pulse-manager-sticky-nav-height: 4.25rem;
   }
 }
 
@@ -339,6 +342,11 @@ All colors MUST be HSL.
 
   html {
     font-size: 100%;
+    scrollbar-gutter: auto;
+  }
+
+  /** Embedded manager tab scroll: reserve gutter so Assist/Agents open does not shift main content */
+  .neo-pulse-embedded-tab-scroller {
     scrollbar-gutter: stable;
   }
 

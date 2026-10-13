@@ -5,6 +5,10 @@ import {
   setCompetitorHarnessTitle,
 } from "@/lib/competitor-analysis/competitor-comparison-harness-state";
 import { runCompareCompetitorAgent } from "@/lib/competitor/compare-competitor-agent";
+import {
+  buildCompetitorCsvKeyword,
+  buildCompetitorRowModifier,
+} from "@/lib/competitor/competitor-csv-row";
 import { runCompetitorTitleRowAgent, suggestCompetitorTitleFormat } from "@/lib/competitor/competitor-title-row-agent";
 import { fetchCompetitorDfsIntel } from "@/lib/competitor/fetch-competitor-dfs-intel";
 import {
@@ -14,6 +18,7 @@ import {
 } from "@/lib/competitor/filter-connected-site-competitors";
 import { runExtractCompetitorProfileAgent } from "@/lib/competitor/extract-competitor-profile-agent";
 import { readConnectedSiteProfile } from "@/lib/competitor/read-connected-site";
+import { resolveModelForAgentCategory } from "@/lib/openrouter-agent-category-api";
 import type {
   CompetitorGenerationOptions,
   CompetitorOrchestratorResult,
@@ -47,7 +52,10 @@ export async function runCompetitorOrchestrator(
   options: CompetitorGenerationOptions,
   onProgress?: CompetitorProgressCallback,
 ): Promise<CompetitorOrchestratorResult> {
-  const { site, places, keyword, promptModifier, apiKey, model } = options;
+  const { site, places, keyword, promptModifier, apiKey } = options;
+  const siteId = options.siteId ?? site.id;
+  const researchModel = resolveModelForAgentCategory("research", siteId);
+  const metaModel = resolveModelForAgentCategory("meta", siteId);
   if (places.length === 0) {
     throw new Error("No competitors to generate.");
   }
@@ -69,7 +77,7 @@ export async function runCompetitorOrchestrator(
     logStep(onProgress, msg, harnessGroups),
   );
 
-  const suggestedTitleFormat = suggestCompetitorTitleFormat(trimmedKeyword);
+  const suggestedTitleFormat = suggestCompetitorTitleFormat(trimmedKeyword, site.name ?? site.siteUrl ?? "Connected site");
   const competitors: CompetitorWithRow[] = [];
 
   for (let i = 0; i < filteredPlaces.length; i++) {
@@ -118,7 +126,7 @@ export async function runCompetitorOrchestrator(
     const topPages = intel.topPages;
     const profileExtras = await runExtractCompetitorProfileAgent({
       apiKey,
-      model,
+      model: researchModel,
       businessName: place.businessName,
       domain: null,
       pages: topPages,
@@ -145,7 +153,7 @@ export async function runCompetitorOrchestrator(
 
     const comparison = await runCompareCompetitorAgent({
       apiKey,
-      model,
+      model: researchModel,
       keyword: trimmedKeyword,
       promptModifier,
       connected: connectedProfile,
@@ -160,14 +168,22 @@ export async function runCompetitorOrchestrator(
       status: "generating",
     });
 
-    const { title, modifier } = await runCompetitorTitleRowAgent({
+    const { title } = await runCompetitorTitleRowAgent({
       apiKey,
-      model,
+      model: metaModel,
       keyword: trimmedKeyword,
       entity: place.businessName,
       connected: connectedProfile,
       comparison,
       suggestedTitleFormat,
+    });
+
+    const rowModifier = buildCompetitorRowModifier({
+      focusKeyword: trimmedKeyword,
+      competitorName: place.businessName,
+      connectedSiteName: connectedProfile.siteName,
+      comparison,
+      promptModifier,
     });
 
     harnessGroups = applyCompetitorHarnessStep(harnessGroups, competitorKey, "WriteCsvRow", {
@@ -176,11 +192,17 @@ export async function runCompetitorOrchestrator(
     });
     harnessGroups = setCompetitorHarnessTitle(harnessGroups, competitorKey, title);
 
+    const competitorName = place.businessName.trim();
     const row: CSVRow = {
-      keyword: trimmedKeyword,
-      entity: place.businessName,
+      keyword: buildCompetitorCsvKeyword(competitorName),
+      keyword_focus: competitorName,
+      entity: competitorName,
+      competitor: competitorName,
+      competitor_fields: `${competitorName}, ${trimmedKeyword}`,
+      sitemap_type: "entity",
       title,
-      modifier,
+      modifier: rowModifier,
+      prompt_modifier: rowModifier,
       featuredImage: "n",
     };
 

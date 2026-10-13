@@ -5,7 +5,7 @@ section: Google Search Console
 method: POST
 path: /api/gsc/export-overview-quick-wins
 auth: open
-order: 330
+order: 340
 ---
 
 POST `/api/gsc/export-overview-quick-wins`.

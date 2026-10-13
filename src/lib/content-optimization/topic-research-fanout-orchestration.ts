@@ -1,6 +1,6 @@
 import type { WordPressSite } from "@/components/integrations/types";
 import { callOpenRouterChatCompletion } from "@/lib/competitor-research/competitor-report-openrouter";
-import { parseJsonWithRepair } from "@/lib/json-repair-utility";
+import { parseJsonStrict } from "@/lib/json-repair-utility";
 import { fetchChatGptCompanyAuthority } from "@/lib/llm-audit/llm-audit-dataforseo";
 import { fetchSerpOrganicForQuery } from "@/lib/llm-audit/fetch-seo-content-brief-wave";
 import { getResearchModel } from "@/lib/optimization-settings-storage";
@@ -121,7 +121,7 @@ export async function planTopicResearchQueries(input: {
       json_schema: { name: "topic_research_plan", strict: false, schema: PLAN_SCHEMA },
     },
   });
-  const { parsed } = parseJsonWithRepair<unknown>(content);
+  const parsed = parseJsonStrict<unknown>(content);
   const plan = normalizeTopicResearchPlan(parsed);
   const localizedQueries = attachLocationToQfoQueries(plan.researchQueries, location);
   const researchQueries = filterBoilerplateResearchQueries(localizedQueries, {
@@ -165,7 +165,7 @@ export async function extractFirstPartyClaims(input: {
       json_schema: { name: "first_party_claims", strict: false, schema: CLAIMS_SCHEMA },
     },
   });
-  const { parsed } = parseJsonWithRepair<unknown>(content);
+  const parsed = parseJsonStrict<unknown>(content);
   return normalizeFirstPartyClaims(parsed);
 }
 

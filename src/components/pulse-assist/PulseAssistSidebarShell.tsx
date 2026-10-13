@@ -139,13 +139,14 @@ export function PulseAssistSidebarShell({
   }, [open, onOpenChange]);
 
   useEffect(() => {
+    if (useDockedChrome) return;
     document.documentElement.classList.toggle("pulse-assist-scroll-lock", open);
     document.body.classList.toggle("pulse-assist-scroll-lock", open);
     return () => {
       document.documentElement.classList.remove("pulse-assist-scroll-lock");
       document.body.classList.remove("pulse-assist-scroll-lock");
     };
-  }, [open]);
+  }, [open, useDockedChrome]);
 
   const openPanel = (next: SidebarPanel) => {
     onPanelChange(next);
@@ -262,7 +263,7 @@ export function PulseAssistSidebarShell({
             </div>
           </div>
         ) : null}
-        {children}
+        {open ? children : null}
       </div>
     </div>
   );

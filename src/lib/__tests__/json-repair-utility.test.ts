@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseJsonWithRepair } from "@/lib/json-repair-utility";
+import { parseJsonStrict, parseJsonWithRepair } from "@/lib/json-repair-utility";
 
 describe("parseJsonWithRepair fail-open", () => {
   it("returns full raw text without throwing when storeRaw is set", () => {
@@ -14,5 +14,15 @@ describe("parseJsonWithRepair fail-open", () => {
     const result = parseJsonWithRepair('{"ok":true}');
     expect(result.parsed).toEqual({ ok: true });
     expect(result.usedRepair).toBe(false);
+  });
+});
+
+describe("parseJsonStrict (bulk one-pass)", () => {
+  it("parses fenced JSON with a single parse", () => {
+    expect(parseJsonStrict('```json\n{"ok":true}\n```')).toEqual({ ok: true });
+  });
+
+  it("throws on prose instead of JSON (no repair)", () => {
+    expect(() => parseJsonStrict('Let me clarify: {"links":[]}')).toThrow();
   });
 });

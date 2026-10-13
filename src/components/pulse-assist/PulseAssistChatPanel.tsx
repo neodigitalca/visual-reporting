@@ -81,7 +81,7 @@ export function PulseAssistChatPanel({
   const userId = user?.id ?? 0;
   const openRouterApiKey = loadApiKey();
   const hasOpenRouterKey = Boolean(openRouterApiKey.trim());
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
   const [taskProjects, setTaskProjects] = useState<TaskProject[]>([]);
   const [pulseAssignedTasks, setPulseAssignedTasks] = useState<TeamContextPulseTask[]>([]);
 
@@ -149,7 +149,9 @@ export function PulseAssistChatPanel({
   }, [userId]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = messagesScrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
   }, [turns, loading]);
 
   const appendAssistantCard = useCallback(
@@ -611,7 +613,7 @@ export function PulseAssistChatPanel({
         </div>
       ) : null}
 
-      <div className="fcw-messages pulse-assist-messages">
+      <div ref={messagesScrollRef} className="fcw-messages pulse-assist-messages">
         {turns.length === 0 ? (
           <div className="fcw-empty">
             <div className="fcw-empty__sub">{SUBMODE_GREETING[submode]}</div>
@@ -653,7 +655,6 @@ export function PulseAssistChatPanel({
             </div>
           );
         })}
-        <div ref={messagesEndRef} />
       </div>
 
       <PulseAssistComposer

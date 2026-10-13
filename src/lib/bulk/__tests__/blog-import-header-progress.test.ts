@@ -90,4 +90,20 @@ describe("buildBlogImportMicroSnapshot", () => {
   it("returns null without phase", () => {
     expect(buildBlogImportMicroSnapshot(null)).toBeNull();
   });
+
+  it("uses progressPct for prompt checklist-style harness (total 1)", () => {
+    const snap = buildBlogImportMicroSnapshot(
+      {
+        phase: "Generating blog ideas…",
+        completed: 0,
+        total: 1,
+        progressPct: 25,
+        harnessActive: false,
+      },
+      "Prompt",
+    );
+    expect(snap?.completed).toBe(0);
+    expect(snap?.total).toBe(1);
+    expect(snap?.progressPct).toBe(25);
+  });
 });

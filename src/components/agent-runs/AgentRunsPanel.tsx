@@ -24,7 +24,7 @@ import { isAgentRunTerminal } from "@/lib/agent-runs-types";
 import { useAgentRunsSiteFilterModel } from "@/hooks/use-agent-runs-site-filter-model";
 import { useTeam } from "@/contexts/TeamContext";
 import { AgentRunCard } from "./AgentRunCard";
-import { AgentRunsBucketTabs } from "./AgentRunsBucketTabs";
+import { AgentRunsBucketSelect } from "./AgentRunsBucketSelect";
 import { AgentRunsHeaderSiteFilter } from "./AgentRunsHeaderSiteFilter";
 
 function preferredRunIdInBucket(bucket: AgentRunBucketGroup | undefined): number | null {
@@ -264,8 +264,7 @@ export function AgentRunsPanel() {
                   {!isAllClientsFilter && selectedClient && activeBucketKey ? (
                     <>
                       <span className="agent-runs-site-picker-row__divider" aria-hidden />
-                      <AgentRunsBucketTabs
-                        mode="iconRail"
+                      <AgentRunsBucketSelect
                         buckets={selectedClient.buckets}
                         value={activeBucketKey}
                         onChange={(key) => selectBucket(selectedClient.siteId, key)}

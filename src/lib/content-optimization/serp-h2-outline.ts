@@ -1,6 +1,6 @@
 import type { SeoContentBriefV1 } from "@/lib/overview-seo-content-brief";
 import { callOpenRouterChatCompletion } from "@/lib/competitor-research/competitor-report-openrouter";
-import { parseJsonWithRepair } from "@/lib/json-repair-utility";
+import { parseJsonStrict } from "@/lib/json-repair-utility";
 import { getResearchModel } from "@/lib/optimization-settings-storage";
 
 const OUTLINE_SCHEMA = {
@@ -144,7 +144,7 @@ export async function deriveSerpH2Outline(input: {
     },
   });
 
-  const { parsed } = parseJsonWithRepair<{ h2Titles?: unknown }>(content);
+  const parsed = parseJsonStrict<{ h2Titles?: unknown }>(content);
   const raw = Array.isArray(parsed?.h2Titles)
     ? parsed!.h2Titles.map((t) => String(t ?? "").trim()).filter(Boolean)
     : [];

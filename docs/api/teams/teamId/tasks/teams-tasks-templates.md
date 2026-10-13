@@ -5,57 +5,12 @@ section: Teams
 method: POST
 path: /api/teams/{teamId}/tasks/templates
 auth: session-team
-order: 2080
+order: 2350
 ---
 
 POST `/api/teams/{teamId}/tasks/templates`.
 
-Bulk replace all team templates. Requires `{ "templates": [...] }`.
-
-## Upsert one template
-
-POST `/api/teams/{teamId}/tasks/templates/upsert`
-
-```json
-{
-  "template": {
-    "keyword": "monthly-seo",
-    "name": "Monthly SEO",
-    "defaultTasks": [
-      { "keyword": "audit", "title": "Monthly SEO Audit", "status": "todo", "clientSiteId": null }
-    ]
-  }
-}
-```
-
-## Delete template
-
-DELETE `/api/teams/{teamId}/tasks/templates/{keyword}`
-
-## Save from project
-
-POST `/api/teams/{teamId}/tasks/templates/from-project`
-
-```json
-{ "projectId": 12, "name": "Monthly SEO", "keyword": "monthly-seo" }
-```
-
-## Create project with template + clients
-
-POST `/api/teams/{teamId}/tasks/projects`
-
-```json
-{
-  "title": "Monthly Tasks",
-  "wordpressSiteId": "site-id",
-  "wordpressSites": [{ "id": "site-id", "name": "Advance Blinds" }],
-  "defaultTasks": [
-    { "keyword": "audit", "title": "Monthly SEO Audit", "clientSiteId": "site-id" }
-  ]
-}
-```
-
-Task titles support `{client}` substitution or append `" — ClientName"` when a client is assigned.
+Runs the templates action in the Teams API from a JSON request body. Requires a signed-in user who belongs to the team id in the path.
 
 ## Request
 

@@ -35,7 +35,7 @@ export function PulseAssistComposer({
 
   useEffect(() => {
     if (!autoFocus || disabled) return;
-    textareaRef.current?.focus();
+    textareaRef.current?.focus({ preventScroll: true });
   }, [autoFocus, disabled]);
 
   useEffect(() => {

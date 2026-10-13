@@ -5,7 +5,7 @@ section: DataForSEO MCP
 method: POST
 path: /api/mcp/DataForSEO_dataforseo_labs_google_page_intersection
 auth: open
-order: 730
+order: 780
 ---
 
 POST `/api/mcp/DataForSEO_dataforseo_labs_google_page_intersection`.

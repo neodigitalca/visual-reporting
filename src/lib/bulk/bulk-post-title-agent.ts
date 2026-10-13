@@ -106,7 +106,7 @@ ${candidateLines || "(no candidates)"}
 
 JSON contract: respond with one object only. Double-quoted key wordpress_title. Example shape: {"wordpress_title":"How To Choose Between Hunter Douglas And Alta Shades"}`;
 
-  const { content } = await callOpenRouterChatCompletion({
+  const { content, parsed } = await callOpenRouterChatCompletion({
     apiKey,
     model,
     system: SYSTEM,
@@ -117,5 +117,9 @@ JSON contract: respond with one object only. Double-quoted key wordpress_title. 
     signal: args.signal,
   });
 
+  const fromParsed = parsed?.wordpress_title;
+  if (typeof fromParsed === "string" && fromParsed.trim()) {
+    return fromParsed.trim();
+  }
   return parseTitleAgentJson(content);
 }

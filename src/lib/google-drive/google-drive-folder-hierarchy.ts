@@ -238,7 +238,7 @@ export function normalizeGoogleDriveTeamSettings(raw: unknown): GoogleDriveTeamS
   };
 }
 
-/** Drive client folder label — matches Properties rows (wordpressSiteDisplayName). */
+/** Drive client folder label — matches Properties rows (wordpressSiteCanonicalName). */
 export function googleDriveClientFolderName(
   site: Pick<WordPressSite, "name" | "siteUrl" | "napInfo">,
 ): string {

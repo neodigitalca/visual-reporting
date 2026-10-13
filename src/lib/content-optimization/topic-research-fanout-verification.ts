@@ -1,7 +1,7 @@
 import type { WordPressSite } from "@/components/integrations/types";
 import pLimit from "p-limit";
 import { callOpenRouterChatCompletion } from "@/lib/competitor-research/competitor-report-openrouter";
-import { parseJsonWithRepair } from "@/lib/json-repair-utility";
+import { parseJsonStrict } from "@/lib/json-repair-utility";
 import { fetchSerpOrganicForQuery } from "@/lib/llm-audit/fetch-seo-content-brief-wave";
 import { getResearchModel } from "@/lib/optimization-settings-storage";
 import { resolveOpenRouterApiKeyForHarness } from "@/lib/openrouter-api-key-resolve";
@@ -418,7 +418,7 @@ export async function extractCheckableClaimsFromPageExcerpt(input: {
         json_schema: { name: "page_claim_inventory", strict: false, schema: PAGE_CLAIM_INVENTORY_SCHEMA },
       },
     });
-    const { parsed } = parseJsonWithRepair<unknown>(content);
+    const parsed = parseJsonStrict<unknown>(content);
     return normalizePageClaimInventory(parsed);
   } catch {
     return [];
@@ -468,7 +468,7 @@ export async function planFactualVerificationQueries(input: {
         json_schema: { name: "factual_verification_plan", strict: false, schema: FACTUAL_VERIFICATION_PLAN_SCHEMA },
       },
     });
-    const { parsed } = parseJsonWithRepair<unknown>(content);
+    const parsed = parseJsonStrict<unknown>(content);
     return normalizeFactualVerificationPlan(parsed);
   } catch {
     return [];
@@ -553,7 +553,7 @@ async function extractVerifiedFactFromPageText(input: {
       json_schema: { name: "verified_fact_extract", strict: false, schema: VERIFIED_FACT_EXTRACT_SCHEMA },
     },
   });
-  const { parsed } = parseJsonWithRepair<unknown>(content);
+  const parsed = parseJsonStrict<unknown>(content);
   return normalizeExtractedVerifiedFact(
     parsed,
     input.claimLabel,

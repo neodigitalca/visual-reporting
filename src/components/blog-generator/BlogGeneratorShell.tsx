@@ -2,10 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { BulkBlogGenerationTab } from "@/components/keyword-research/BulkBlogGenerationTab";
 import { FlowGeneratorSection } from "@/components/generator/FlowGeneratorSection";
 import { ResearchGeneratorSection } from "@/components/generator/ResearchGeneratorSection";
-import { ReportingTab } from "@/components/research/reporting/ReportingTab";
 import { ImageGeneratorSection } from "@/components/generator/ImageGeneratorSection";
 import type { GeneratorFreeFlowBindings } from "@/components/generator/generator-free-flow-bindings";
-import { CompetitorGeneratorShell } from "@/components/competitor-generator/CompetitorGeneratorShell";
 import { SapGeneratorShell } from "@/components/sap-generator/SapGeneratorShell";
 import { ContentOptimizerTabContent } from "@/components/content-optimizer/ContentOptimizerTabContent";
 import { setRuntimeDataForSeoApiKey } from "@/lib/integration-api-keys-runtime";
@@ -103,14 +101,6 @@ export const BlogGeneratorShell: React.FC<BlogGeneratorShellProps> = ({
     );
   }
 
-  if (section === "report") {
-    return (
-      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
-        <ReportingTab activeSection={section} onSectionChange={setSection} />
-      </div>
-    );
-  }
-
   if (section === "flow") {
     if (!freeFlowBindings) return null;
     return (
@@ -133,24 +123,6 @@ export const BlogGeneratorShell: React.FC<BlogGeneratorShellProps> = ({
           activeSection={section}
           onSectionChange={setSection}
           bindings={freeFlowBindings}
-        />
-      </div>
-    );
-  }
-
-  if (section === "competitor") {
-    return (
-      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
-        <CompetitorGeneratorShell
-          apiKey={openRouterApiKey}
-          dataForSEOApiKey={dataForSEOApiKey ?? ""}
-          selectedModel={selectedModel ?? ""}
-          temperature={temperature ?? 0.7}
-          maxTokens={maxTokens ?? 4096}
-          topP={topP ?? 1}
-          flowPurpose={flowPurpose}
-          activeSection={section}
-          onSectionChange={setSection}
         />
       </div>
     );

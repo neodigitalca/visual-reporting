@@ -1,72 +1,50 @@
-import { parseSitemap } from "@/lib/wordpress-api/connection";
-import { analyzeWordPressPages } from "@/lib/wp-page-analyzer";
 import type { WordPressSite } from "@/components/integrations/types";
 import type { ConnectedSiteProfile } from "@/lib/competitor/types";
 import { getPublicSiteUrl } from "@/lib/wordpress-site-public-url";
 
-function servicesFromH2Patterns(h2Patterns: string[]): string[] {
-  return h2Patterns
-    .map((h) => h.trim())
-    .filter((h) => h.length > 2 && h.length < 120)
-    .slice(0, 20);
+function samplePagesFromIntegrationsCache(site: WordPressSite): ConnectedSiteProfile["samplePages"] {
+  const postMetadata = site.sitemaps?.postMetadata;
+  if (!postMetadata) return [];
+
+  const out: ConnectedSiteProfile["samplePages"] = [];
+  for (const bucket of Object.values(postMetadata)) {
+    for (const post of bucket.posts ?? []) {
+      const url = post.link?.trim() || "";
+      if (!url) continue;
+      out.push({
+        title: post.title?.trim() || url,
+        url,
+      });
+      if (out.length >= 8) return out;
+    }
+  }
+  return out;
 }
 
+function servicesHintFromSite(site: WordPressSite): string[] {
+  const tags = site.profileTags?.map((t) => t.trim()).filter(Boolean) ?? [];
+  const vertical = site.industryVertical?.trim();
+  const hints = [...tags];
+  if (vertical) hints.unshift(vertical);
+  return [...new Set(hints)].slice(0, 8);
+}
+
+/**
+ * Lightweight connected-site context for competitor comparison (no sitemap crawl or WP page analyzer).
+ */
 export async function readConnectedSiteProfile(
   site: WordPressSite,
   onProgress?: (message: string) => void,
 ): Promise<ConnectedSiteProfile> {
   const siteUrl = getPublicSiteUrl(site) || site.siteUrl?.trim() || "";
   const siteName = site.name?.trim() || siteUrl;
-  onProgress?.("Reading connected site sitemap and meta…");
-
-  const mainSitemap =
-    site.sitemaps?.mainSitemapUrl?.trim() ||
-    site.sitemaps?.postSitemapUrl?.trim() ||
-    `${siteUrl.replace(/\/$/, "")}/sitemap_index.xml`;
-
-  let samplePages: ConnectedSiteProfile["samplePages"] = [];
-  let services: string[] = [];
-  let metaPatterns: string[] = [];
-
-  if (mainSitemap && site.username && site.appPassword) {
-    try {
-      const analysis = await analyzeWordPressPages(site, mainSitemap, "post", 12, onProgress);
-      services = servicesFromH2Patterns(analysis.contentStyle.h2Patterns);
-      if (analysis.metaDescriptionPattern) {
-        metaPatterns.push(analysis.metaDescriptionPattern);
-      }
-      samplePages = analysis.examples.map((ex) => ({
-        title: ex.title,
-        url: ex.url,
-        metaDescription: ex.metaDescription,
-      }));
-    } catch {
-      /* fall through */
-    }
-  }
-
-  if (samplePages.length === 0 && site.entitySitemapUrl?.trim() && site.username && site.appPassword) {
-    try {
-      const parseResult = await parseSitemap(
-        site.siteUrl,
-        site.entitySitemapUrl,
-        site.username,
-        site.appPassword,
-      );
-      samplePages = (parseResult.urls ?? []).slice(0, 8).map((url) => ({
-        title: url.split("/").filter(Boolean).pop() ?? url,
-        url,
-      }));
-    } catch {
-      /* ignore */
-    }
-  }
+  onProgress?.("Using Integrations profile for connected site…");
 
   return {
     siteName,
     siteUrl,
-    services,
-    metaPatterns,
-    samplePages,
+    services: servicesHintFromSite(site),
+    metaPatterns: [],
+    samplePages: samplePagesFromIntegrationsCache(site),
   };
 }

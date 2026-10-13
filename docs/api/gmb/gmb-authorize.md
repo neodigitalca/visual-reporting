@@ -5,7 +5,7 @@ section: Google Business Profile
 method: GET
 path: /api/gmb/authorize
 auth: open
-order: 190
+order: 200
 ---
 
 GET `/api/gmb/authorize`.

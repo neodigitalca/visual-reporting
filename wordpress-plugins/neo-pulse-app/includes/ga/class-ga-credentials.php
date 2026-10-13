@@ -73,7 +73,13 @@ class Neo_Pulse_App_Ga_Credentials {
 		$property_id = isset( $body['propertyId'] ) ? trim( (string) $body['propertyId'] ) : '';
 
 		if ( $property_id !== '' ) {
-			$prop_id = preg_replace( '/^properties\/?/i', '', $property_id );
+			$prop_id = Neo_Pulse_App_Ga_Api::normalize_property_id( $property_id );
+			if ( is_wp_error( $prop_id ) ) {
+				return array(
+					'statusCode' => 400,
+					'body'       => array( 'success' => false, 'error' => $prop_id->get_error_message() ),
+				);
+			}
 			$result  = Neo_Pulse_App_Ga_Api::run_report(
 				$credentials,
 				(string) $prop_id,
@@ -85,7 +91,16 @@ class Neo_Pulse_App_Ga_Credentials {
 			if ( is_wp_error( $result ) ) {
 				return array(
 					'statusCode' => Neo_Pulse_App_Ga_Api::map_error_status( $result ),
-					'body'       => array( 'success' => false, 'error' => $result->get_error_message() ),
+					'body'       => array(
+						'success'      => false,
+						'error'        => Neo_Pulse_App_Ga_Api::format_api_error_for_user_public(
+							$result,
+							$credentials['client_email'] ?? '',
+							(string) $prop_id
+						),
+						'client_email' => $credentials['client_email'] ?? '',
+						'propertyId'   => $prop_id,
+					),
 				);
 			}
 			return array(

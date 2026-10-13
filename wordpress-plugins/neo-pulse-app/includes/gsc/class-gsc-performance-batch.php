@@ -250,10 +250,11 @@ class Neo_Pulse_App_Gsc_Performance_Batch {
 			$d  = (string) ( $row['keys'][0] ?? '' );
 			$mk = substr( $d, 0, 7 );
 			if ( ! isset( $monthly_data[ $mk ] ) ) {
-				$monthly_data[ $mk ] = array( 'impressions' => 0, 'pos' => 0.0, 'posCount' => 0 );
+				$monthly_data[ $mk ] = array( 'impressions' => 0, 'clicks' => 0, 'pos' => 0.0, 'posCount' => 0 );
 			}
 			$im = (int) ( $row['impressions'] ?? 0 );
 			$monthly_data[ $mk ]['impressions'] += $im;
+			$monthly_data[ $mk ]['clicks']      += (int) ( $row['clicks'] ?? 0 );
 			$monthly_data[ $mk ]['pos']         += (float) ( $row['position'] ?? 0 ) * max( 1, $im );
 			$monthly_data[ $mk ]['posCount']    += max( 1, $im );
 			$total_imp                          += $im;
@@ -268,6 +269,7 @@ class Neo_Pulse_App_Gsc_Performance_Batch {
 		foreach ( $monthly_data as $m => $d ) {
 			$monthly_stats[] = array(
 				'month'       => $m,
+				'clicks'      => $d['clicks'],
 				'impressions' => $d['impressions'],
 				'avgPosition' => $d['posCount'] > 0 ? round( $d['pos'] / $d['posCount'], 1 ) : 0,
 			);

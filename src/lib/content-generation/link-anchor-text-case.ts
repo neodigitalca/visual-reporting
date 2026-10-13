@@ -93,15 +93,15 @@ export const INTERNAL_LINK_ANCHOR_CASE_RULE = `**INTERNAL LINK ANCHOR CASE (NON-
 /** Minimum [[LINK]] placeholders required in each body H2 section (Overview/FAQ excluded). */
 export const MIN_INTERNAL_LINKS_PER_BODY_H2 = 2;
 
-/** Target [[LINK]] count per body H2 when section has table or 3+ paragraphs. */
-export const TARGET_INTERNAL_LINKS_PER_BODY_H2 = 3;
+/** Target [[LINK]] count per body H2 (tables and longer sections). */
+export const TARGET_INTERNAL_LINKS_PER_BODY_H2 = 5;
 
 export const INTERNAL_LINKS_PER_SECTION_RULE = `**INTERNAL LINKS PER SECTION (NON-NEGOTIABLE)**:
-- Every body H2 section (not Overview, not FAQ) MUST include at least **${MIN_INTERNAL_LINKS_PER_BODY_H2}** distinct [[LINK:query|anchor]] placeholders; target **${TARGET_INTERNAL_LINKS_PER_BODY_H2}** when the section has a table or 3+ paragraphs.
+- Every body H2 section (not Overview, not FAQ, not Answer) MUST include **${MIN_INTERNAL_LINKS_PER_BODY_H2} to ${TARGET_INTERNAL_LINKS_PER_BODY_H2}** distinct [[LINK:query|anchor]] placeholders. Aim for **${TARGET_INTERNAL_LINKS_PER_BODY_H2}** when the section has a table or 3+ paragraphs.
 - Spread links across prose paragraphs and table cells. Weave each [[LINK]] mid-sentence with words before and after the token.
-- When LINK TARGETS PLAN lists entries with sectionHints for this H2, use a different plan query for each link slot before reusing queries.
+- When THIS SECTION LINK ASSIGNMENTS or LINK TARGETS PLAN lists entries for this H2, emit one [[LINK]] for each assigned query (exact query string) before using any other inventory title.
 - Forbidden: a leftover keyword, page title, or [[LINK]] after the last period (". durable window coverings"). If you cannot weave a remaining link inside a sentence you are already writing, STOP. Do not append it.
-- Forbidden: shipping a body H2 with only zero or one internal link when PAGES or BLOG POSTS inventory exists.`;
+- Forbidden: shipping a body H2 with fewer than ${MIN_INTERNAL_LINKS_PER_BODY_H2} internal links when PAGES or BLOG POSTS inventory exists.`;
 
 function isMixedCaseBrand(word: string): boolean {
   if (word.length < 3 || !/^[A-Z]/.test(word)) return false;

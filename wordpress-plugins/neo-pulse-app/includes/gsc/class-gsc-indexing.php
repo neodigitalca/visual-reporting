@@ -112,6 +112,183 @@ class Neo_Pulse_App_Gsc_Indexing {
 	 * @param array<string,mixed> $body
 	 * @return array{statusCode:int,body:array<string,mixed>}
 	 */
+	/**
+	 * Sample URLs from a page sitemap and aggregate URL Inspection results (GSC Page indexing style).
+	 *
+	 * @param array<string,mixed> $body
+	 * @return array{statusCode:int,body:array<string,mixed>}
+	 */
+	public static function page_indexing_report( array $body ): array {
+		if ( function_exists( 'set_time_limit' ) ) {
+			set_time_limit( 300 );
+		}
+
+		$site_url    = isset( $body['siteUrl'] ) ? trim( (string) $body['siteUrl'] ) : '';
+		$sitemap_url = isset( $body['sitemapUrl'] ) ? trim( (string) $body['sitemapUrl'] ) : '';
+		$username    = isset( $body['username'] ) ? (string) $body['username'] : '';
+		$app_pass    = isset( $body['appPassword'] ) ? (string) $body['appPassword'] : '';
+		$max_urls    = isset( $body['maxUrls'] ) ? (int) $body['maxUrls'] : 40;
+
+		if ( $max_urls < 1 ) {
+			$max_urls = 40;
+		}
+		if ( $max_urls > 50 ) {
+			$max_urls = 50;
+		}
+
+		if ( $site_url === '' || $sitemap_url === '' ) {
+			return array(
+				'statusCode' => 400,
+				'body'       => array( 'success' => false, 'error' => 'Missing required fields: siteUrl, sitemapUrl' ),
+			);
+		}
+
+		$urls = self::parse_sitemap_urls( $sitemap_url, $username, $app_pass );
+		if ( is_wp_error( $urls ) ) {
+			return array(
+				'statusCode' => 400,
+				'body'       => array( 'success' => false, 'error' => $urls->get_error_message() ),
+			);
+		}
+
+		if ( empty( $urls ) ) {
+			return array(
+				'statusCode' => 400,
+				'body'       => array( 'success' => false, 'error' => 'No URLs found in sitemap' ),
+			);
+		}
+
+		$sitemap_total = count( $urls );
+		$sample        = array_slice( $urls, 0, $max_urls );
+
+		$pack     = self::get_indexing_property_candidates( $site_url );
+		$property = self::resolve_working_property( $pack['propertyCandidates'], $sample[0] );
+		if ( ! $property ) {
+			return array(
+				'statusCode' => 404,
+				'body'       => Neo_Pulse_App_Gsc_Service_Account::property_error_payload( $pack['fm'] ),
+			);
+		}
+
+		$indexed_count     = 0;
+		$not_indexed_count = 0;
+		$inspect_errors    = 0;
+		$reason_counts     = array();
+		$processed         = 0;
+
+		foreach ( $sample as $url ) {
+			++$processed;
+			$inspect = self::url_inspection( $property, $url );
+			if ( is_wp_error( $inspect ) ) {
+				++$inspect_errors;
+				$reason = 'Inspection error';
+				if ( ! isset( $reason_counts[ $reason ] ) ) {
+					$reason_counts[ $reason ] = 0;
+				}
+				++$reason_counts[ $reason ];
+				++$not_indexed_count;
+				if ( $processed < count( $sample ) ) {
+					usleep( 150000 );
+				}
+				continue;
+			}
+
+			$inspection    = $inspect['inspectionResult'] ?? array();
+			$index_status  = $inspection['indexStatusResult'] ?? array();
+			$verdict       = $index_status['verdict'] ?? 'UNKNOWN';
+			$coverage      = isset( $index_status['coverageState'] ) ? trim( (string) $index_status['coverageState'] ) : '';
+			$is_indexed    = ( 'PASS' === $verdict || 'PARTIAL' === $verdict );
+
+			if ( $is_indexed ) {
+				++$indexed_count;
+			} else {
+				++$not_indexed_count;
+				$reason = $coverage !== '' ? $coverage : 'URL is not on Google';
+				if ( ! isset( $reason_counts[ $reason ] ) ) {
+					$reason_counts[ $reason ] = 0;
+				}
+				++$reason_counts[ $reason ];
+			}
+
+			if ( $processed < count( $sample ) ) {
+				usleep( 150000 );
+			}
+		}
+
+		$reason_rows = array();
+		foreach ( $reason_counts as $reason => $pages ) {
+			$reason_rows[] = array(
+				'reason'     => $reason,
+				'source'     => self::indexing_reason_source( $reason ),
+				'validation' => 'Not started',
+				'trend'      => 'flat',
+				'pages'      => (int) $pages,
+			);
+		}
+
+		usort(
+			$reason_rows,
+			static function ( $a, $b ) {
+				return ( $b['pages'] ?? 0 ) <=> ( $a['pages'] ?? 0 );
+			}
+		);
+
+		$today = gmdate( 'Y-m-d' );
+
+		return array(
+			'statusCode' => 200,
+			'body'       => array(
+				'success'           => true,
+				'property'          => $property,
+				'sitemapUrl'        => $sitemap_url,
+				'sitemapTotalUrls'  => $sitemap_total,
+				'sampleSize'        => count( $sample ),
+				'indexedCount'      => $indexed_count,
+				'notIndexedCount'   => $not_indexed_count,
+				'inspectErrors'     => $inspect_errors,
+				'reasonCount'       => count( $reason_rows ),
+				'reasons'           => $reason_rows,
+				'fetchedAt'         => gmdate( 'c' ),
+				'chart'             => array(
+					array(
+						'date'        => $today,
+						'indexed'     => $indexed_count,
+						'notIndexed'  => $not_indexed_count,
+					),
+				),
+			),
+		);
+	}
+
+	/**
+	 * @param string $reason Coverage state or error label.
+	 */
+	private static function indexing_reason_source( string $reason ): string {
+		$lower = strtolower( $reason );
+		if ( str_contains( $lower, 'inspection error' ) ) {
+			return 'Google systems';
+		}
+		$website_markers = array(
+			'redirect',
+			'not found',
+			'404',
+			'server error',
+			'5xx',
+			'robots',
+			'401',
+			'403',
+			'unauthorized',
+			'forbidden',
+			'blocked',
+		);
+		foreach ( $website_markers as $marker ) {
+			if ( str_contains( $lower, $marker ) ) {
+				return 'Website';
+			}
+		}
+		return 'Google systems';
+	}
+
 	public static function index_sitemap_urls( array $body ): array {
 		$site_url    = isset( $body['siteUrl'] ) ? trim( (string) $body['siteUrl'] ) : '';
 		$sitemap_url = isset( $body['sitemapUrl'] ) ? trim( (string) $body['sitemapUrl'] ) : '';

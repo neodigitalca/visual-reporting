@@ -48,6 +48,8 @@ export type GscPerformanceLinkOptions = {
 const GSC_SEARCH_ANALYTICS =
   "https://search.google.com/search-console/performance/search-analytics";
 
+const GSC_PAGE_INDEXING = "https://search.google.com/search-console/index";
+
 /**
  * GSC Search Analytics deep links use a leading `!` on the query filter value so the UI
  * applies the same row-level filter as the Performance table (matches the `query` URL param
@@ -89,6 +91,14 @@ export function buildGscSearchAnalyticsUrl(opts: GscPerformanceLinkOptions): str
   }
 
   return `${GSC_SEARCH_ANALYTICS}?${params.toString()}`;
+}
+
+/** Opens Search Console Page indexing for the property (new tab). */
+export function buildGscPageIndexingUrl(siteUrl: string): string {
+  const resourceId = normalizeGscResourceIdForUi(siteUrl);
+  const params = new URLSearchParams();
+  params.set("resource_id", resourceId);
+  return `${GSC_PAGE_INDEXING}?${params.toString()}`;
 }
 
 export function gscValidateLinkTooltip(opts: {

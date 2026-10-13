@@ -26,6 +26,7 @@ import { normalizeBulkPostDestination } from '@/lib/bulk-post-destination-normal
 import { useBulkProcessing } from './bulk/useBulkProcessing';
 import { useBulkAutoGenerate } from '@/hooks/use-bulk-auto-generate';
 import { usePromptBulkGenerate } from '@/hooks/use-prompt-bulk-generate';
+import { usePromptBulkSiteContext } from '@/hooks/use-prompt-bulk-site-context';
 import { getStoredSites, type WordPressSite } from '@/components/IntegrationsTab';
 import type { ConnectedSiteSummary } from '@/components/integrations/types';
 import { CSVUploadSection } from './bulk/CSVUploadSection';
@@ -302,6 +303,7 @@ export const BulkAutoGeneratePanel: React.FC<BulkAutoGeneratePanelProps> = ({
         ...prev,
         [wordPressSite.id]: {
           sitemapType: defaultBulkSitemapMode(),
+          ...(forcedInputMode === "prompt" ? { scopeTags: ["posts"] as const } : {}),
         },
       };
     });
@@ -343,6 +345,10 @@ export const BulkAutoGeneratePanel: React.FC<BulkAutoGeneratePanelProps> = ({
 
   const effectiveFlowPurpose = inputMode === 'prompt' ? (generalIntent?.trim() || flowPurpose || '') : (flowPurpose || '');
 
+  const promptSiteContext = usePromptBulkSiteContext(
+    inputMode === 'prompt' ? wordPressSite : null,
+  );
+
   const {
     userInput,
     setUserInput,
@@ -351,8 +357,6 @@ export const BulkAutoGeneratePanel: React.FC<BulkAutoGeneratePanelProps> = ({
     generatedRows,
     setGeneratedRows,
     wordPressPostsMetadata,
-    sitemapInventoryLinks,
-    siteKwHostedLink,
     lastInventorySentToAiCount,
     handleGenerateChecklist,
     resetPromptGeneration,
@@ -370,6 +374,9 @@ export const BulkAutoGeneratePanel: React.FC<BulkAutoGeneratePanelProps> = ({
     connectedSite: connectedSite || undefined,
     siteConfigs,
     selectedWordPressSites,
+    promptIdeasContext: promptSiteContext.ideasContext,
+    promptSiteContextReady: promptSiteContext.promptSiteContextReady,
+    sitemapInventoryLoading: promptSiteContext.sitemapInventoryLoading,
     onProgress: (step, progress) => {
       setChecklistPhase(step);
       setChecklistProgressPct(progress);
@@ -901,8 +908,10 @@ export const BulkAutoGeneratePanel: React.FC<BulkAutoGeneratePanelProps> = ({
       checklistProgressPct,
       hasGeneratedChecklist,
       handleGenerateChecklist: handleGenerateChecklistAndSelectAll,
-      sitemapInventoryLinks,
-      siteKwHostedLink,
+      sitemapInventoryLinks: promptSiteContext.sitemapInventoryLinks,
+      gscHostedLink: promptSiteContext.gscHostedLink,
+      sitemapInventoryLoading: promptSiteContext.sitemapInventoryLoading,
+      promptSiteContextReady: promptSiteContext.promptSiteContextReady,
       selectedBlogIndices,
       optionalPrompt,
       setOptionalPrompt,
@@ -971,8 +980,10 @@ export const BulkAutoGeneratePanel: React.FC<BulkAutoGeneratePanelProps> = ({
     checklistProgressPct,
     hasGeneratedChecklist,
     handleGenerateChecklistAndSelectAll,
-    sitemapInventoryLinks,
-    siteKwHostedLink,
+    promptSiteContext.sitemapInventoryLinks,
+    promptSiteContext.gscHostedLink,
+    promptSiteContext.sitemapInventoryLoading,
+    promptSiteContext.promptSiteContextReady,
     selectedBlogIndices,
     optionalPrompt,
     featuredImagePerBlog,
@@ -1182,11 +1193,7 @@ export const BulkAutoGeneratePanel: React.FC<BulkAutoGeneratePanelProps> = ({
               <GeneratedBlogIdeasList
                 hasGeneratedChecklist={hasGeneratedChecklist}
                 slotMode={!hasGeneratedChecklist}
-                placeholderCount={
-                  !hasGeneratedChecklist && generatedRows.length > 0
-                    ? generatedRows.length
-                    : BULK_GENERATOR_EMPTY_ROW_COUNT
-                }
+                placeholderCount={BULK_GENERATOR_EMPTY_ROW_COUNT}
                 generatedRows={generatedRows}
                 selectedBlogIndices={selectedBlogIndices}
                 setSelectedBlogIndices={setSelectedBlogIndices}

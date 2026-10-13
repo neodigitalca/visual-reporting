@@ -17,8 +17,10 @@ import {
 } from "@/lib/agent-runs/agent-run-grouping";
 import { TASK_EXECUTION_TARGET_BUCKET_LABELS } from "@/lib/task-execution-bucket";
 
-/** Buckets shown in the agent sidebar icon rail (stable order). */
-export const AGENT_RUN_SIDEBAR_BUCKET_KEYS: AgentRunBucketKey[] = AGENT_RUN_BUCKET_ORDER;
+/** Buckets shown in the agent sidebar category menu (stable order; excludes internal "other"). */
+export const AGENT_RUN_SIDEBAR_BUCKET_KEYS: AgentRunBucketKey[] = AGENT_RUN_BUCKET_ORDER.filter(
+  (key) => key !== "other",
+);
 
 const RECIPE_BUCKET_LABELS: Partial<Record<AgentRunBucketKey, string>> = {
   reporting: "Reporting",

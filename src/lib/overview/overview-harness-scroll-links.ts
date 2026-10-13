@@ -1,5 +1,5 @@
 import { callOpenRouterChatCompletion } from "@/lib/competitor-research/competitor-report-openrouter";
-import { parseJsonWithRepair } from "@/lib/json-repair-utility";
+import { parseJsonStrict } from "@/lib/json-repair-utility";
 import type { HarnessSectionAnchorEntry } from "@/lib/bulk/harness-section-anchor-ids";
 import { HARNESS_OVERVIEW_ANCHOR_ID } from "@/lib/bulk/harness-section-anchor-ids";
 import { stitchHarnessSections } from "@/lib/bulk/bulk-harness-outline";
@@ -335,9 +335,7 @@ Return JSON with exactly ${anchorMap.length} bullets — one per anchor above, i
     signal: args.signal,
   });
 
-  const { parsed } = parseJsonWithRepair<OverviewHarnessScrollLinksPayload>(content, {
-    targetKeys: ["bullets"],
-  });
+  const parsed = parseJsonStrict<OverviewHarnessScrollLinksPayload>(content);
 
   const rawBullets = Array.isArray(parsed.bullets) ? parsed.bullets : [];
   const normalizedBullets = anchorMap

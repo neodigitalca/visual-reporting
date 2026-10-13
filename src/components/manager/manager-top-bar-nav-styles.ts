@@ -12,8 +12,13 @@ export const MANAGER_NAV_TRIGGER_INACTIVE =
 export const MANAGER_NAV_TRIGGER_ACTIVE =
   "bg-zinc-800 text-foreground hover:bg-zinc-700 hover:text-foreground";
 
-export const MANAGER_NAV_DROPDOWN_PANEL =
-  "z-50 min-w-[16.5rem] rounded-none border border-white/[0.06] bg-zinc-950 p-0 shadow-none text-popover-foreground";
+/** Above embedded sticky chrome (`z-[60]`) and docked Assist rail. */
+export const MANAGER_NAV_DROPDOWN_Z = "z-[100]";
+
+export const MANAGER_NAV_DROPDOWN_PANEL = cn(
+  MANAGER_NAV_DROPDOWN_Z,
+  "min-w-[16.5rem] rounded-none border border-white/[0.06] bg-zinc-950 p-0 shadow-none text-popover-foreground",
+);
 
 export const MANAGER_NAV_DROPDOWN_ITEM_BASE =
   "cursor-pointer rounded-none px-3 py-2.5 text-base font-normal outline-none transition-colors focus:!bg-zinc-800/90 focus:!text-foreground data-[highlighted]:!bg-zinc-800/90 data-[highlighted]:!text-foreground";

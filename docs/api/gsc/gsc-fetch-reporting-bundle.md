@@ -5,7 +5,7 @@ section: Google Search Console
 method: POST
 path: /api/gsc/fetch-reporting-bundle
 auth: open
-order: 400
+order: 410
 ---
 
 POST `/api/gsc/fetch-reporting-bundle`.

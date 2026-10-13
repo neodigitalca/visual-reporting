@@ -4,7 +4,7 @@
 import type { WordPressSite } from '@/components/integrations/types';
 import type { CSVRow } from '@/lib/bulk/bulk-csv-parser';
 import type { BulkProcessingOptions } from '@/lib/bulk/bulk-auto-generate-types';
-import type { BulkGeneratedFile, BulkFileManager } from '@/lib/bulk-file-manager';
+import { BulkFileManager, type BulkGeneratedFile } from '@/lib/bulk-file-manager';
 import type { KeywordData } from '@/lib/keyword-types';
 import type { PrecomputedAcfSeoBundle } from '@/lib/content-generation/bulk-acf-seo-bundle';
 import type { FaqEntry } from '@/lib/faq-entries';
@@ -44,8 +44,12 @@ import {
 import { wpUploadHarnessGeneratedFiles } from '@/lib/overview/overview-wp-upload-harness-artifacts';
 import { extractOriginFromSapTitle } from '@/lib/sap-origin-from-title';
 import { buildSapSlugFromKeywordEntity } from '@/lib/sap-slug-from-keyword-entity';
-import { extractEndpointFromEntitySitemapUrl } from '@/lib/entity-endpoint-extractor';
-import { acfOriginAppliesForSitemapType } from '@/lib/acf-origin-applies';
+import { acfOriginAppliesForRow } from '@/lib/acf-origin-applies';
+import { acfCompetitorAppliesForRow } from '@/lib/acf-competitor-applies';
+import {
+  resolveEntityEndpointForRow,
+  resolveEntitySitemapUrlForRow,
+} from '@/lib/competitor/competitor-entity-sitemap';
 import { loadApiKey } from '@/lib/api';
 import { generateExcerpt } from '@/lib/markdown-to-html';
 import { sanitizeWordPressSlugSegment } from '@/lib/rank-math-redirect-csv';
@@ -356,13 +360,10 @@ export async function publishBulkRowToWordPressSites(
           // Always attempt upload for each row. (We no longer skip when an entity label appears in the entity
           // sitemap - titles/slugs differ per post; users asked to never skip scheduled rows for that reason.)
 
-          // Determine entity endpoint based on sitemapType
-          let entityEndpoint: string;
-          if (sitemapType === 'entity' && site.entitySitemapUrl) {
-            entityEndpoint = extractEndpointFromEntitySitemapUrl(site.entitySitemapUrl);
-          } else {
-            entityEndpoint = 'posts';
-          }
+          const entityEndpoint =
+            sitemapType === 'entity'
+              ? resolveEntityEndpointForRow(site, enrichedRow, sitemapType)
+              : 'posts';
 
           let siteFeaturedImageId = featuredImageId;
           if (siteIndex > 0 && useGoogleMaps && entityForImage) {
@@ -464,7 +465,8 @@ export async function publishBulkRowToWordPressSites(
           }
 
           // Sanitize: remove invalid internal links (not in WordPress list), non-Wikipedia external
-          const isEntityUpload = sitemapType === 'entity' && !!site.entitySitemapUrl;
+          const isEntityUpload =
+            sitemapType === 'entity' && !!resolveEntitySitemapUrlForRow(site, enrichedRow);
           const sanitizedHtmlContent = sanitizeContentForUpload(
             htmlContent,
             site.siteUrl,
@@ -629,6 +631,7 @@ export async function publishBulkRowToWordPressSites(
                 faq: fieldMapping.faq || 'faq',
                 promptModifier: fieldMapping.promptModifier || 'prompt_modifier',
                 origin: fieldMapping.origin || 'origin',
+                competitor: fieldMapping.competitor || 'competitor',
                 keywordFocus: fieldMapping.keywordFocus || 'keyword_focus',
                 seoResearch: fieldMapping.seoResearch || 'seo_research',
               };
@@ -810,10 +813,20 @@ export async function publishBulkRowToWordPressSites(
               if (enrichedRow.prompt_modifier && enrichedRow.prompt_modifier.trim()) {
                 acfMetaFields[fieldNames.promptModifier] = enrichedRow.prompt_modifier.trim();
               }
-              if (enrichedRow.service_area_fields && enrichedRow.service_area_fields.trim()) {
+              const rowKeyword = enrichedRow.keyword?.trim() ?? '';
+              if (acfCompetitorAppliesForRow(rowKeyword)) {
+                if (enrichedRow.competitor?.trim()) {
+                  acfMetaFields[fieldNames.competitor] = enrichedRow.competitor.trim();
+                } else if (entity) {
+                  acfMetaFields[fieldNames.competitor] = entity;
+                }
+                if (enrichedRow.competitor_fields?.trim()) {
+                  acfMetaFields.competitor_fields = enrichedRow.competitor_fields.trim();
+                }
+              } else if (enrichedRow.service_area_fields && enrichedRow.service_area_fields.trim()) {
                 acfMetaFields['service_area_fields'] = enrichedRow.service_area_fields.trim();
               }
-              if (acfOriginAppliesForSitemapType(sitemapType)) {
+              if (acfOriginAppliesForRow(rowKeyword, sitemapType)) {
                 const titleForAcfOrigin = (enrichedRow.title ?? postTitle ?? '').trim();
                 const originFromTitle = extractOriginFromSapTitle(titleForAcfOrigin);
                 if (enrichedRow.origin && enrichedRow.origin.trim() && enrichedRow.origin.trim() !== 'N/A') {
@@ -1071,8 +1084,8 @@ export async function publishBulkRowToWordPressSites(
           );
           if (siteIndex === 0) {
             const failEndpoint =
-              sitemapType === "entity" && site.entitySitemapUrl
-                ? extractEndpointFromEntitySitemapUrl(site.entitySitemapUrl)
+              sitemapType === "entity"
+                ? resolveEntityEndpointForRow(site, enrichedRow, sitemapType)
                 : "posts";
             const pageUrl =
               uploadPageUrl ||

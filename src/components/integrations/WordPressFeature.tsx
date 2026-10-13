@@ -10,7 +10,21 @@ import { Plus, Upload, Download, RotateCcw } from "lucide-react";
 import { notify } from "@/lib/app-notifications";
 import { useAuth } from "@/contexts/AuthContext";
 import { PROPERTIES_SHELL } from "./wordpress/wordpress-properties-surfaces";
-import { BULK_HEADER_TOOL_BTN } from "@/components/keyword-research/bulk/bulk-workspace-header-styles";
+import {
+  BULK_HEADER_SELECT_TRIGGER,
+  BULK_HEADER_TOOL_BTN,
+} from "@/components/keyword-research/bulk/bulk-workspace-header-styles";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  formatDashboardEditorialMonthShort,
+  getLocalCalendarMonthAfterBeforeForMonthKey,
+} from "@/lib/quarter-bounds";
 import { useWordPressSites } from "@/hooks/use-wordpress-sites";
 import { WordPressSiteList } from "./wordpress/WordPressSiteList";
 import { WordPressDialogs } from "./wordpress/WordPressDialogs";
@@ -70,6 +84,10 @@ export const WordPressFeature: React.FC<WordPressFeatureProps> = ({
     handleCheckFuturePosts,
     handleLoadCalendarPosts,
     handleSetEntitySitemap,
+    handleSetCompetitorEntitySitemap,
+    handleAddCustomSitemapTagLabel,
+    handleToggleChildSystemRole,
+    handleToggleChildCustomTag,
     handleToggleChildSitemapDisabled,
     getScrapingKey,
     handlePatchSite,
@@ -610,6 +628,30 @@ export const WordPressFeature: React.FC<WordPressFeatureProps> = ({
   const trailingToolbarActions = useMemo(
     () => (
       <>
+        {editorialMonthOptions.length > 0 && editorialSelectedMonthKey ? (
+          <Select value={editorialSelectedMonthKey} onValueChange={setEditorialSelectedMonthKey}>
+            <SelectTrigger
+              className={cn(BULK_HEADER_SELECT_TRIGGER, "min-w-[4.25rem] tabular-nums")}
+              aria-label="Editorial counts month for all properties"
+              title="Month for editorial counts on all properties"
+            >
+              <SelectValue placeholder="Month">
+                {formatDashboardEditorialMonthShort(editorialSelectedMonthKey)}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {editorialMonthOptions.map((opt) => (
+                <SelectItem
+                  key={opt.key}
+                  value={opt.key}
+                  title={getLocalCalendarMonthAfterBeforeForMonthKey(opt.key).label}
+                >
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
         <Button
           type="button"
           variant="ghost"
@@ -688,6 +730,9 @@ export const WordPressFeature: React.FC<WordPressFeatureProps> = ({
     ),
     [
       credentialedSiteCount,
+      editorialMonthOptions,
+      editorialSelectedMonthKey,
+      setEditorialSelectedMonthKey,
       isRefreshingAllQuarterCounts,
       isRefreshingAllOptimizationCounts,
       handleExportAllSitesCsv,
@@ -753,6 +798,7 @@ export const WordPressFeature: React.FC<WordPressFeatureProps> = ({
         onIndexSitemap={handleIndexSitemap}
         onEntityGeneration={onEntityGeneration}
         onSetEntitySitemap={handleSetEntitySitemap}
+        onSetCompetitorEntitySitemap={handleSetCompetitorEntitySitemap}
         onToggleChildSitemapDisabled={handleToggleChildSitemapDisabled}
         onAppendManualChildSitemap={handleAppendManualChildSitemap}
         onLoadCalendarPosts={handleLoadCalendarPosts}
@@ -810,11 +856,23 @@ export const WordPressFeature: React.FC<WordPressFeatureProps> = ({
         onSetEntitySitemap={(sitemapUrl) => {
           if (profileSite) handleSetEntitySitemap(profileSite, sitemapUrl);
         }}
+        onSetCompetitorEntitySitemap={(sitemapUrl) => {
+          if (profileSite) handleSetCompetitorEntitySitemap(profileSite, sitemapUrl);
+        }}
         onToggleChildSitemapDisabled={(childSitemapUrl) => {
           if (profileSite) handleToggleChildSitemapDisabled(profileSite, childSitemapUrl);
         }}
         onAppendManualChildSitemap={(url) => {
           if (profileSite) handleAppendManualChildSitemap(profileSite, url);
+        }}
+        onAddCustomSitemapTagLabel={(label) => {
+          if (profileSite) handleAddCustomSitemapTagLabel(profileSite, label);
+        }}
+        onToggleChildSystemRole={(childUrl, role) => {
+          if (profileSite) handleToggleChildSystemRole(profileSite, childUrl, role);
+        }}
+        onToggleChildCustomTag={(childUrl, label) => {
+          if (profileSite) handleToggleChildCustomTag(profileSite, childUrl, label);
         }}
         onIndexSitemap={(url) => {
           if (profileSite) handleIndexSitemap(profileSite, url);

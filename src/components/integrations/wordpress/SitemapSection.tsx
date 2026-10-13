@@ -5,8 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -24,6 +26,10 @@ import {
   Map,
 } from "lucide-react";
 import { type WordPressSite } from "../types";
+import {
+  getChildTagEntry,
+  type SitemapSystemRole,
+} from "@/lib/sitemap-child-tags";
 import { PostCalendar } from "./PostCalendar";
 import { cn } from "@/lib/utils";
 import {
@@ -109,6 +115,7 @@ interface SitemapSectionProps {
   onScrapeChildSitemap: (childSitemapUrl: string) => void;
   onEntityGeneration?: (sitemapUrl: string) => void;
   onSetEntitySitemap?: (sitemapUrl: string) => void;
+  onSetCompetitorEntitySitemap?: (sitemapUrl: string) => void;
   /** Per child sitemap row: mark disabled (stored on site.sitemaps.disabledChildSitemapUrls). */
   onToggleChildSitemapDisabled?: (childSitemapUrl: string) => void;
   onIndexSitemap?: (sitemapUrl: string) => void;
@@ -116,7 +123,17 @@ interface SitemapSectionProps {
   onRefreshSitemaps?: () => void;
   isRefreshingSitemaps?: boolean;
   onAppendManualChildSitemap?: (url: string) => void;
+  onAddCustomSitemapTagLabel?: (label: string) => void;
+  onToggleChildSystemRole?: (childSitemapUrl: string, role: SitemapSystemRole) => void;
+  onToggleChildCustomTag?: (childSitemapUrl: string, label: string) => void;
 }
+
+const SYSTEM_ROLE_LABELS: Record<SitemapSystemRole, string> = {
+  pages: "Pages",
+  posts: "Posts",
+  entity: "Entity",
+  competitor: "Competitor",
+};
 
 export const SitemapSection: React.FC<SitemapSectionProps> = ({
   site,
@@ -129,16 +146,21 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({
   onScrapeChildSitemap,
   onEntityGeneration,
   onSetEntitySitemap,
+  onSetCompetitorEntitySitemap,
   onToggleChildSitemapDisabled,
   onIndexSitemap,
   onLoadCalendarPosts,
   onRefreshSitemaps,
   isRefreshingSitemaps = false,
   onAppendManualChildSitemap,
+  onAddCustomSitemapTagLabel,
+  onToggleChildSystemRole,
+  onToggleChildCustomTag,
 }) => {
   const chrome = sitemapSectionChrome(layout);
   const [openCalendars, setOpenCalendars] = useState<Record<string, boolean>>({});
   const [manualSitemapUrl, setManualSitemapUrl] = useState("");
+  const [newCustomTagLabel, setNewCustomTagLabel] = useState("");
 
   const handleCalendarOpenChange = useCallback((sitemapUrl: string, open: boolean) => {
     setOpenCalendars(prev => ({ ...prev, [sitemapUrl]: open }));
@@ -193,8 +215,46 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({
     <div className={chrome.sectionShell}>
       {site.sitemaps.type === "index" && site.sitemaps.childSitemaps && (
         <div className="space-y-2">
-          {(onAppendManualChildSitemap || onRefreshSitemaps) && (
+          {(onAppendManualChildSitemap || onRefreshSitemaps || onAddCustomSitemapTagLabel) && (
             <div className="flex flex-wrap items-center gap-1">
+              {onAddCustomSitemapTagLabel && (
+                <>
+                  <Input
+                    value={newCustomTagLabel}
+                    onChange={(e) => setNewCustomTagLabel(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const label = newCustomTagLabel.trim();
+                        if (label) {
+                          onAddCustomSitemapTagLabel(label);
+                          setNewCustomTagLabel("");
+                        }
+                      }
+                    }}
+                    placeholder="Custom tag label"
+                    disabled={site.enabled === false}
+                    className={cn(chrome.fieldWell, "max-w-[14rem]")}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={site.enabled === false || !newCustomTagLabel.trim()}
+                    className={cn(chrome.btnRow, "h-10 min-h-10 px-3")}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const label = newCustomTagLabel.trim();
+                      if (!label) return;
+                      onAddCustomSitemapTagLabel(label);
+                      setNewCustomTagLabel("");
+                    }}
+                  >
+                    Add tag
+                  </Button>
+                </>
+              )}
               {onAppendManualChildSitemap && (
                 <>
                   <Input
@@ -252,7 +312,12 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({
           )}
           <div className={cn(WP_PANEL_LIST_GAP, smFlatScroll)}>
             {site.sitemaps.childSitemaps.map((url, idx) => {
-              const isEntityRow = site.entitySitemapUrl === url;
+              const tagEntry = getChildTagEntry(site, url);
+              const isEntityRow =
+                site.entitySitemapUrl === url || tagEntry.roles.includes("entity");
+              const isCompetitorRow =
+                site.competitorEntitySitemapUrl === url ||
+                tagEntry.roles.includes("competitor");
               const rowDisabled =
                 site.sitemaps?.disabledChildSitemapUrls?.includes(url) ?? false;
               const scrapingKey = getScrapingKey(site.id, url);
@@ -281,14 +346,14 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({
                   className={cn(
                     chrome.rowTile,
                     "flex flex-wrap items-center gap-2 py-2.5 pr-1",
-                    site.entitySitemapUrl === url && chrome.rowTileEntity,
+                    (site.entitySitemapUrl === url || isCompetitorRow) && chrome.rowTileEntity,
                   )}
                 >
                     <span
                       className={cn(
                         "min-w-0 flex-1 truncate text-base",
                         chrome.urlText,
-                        site.entitySitemapUrl !== url && "font-normal",
+                        site.entitySitemapUrl !== url && !isCompetitorRow && "font-normal",
                       )}
                     >
                       {url}
@@ -302,6 +367,27 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({
                         Entity
                       </Badge>
                     )}
+                    {isCompetitorRow && (
+                      <Badge
+                        variant="secondary"
+                        className={chrome.badgeEntity}
+                      >
+                        <Tag className="mr-1 h-4 w-4" />
+                        Competitor
+                      </Badge>
+                    )}
+                    {tagEntry.roles
+                      .filter((r) => r !== "entity" && r !== "competitor")
+                      .map((role) => (
+                        <Badge key={role} variant="secondary" className={chrome.badgeSecondary}>
+                          {SYSTEM_ROLE_LABELS[role]}
+                        </Badge>
+                      ))}
+                    {tagEntry.custom.map((label) => (
+                      <Badge key={label} variant="secondary" className={chrome.badgeSecondary}>
+                        {label}
+                      </Badge>
+                    ))}
                     {rowDisabled && (
                       <Badge
                         variant="secondary"
@@ -349,7 +435,7 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({
                         onClick={(e) => e.stopPropagation()}
                         className={chrome.menuContent}
                       >
-                        {onToggleChildSitemapDisabled && !isEntityRow ? (
+                        {onToggleChildSitemapDisabled && !isEntityRow && !isCompetitorRow ? (
                           <>
                             <DropdownMenuItem
                               onClick={(e) => {
@@ -421,6 +507,48 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({
                             )}
                           </DropdownMenuItem>
                         )}
+                        {(onToggleChildSystemRole || onToggleChildCustomTag) && (
+                          <>
+                            <DropdownMenuSeparator className={chrome.menuSep} />
+                            <DropdownMenuLabel className={cn(chrome.menuItem, "font-semibold")}>
+                              Tags
+                            </DropdownMenuLabel>
+                            {onToggleChildSystemRole
+                              ? (Object.keys(SYSTEM_ROLE_LABELS) as SitemapSystemRole[]).map(
+                                  (role) => (
+                                    <DropdownMenuCheckboxItem
+                                      key={role}
+                                      checked={tagEntry.roles.includes(role)}
+                                      disabled={site.enabled === false}
+                                      onCheckedChange={() =>
+                                        onToggleChildSystemRole(url, role)
+                                      }
+                                      onSelect={(e) => e.preventDefault()}
+                                      className={chrome.menuItem}
+                                    >
+                                      {SYSTEM_ROLE_LABELS[role]}
+                                    </DropdownMenuCheckboxItem>
+                                  ),
+                                )
+                              : null}
+                            {(site.customSitemapTagLabels ?? []).map((label) =>
+                              onToggleChildCustomTag ? (
+                                <DropdownMenuCheckboxItem
+                                  key={label}
+                                  checked={tagEntry.custom.some(
+                                    (t) => t.toLowerCase() === label.toLowerCase(),
+                                  )}
+                                  disabled={site.enabled === false}
+                                  onCheckedChange={() => onToggleChildCustomTag(url, label)}
+                                  onSelect={(e) => e.preventDefault()}
+                                  className={chrome.menuItem}
+                                >
+                                  {label}
+                                </DropdownMenuCheckboxItem>
+                              ) : null,
+                            )}
+                          </>
+                        )}
                         {onSetEntitySitemap ? (
                           <>
                             <DropdownMenuSeparator className={chrome.menuSep} />
@@ -471,6 +599,32 @@ export const SitemapSection: React.FC<SitemapSectionProps> = ({
                                 )}
                               </DropdownMenuItem>
                             )}
+                          </>
+                        ) : null}
+                        {onSetCompetitorEntitySitemap ? (
+                          <>
+                            <DropdownMenuSeparator className={chrome.menuSep} />
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onSetCompetitorEntitySitemap(url);
+                              }}
+                              disabled={site.enabled === false || rowDisabled}
+                              className={chrome.menuItem}
+                            >
+                              {site.competitorEntitySitemapUrl === url ? (
+                                <>
+                                  <Ban className="mr-2 h-4 w-4" aria-hidden />
+                                  Clear competitor sitemap
+                                </>
+                              ) : (
+                                <>
+                                  <Tag className="mr-2 h-4 w-4" aria-hidden />
+                                  Set as competitor sitemap
+                                </>
+                              )}
+                            </DropdownMenuItem>
                           </>
                         ) : null}
                         {(onLoadCalendarPosts || openCalendars[url]) && (

@@ -5,7 +5,7 @@ section: Google Business Profile
 method: POST
 path: /api/gmb/posts-inventory
 auth: open
-order: 250
+order: 260
 ---
 
 POST `/api/gmb/posts-inventory`.

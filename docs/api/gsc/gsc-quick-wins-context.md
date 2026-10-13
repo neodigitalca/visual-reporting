@@ -5,7 +5,7 @@ section: Google Search Console
 method: POST
 path: /api/gsc/quick-wins-context
 auth: open
-order: 430
+order: 450
 ---
 
 POST `/api/gsc/quick-wins-context`.

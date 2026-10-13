@@ -2,11 +2,16 @@ import type { WordPressSite } from "@/components/integrations/types";
 import { extractEndpointFromEntitySitemapUrl } from "@/lib/entity-endpoint-extractor";
 import { sitemapOptimizerEntityCollectionLabel } from "@/lib/sitemap-optimizer/sitemap-optimizer-toolbar-copy";
 import type { SitemapOptimizerCollectionKey } from "@/lib/sitemap-optimizer/types";
+import {
+  customScopeIdFromLabel,
+  restCollectionsForCustomTag,
+} from "@/lib/sitemap-child-tags";
 
 export type SitemapOptimizerCollectionOption = {
   key: SitemapOptimizerCollectionKey;
   label: string;
   restCollection: string;
+  restCollections?: string[];
   enabled: boolean;
 };
 
@@ -23,7 +28,7 @@ export function buildSitemapOptimizerCollectionOptions(
     entityEndpoint !== "post" &&
     entityEndpoint !== "page";
 
-  return [
+  const options: SitemapOptimizerCollectionOption[] = [
     { key: "posts", label: "Posts", restCollection: "posts", enabled: true },
     { key: "pages", label: "Pages", restCollection: "pages", enabled: true },
     {
@@ -33,6 +38,19 @@ export function buildSitemapOptimizerCollectionOptions(
       enabled: hasEntity,
     },
   ];
+
+  for (const label of site?.customSitemapTagLabels ?? []) {
+    const collections = site ? restCollectionsForCustomTag(site, label) : [];
+    options.push({
+      key: customScopeIdFromLabel(label) as SitemapOptimizerCollectionKey,
+      label,
+      restCollection: collections[0] ?? "",
+      restCollections: collections,
+      enabled: collections.length > 0,
+    });
+  }
+
+  return options;
 }
 
 export function restCollectionsFromSelectedKeys(
@@ -41,8 +59,15 @@ export function restCollectionsFromSelectedKeys(
 ): string[] {
   const out: string[] = [];
   for (const opt of options) {
-    if (!selected.has(opt.key) || !opt.enabled || !opt.restCollection.trim()) continue;
-    if (!out.includes(opt.restCollection)) out.push(opt.restCollection);
+    if (!selected.has(opt.key) || !opt.enabled) continue;
+    const cols = opt.restCollections?.length
+      ? opt.restCollections
+      : opt.restCollection.trim()
+        ? [opt.restCollection]
+        : [];
+    for (const coll of cols) {
+      if (!out.includes(coll)) out.push(coll);
+    }
   }
   return out;
 }

@@ -275,6 +275,74 @@ export type LinkTargetsPlan = {
   blogTargets: LinkTargetPlanEntry[];
 };
 
+function normLinkPlanSectionTitleKey(title: string): string {
+  return title.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function allLinkTargetPlanEntries(plan: LinkTargetsPlan): LinkTargetPlanEntry[] {
+  return [...plan.pageTargets, ...plan.blogTargets];
+}
+
+/** Entries whose sectionHints include this H2 title (normalized match). */
+export function linkTargetEntriesForSection(
+  plan: LinkTargetsPlan,
+  sectionTitle: string,
+): LinkTargetPlanEntry[] {
+  const key = normLinkPlanSectionTitleKey(sectionTitle);
+  if (!key) return [];
+  return allLinkTargetPlanEntries(plan).filter((entry) =>
+    entry.sectionHints.some((hint) => normLinkPlanSectionTitleKey(hint) === key),
+  );
+}
+
+/** Per-H2 mandatory block appended to harness section user prompts. */
+export function formatLinkTargetsPlanForSection(
+  plan: LinkTargetsPlan,
+  sectionTitle: string,
+): string {
+  const entries = linkTargetEntriesForSection(plan, sectionTitle);
+  if (!entries.length) return "";
+
+  const lines = entries.map((entry, index) => {
+    const anchor = entry.suggestedAnchor?.trim()
+      ? ` → anchor "${entry.suggestedAnchor.trim()}"`
+      : "";
+    return `${index + 1}. [[LINK:${entry.query}|…]] — destination "${entry.title}" (copy query exactly)${anchor}`;
+  });
+
+  const assigned = entries.length;
+
+  return `
+=== THIS SECTION LINK ASSIGNMENTS (H2: ${sectionTitle.trim()}) ===
+You MUST emit ${MIN_INTERNAL_LINKS_PER_BODY_H2} to ${TARGET_INTERNAL_LINKS_PER_BODY_H2} distinct [[LINK:query|anchor]] placeholders in THIS section only (non-negotiable).
+First: emit one placeholder for EACH numbered assignment below (copy each query string exactly).
+Then: if you still have fewer than ${MIN_INTERNAL_LINKS_PER_BODY_H2} placeholders, add more [[LINK:query|anchor]] from PAGES or BLOG POSTS in the system prompt until you reach at least ${MIN_INTERNAL_LINKS_PER_BODY_H2}.
+${lines.join("\n")}
+Weave every [[LINK]] mid-sentence in prose and/or table cells. Spread across the section; never dump links after the final period.
+=== END THIS SECTION LINK ASSIGNMENTS ===`;
+}
+
+function formatLinkTargetsPlanPerSectionSummary(plan: LinkTargetsPlan): string {
+  const bySection = new Map<string, LinkTargetPlanEntry[]>();
+  for (const entry of allLinkTargetPlanEntries(plan)) {
+    for (const hint of entry.sectionHints) {
+      const key = hint.trim();
+      if (!key) continue;
+      const list = bySection.get(key) ?? [];
+      list.push(entry);
+      bySection.set(key, list);
+    }
+  }
+  if (!bySection.size) return "";
+  const blocks: string[] = ["## Per-section link counts (mandatory minimum per body H2)"];
+  for (const [title, entries] of bySection) {
+    blocks.push(
+      `- **${title}**: ${entries.length} assigned queries → emit at least ${Math.min(MIN_INTERNAL_LINKS_PER_BODY_H2, entries.length)} [[LINK]] placeholders (target ${Math.min(TARGET_INTERNAL_LINKS_PER_BODY_H2, entries.length)}).`,
+    );
+  }
+  return blocks.join("\n");
+}
+
 export function formatLinkTargetsPlanPrompt(plan: LinkTargetsPlan): string {
   const formatEntries = (entries: LinkTargetPlanEntry[], label: string) => {
     if (!entries.length) return "";
@@ -293,11 +361,12 @@ export function formatLinkTargetsPlanPrompt(plan: LinkTargetsPlan): string {
   const pageBlock = formatEntries(plan.pageTargets, "ASSIGNED PAGE LINKS (product/service/commercial)");
   const blogBlock = formatEntries(plan.blogTargets, "ASSIGNED BLOG LINKS (informational)");
   if (!pageBlock && !blogBlock) return "";
+  const perSectionSummary = formatLinkTargetsPlanPerSectionSummary(plan);
   return `
 === LINK TARGETS PLAN (predetermined — use these queries in [[LINK:query|anchor]]) ===
-${[pageBlock, blogBlock].filter(Boolean).join("\n\n")}
+${perSectionSummary ? `${perSectionSummary}\n\n` : ""}${[pageBlock, blogBlock].filter(Boolean).join("\n\n")}
 ${INTERNAL_LINK_INTENT_ROUTING_RULE}
-Use ${MIN_INTERNAL_LINKS_PER_BODY_H2}-${TARGET_INTERNAL_LINKS_PER_BODY_H2} [[LINK:query|anchor]] placeholders per body H2 section. Prefer plan entries whose sectionHints match this H2 before global entries.
+Every body H2 section (not Overview, not FAQ, not Answer) MUST include ${MIN_INTERNAL_LINKS_PER_BODY_H2}-${TARGET_INTERNAL_LINKS_PER_BODY_H2} distinct [[LINK:query|anchor]] placeholders. Use every assigned query for that H2 from the per-section summary before reusing queries.
 Copy each query string EXACTLY from this plan. Anchor must match suggested anchor casing or share words from the destination title in sentence case (brands capitalized only).
 Product, service, and brand terms: use ASSIGNED PAGE LINKS queries only. Informational terms: use ASSIGNED BLOG LINKS queries only.
 === END LINK TARGETS PLAN ===`;

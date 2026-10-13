@@ -21,6 +21,7 @@ import {
   BULK_HEADER_TOOL_BTN,
   BULK_TOOLBAR_GROUP_DIVIDER,
 } from "@/components/keyword-research/bulk/bulk-workspace-header-styles";
+import { cn } from "@/lib/utils";
 import type { MetaBulkMicroSnapshot } from "@/components/overview/OverviewBulkMicroProgress";
 import type { WordPressPostDestination } from "@/lib/bulk-auto-generate";
 import { WORDPRESS_POST_DESTINATION_SHORT } from "@/lib/bulk-auto-generate";
@@ -54,7 +55,7 @@ export type BulkCsvWorkspaceHeaderProps = {
   onCancel: () => void;
   onClear: () => void;
   scheduleMenu?: ReactNode;
-  sitemapMenu?: ReactNode;
+  sitemapScopeSlot?: ReactNode;
   detailsProps: BulkGeneratorDetailsPanelProps;
   onDetailsOpenChange?: (open: boolean) => void;
 };
@@ -83,7 +84,7 @@ export function BulkCsvWorkspaceHeader({
   onCancel,
   onClear,
   scheduleMenu,
-  sitemapMenu,
+  sitemapScopeSlot,
   detailsProps,
   onDetailsOpenChange,
 }: BulkCsvWorkspaceHeaderProps) {
@@ -106,9 +107,9 @@ export function BulkCsvWorkspaceHeader({
       onSectionChange={onSectionChange}
       sectionSwitchDisabled={isProcessing}
       titleRowMenu={
-        sitemapMenu || scheduleMenu ? (
-          <div className="flex shrink-0 items-center gap-0.5">
-            {sitemapMenu}
+        sitemapScopeSlot !== undefined || scheduleMenu ? (
+          <div className="flex shrink-0 items-center gap-2">
+            {sitemapScopeSlot !== undefined ? sitemapScopeSlot : null}
             {scheduleMenu}
           </div>
         ) : null

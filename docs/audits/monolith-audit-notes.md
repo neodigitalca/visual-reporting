@@ -16,9 +16,9 @@ Machine-readable list: [`monolith-inventory.json`](./monolith-inventory.json).
 | `src/lib/` | |
 | `src/components/` | |
 
-**Summary (2026-10-07 refresh):** 143 monoliths (≥500 lines). By area: **scripts 0** monoliths, `src/lib` 92, `src/components` 51. Regenerate: `node scripts/generate-monolith-inventory.mjs`.
+**Summary (2026-10-07 refresh):** 143 monoliths (≥500 lines) in code scan (`scripts` + `src/lib` + `src/components`). By area: **scripts code 0** monoliths, `src/lib` 92, `src/components` 51. Regenerate: `node scripts/generate-monolith-inventory.mjs`.
 
-**Scripts:** split into facades and part files (`chatgpt-login-ui-auth/submit`, `generate-api-docs-{scan,analyze,scaffold,core}`, `feature-playbooks.data-{a,b,pb}`, `recipe-catalog-{a,b1,b2}`). None remain ≥500 lines.
+**Scripts ≥500 (full tree, any extension):** Gate is `node scripts/audit-scripts-tree.mjs` (writes [`scripts-tree-500.json`](./scripts-tree-500.json)). Code-only inventory ignores `.json`; the tree gate does not. Former `scripts/searchconsole-v1.json` (1537 lines) was moved to [`docs/vendor/google/searchconsole-v1.json`](../vendor/google/searchconsole-v1.json) (unused in repo). **Current tree gate: 0 files ≥500 under `scripts/`.** Runnable script code remains split (`chatgpt-login-ui-*`, `generate-api-docs-*`, playbooks, recipe catalog facades); largest code ~475 lines.
 
 **Phase 2 shipped on `main`:** `bulk-auto-generate.ts`, `blog-template-builder` facade, `topic-research-fanout` facade, `content-sanitizer` facade, bulk row pipeline phases, workflow dispatch splits.
 

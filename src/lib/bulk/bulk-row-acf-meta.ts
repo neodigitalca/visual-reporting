@@ -1,6 +1,10 @@
 import type { CSVRow } from '@/lib/bulk/bulk-csv-parser';
 import type { KeywordAIAnalysis, KeywordData } from '@/lib/keyword-types';
 import type { OptimizedMetaFields } from '@/lib/meta-field-optimizer';
+import {
+  buildCompetitorFieldsValue,
+  isCompetitorCsvKeyword,
+} from '@/lib/competitor/competitor-csv-row';
 import { extractOriginFromSapTitle } from '@/lib/sap-origin-from-title';
 
 /** Populate ACF fields from DFS data for new posts (skipping GSC). */
@@ -18,6 +22,25 @@ export function populateACFFieldsFromDFS(
 
   if (!row.prompt_modifier && row.modifier) {
     acfFields.prompt_modifier = row.modifier;
+  }
+
+  const competitorRow = isCompetitorCsvKeyword(row.keyword);
+  const focusForFields =
+    row.keyword_focus?.trim() || keywordData?.keyword?.trim() || '';
+
+  if (competitorRow && row.sitemap_type === 'entity') {
+    const competitorName =
+      row.competitor?.trim() ||
+      (row.entity?.trim() && row.entity.trim() !== 'N/A' ? row.entity.trim() : '');
+    if (competitorName && focusForFields) {
+      if (!row.competitor?.trim()) {
+        acfFields.competitor = competitorName;
+      }
+      if (!row.competitor_fields?.trim()) {
+        acfFields.competitor_fields = buildCompetitorFieldsValue(competitorName, focusForFields);
+      }
+    }
+    return acfFields;
   }
 
   if (row.sitemap_type === 'entity' && !row.origin?.trim()) {

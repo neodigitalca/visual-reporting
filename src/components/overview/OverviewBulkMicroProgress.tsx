@@ -448,14 +448,20 @@ function EmbeddedMicroProgressRow({
   /** Multi-post batch: bar = finished posts only (0% until first completes). */
   const fillPct = allPagesDone
     ? 100
-    : pagesTotal > 1
-      ? pct
-      : typeof progressPct === "number" && Number.isFinite(progressPct)
-        ? progressPct
+    : typeof progressPct === "number" && Number.isFinite(progressPct)
+      ? progressPct
+      : pagesTotal > 1
+        ? pct
         : pagesTotal > 0
           ? pct
           : 0;
-  const inProgress = !idle && pagesTotal > 0 && pagesDone < pagesTotal;
+  const inProgress = !idle && (pagesTotal === 0 || pagesDone < pagesTotal);
+  /** Determinate 0→100 when total is known (same as Content Optimizer batch bar). */
+  const indeterminate =
+    inProgress &&
+    typeof progressPct !== "number" &&
+    pagesTotal === 0 &&
+    fillPct <= 0;
 
   return (
     <div
@@ -474,7 +480,7 @@ function EmbeddedMicroProgressRow({
         <HarnessNeonProgressBar
           variant="header"
           pct={fillPct}
-          indeterminate={false}
+          indeterminate={indeterminate}
           ariaLabel={barAriaLabel}
         />
       )}

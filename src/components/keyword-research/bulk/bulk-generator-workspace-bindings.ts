@@ -70,7 +70,10 @@ export type BulkGeneratorWorkspaceBindings = {
   hasGeneratedChecklist: boolean;
   handleGenerateChecklist: () => Promise<CSVRow[] | undefined>;
   sitemapInventoryLinks: PromptBulkSitemapInventoryLink[];
-  /** Hosted SITE_KW_JSON from GSC + Semrush scrape (Prompt Ideas). */
+  gscHostedLink?: import("@/lib/bulk/bulk-gsc-keywords-hosted-link").BulkGscKeywordsHostedLink | null;
+  sitemapInventoryLoading?: boolean;
+  promptSiteContextReady?: boolean;
+  /** @deprecated Use gscHostedLink from warm cache (Content Opt parity). */
   siteKwHostedLink?: import("@/lib/bulk/prompt-bulk-site-kw-scrape").PromptBulkSiteKwHostedLink | null;
   selectedBlogIndices: Set<number>;
   optionalPrompt: string;

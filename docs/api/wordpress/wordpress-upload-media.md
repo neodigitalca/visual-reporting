@@ -5,7 +5,7 @@ section: WordPress
 method: POST
 path: /api/wordpress/upload-media
 auth: open
-order: 2850
+order: 3290
 ---
 
 POST `/api/wordpress/upload-media`.

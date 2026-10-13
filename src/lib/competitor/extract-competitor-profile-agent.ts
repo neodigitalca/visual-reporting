@@ -1,5 +1,4 @@
-import { callOpenRouterChatCompletion } from "@/lib/competitor-research/competitor-report-openrouter";
-import { parseAssistantJsonObject } from "@/lib/competitor-research/competitor-report-json-parse";
+import { callOpenRouterJsonObject } from "@/lib/competitor-research/competitor-openrouter-json-object";
 import type { CompetitorPageMeta, CompetitorSiteProfile } from "@/lib/competitor/types";
 
 const PROFILE_SYSTEM = `You are a local business site analyst. Output ONLY valid JSON:
@@ -30,18 +29,18 @@ export async function runExtractCompetitorProfileAgent(args: {
     })),
   };
 
-  const { content } = await callOpenRouterChatCompletion({
+  const parsedRaw = await callOpenRouterJsonObject({
     apiKey: args.apiKey,
     model: args.model,
     system: PROFILE_SYSTEM,
     user: JSON.stringify(payload),
     maxTokens: 2048,
     temperature: 0.2,
-    responseFormat: { type: "json_object" },
     signal: args.signal,
+    allowEmptyOnFailure: true,
   });
 
-  const parsed = parseAssistantJsonObject(content) as {
+  const parsed = (parsedRaw ?? {}) as {
     services?: unknown;
     categories?: unknown;
     metaPatterns?: unknown;

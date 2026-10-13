@@ -52,36 +52,41 @@ export function ImageGeneratorWorkspaceHeader({
     ],
   );
 
-  let progressSnapshot: MetaBulkMicroSnapshot = {
-    label: "Image",
-    completed: 0,
-    total: 1,
-    statusMessage: "Ready",
-  };
-  if (generator.isGeneratingChecklist) {
-    progressSnapshot = {
-      label: "Checklist",
-      completed: 0,
-      total: 1,
-      statusMessage: "Building checklist…",
-    };
-  } else if (generator.isGenerating) {
-    progressSnapshot = {
-      label: "Image",
-      completed: 0,
-      total: 1,
-      statusMessage: "Gathering references and generating…",
-    };
-  } else if (generator.imageDisplayUrl) {
-    progressSnapshot = {
-      label: "Image",
-      completed: 1,
-      total: 1,
-      statusMessage: hasRefs
-        ? `References: ${generator.referenceResearch?.references.length ?? 0}`
-        : "Generated",
-    };
-  }
+  const progressSnapshot: MetaBulkMicroSnapshot | null = useMemo(() => {
+    if (generator.isGeneratingChecklist) {
+      return {
+        label: "Checklist",
+        completed: 0,
+        total: 1,
+        statusMessage: "Building checklist…",
+      };
+    }
+    if (generator.isGenerating) {
+      return {
+        label: "Image",
+        completed: 0,
+        total: 1,
+        statusMessage: "Gathering references and generating…",
+      };
+    }
+    if (generator.imageDisplayUrl) {
+      return {
+        label: "Image",
+        completed: 1,
+        total: 1,
+        statusMessage: hasRefs
+          ? `References: ${generator.referenceResearch?.references.length ?? 0}`
+          : "Generated",
+      };
+    }
+    return null;
+  }, [
+    generator.isGeneratingChecklist,
+    generator.isGenerating,
+    generator.imageDisplayUrl,
+    hasRefs,
+    generator.referenceResearch?.references.length,
+  ]);
 
   return (
     <BlogGeneratorWorkspaceChrome

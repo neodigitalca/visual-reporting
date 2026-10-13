@@ -35,7 +35,7 @@ import {
 } from "@/lib/content-generation/external-link-placeholders";
 import { repairHarnessHtmlForUpload } from "@/lib/content-generation/repair-harness-html";
 import { labelMapFromAnchorTargets } from "@/lib/content-generation/harness-link-leak-repair";
-import { applyLinkTargetsPlanToHtml } from "@/lib/content-generation/ensure-links-per-section";
+import { applyLinkTargetsPlanToHtmlDeterministic } from "@/lib/content-generation/ensure-links-per-section";
 
 export type HarnessUploadPrepWordPressPost = {
   id: number;
@@ -138,21 +138,18 @@ export async function prepareHarnessContentForUpload(
   }
 
   htmlContent = finalizeExternalLinksInHtml(htmlContent, externalUrlPairs);
-  htmlContent = repairHarnessHtmlForUpload(htmlContent, linkLeakOpts);
 
-  if (linkTargetsPlan && canResolveLinks && siteUrl && linkCatalog?.length && apiKey?.trim()) {
-    htmlContent = await applyLinkTargetsPlanToHtml({
+  if (linkTargetsPlan && siteUrl && linkCatalog?.length) {
+    htmlContent = applyLinkTargetsPlanToHtmlDeterministic({
       htmlContent,
       linkTargetsPlan,
       wordPressPosts: linkCatalog,
       currentPageUrl,
       siteUrl,
-      apiKey,
-      model,
-      signal,
-      siteId,
     });
   }
+
+  htmlContent = repairHarnessHtmlForUpload(htmlContent, linkLeakOpts);
 
   if (bodyAnchors.length > 0) {
     const overviewSection = extractOverviewSectionHtml(htmlContent);

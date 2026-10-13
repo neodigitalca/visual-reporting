@@ -138,3 +138,54 @@ export async function detectEntitySitemap(site: WordPressSite): Promise<string |
   return null;
 }
 
+/**
+ * Detects competitor comparison sitemap (competitor-sitemap.xml or /competitor/ URLs).
+ */
+export async function detectCompetitorEntitySitemap(site: WordPressSite): Promise<string | null> {
+  if (!site.sitemaps?.childSitemaps?.length) {
+    return null;
+  }
+  if (!site.username || !site.appPassword) {
+    return null;
+  }
+
+  for (const sitemapUrl of site.sitemaps.childSitemaps) {
+    const urlLower = sitemapUrl.toLowerCase();
+    if (
+      urlLower.includes('competitor-sitemap') ||
+      urlLower.includes('competitors-sitemap') ||
+      urlLower.includes('competitor_sitemap')
+    ) {
+      return sitemapUrl;
+    }
+  }
+
+  for (const sitemapUrl of site.sitemaps.childSitemaps) {
+    try {
+      const parseResult = await parseSitemap(
+        site.siteUrl,
+        sitemapUrl,
+        site.username,
+        site.appPassword,
+      );
+      if (!parseResult.urls?.length) continue;
+      let competitorPathCount = 0;
+      for (const url of parseResult.urls.slice(0, 25)) {
+        try {
+          const path = new URL(url).pathname.toLowerCase();
+          if (path.includes('/competitor/')) competitorPathCount++;
+        } catch {
+          /* skip */
+        }
+      }
+      if (competitorPathCount >= 1) {
+        return sitemapUrl;
+      }
+    } catch {
+      /* try next child */
+    }
+  }
+
+  return null;
+}
+

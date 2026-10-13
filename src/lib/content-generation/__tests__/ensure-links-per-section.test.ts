@@ -3,6 +3,7 @@ import {
   countEligibleHeadingSections,
   countInternalLinksInHtmlContent,
   applyLinkTargetsPlanToHtml,
+  applyLinkTargetsPlanToHtmlDeterministic,
   insertOneInternalLinkIntoHtml,
   type WordPressPost,
 } from "../ensure-links-per-section";
@@ -194,6 +195,35 @@ describe("applyLinkTargetsPlanToHtml", () => {
       apiKey: "",
     });
     expect(out).toBe(html);
+  });
+});
+
+describe("applyLinkTargetsPlanToHtmlDeterministic", () => {
+  it("adds at least two internal links per body H2 from plan and catalog", () => {
+    const html =
+      "<h2>Gear and Logistics</h2><p>Preparing for corporate glamping retreats involves thoughtful logistics.</p>";
+
+    const out = applyLinkTargetsPlanToHtmlDeterministic({
+      htmlContent: html,
+      linkTargetsPlan: planForSections([
+        { section: "Gear and Logistics", slug: "event-hosting", title: "Event Hosting", bucket: "pages" },
+        { section: "Gear and Logistics", slug: "custom-adventure", title: "Custom Adventure Packages", bucket: "pages" },
+      ]),
+      wordPressPosts: [
+        ...INVENTORY,
+        post(11, "event-hosting", "Event Hosting", "pages"),
+        post(12, "custom-adventure", "Custom Adventure Packages", "pages"),
+      ],
+      siteUrl: SITE_URL,
+    });
+
+    const posts = [
+      ...INVENTORY,
+      post(11, "event-hosting", "Event Hosting", "pages"),
+      post(12, "custom-adventure", "Custom Adventure Packages", "pages"),
+    ];
+    expect(countInternalLinksInHtmlContent(out, posts, SITE_URL)).toBeGreaterThanOrEqual(2);
+    expect(out).toMatch(/<a href="https:\/\/example\.com\//);
   });
 });
 

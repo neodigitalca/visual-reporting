@@ -3,6 +3,28 @@
  * Whole values omit .00; non-zero fractions keep two digits (8.40, 12.50%).
  */
 
+/** Compact display for large counts (1K, 10K, 1.2M). Values under 1,000 use grouped integers. */
+export function formatCanadianCompactNumber(n: number, maxFractionDigits = 1): string {
+  if (!Number.isFinite(n)) return String(n);
+  const sign = n < 0 ? "-" : "";
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000) {
+    return `${sign}${compactUnit(abs / 1_000_000, maxFractionDigits)}M`;
+  }
+  if (abs >= 1_000) {
+    return `${sign}${compactUnit(abs / 1_000, maxFractionDigits)}K`;
+  }
+  return formatCanadianNumber(Math.round(abs), 0);
+}
+
+function compactUnit(value: number, maxFractionDigits: number): string {
+  const factor = 10 ** maxFractionDigits;
+  const rounded = Math.round(value * factor) / factor;
+  if (Number.isInteger(rounded)) return String(rounded);
+  const fixed = rounded.toFixed(maxFractionDigits);
+  return fixed.replace(/\.?0+$/, "");
+}
+
 export function formatCanadianNumber(n: number, maxFractionDigits = 2): string {
   if (!Number.isFinite(n)) return String(n);
   const sign = n < 0 ? "-" : "";

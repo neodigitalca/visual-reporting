@@ -5,7 +5,7 @@ section: Google Business Profile
 method: POST
 path: /api/gmb/process-schedule-queue
 auth: open
-order: 260
+order: 270
 ---
 
 POST `/api/gmb/process-schedule-queue`.

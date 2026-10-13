@@ -17,6 +17,11 @@ import {
   formatSapChecklistExample,
   formatSapPageChecklistBlock,
 } from "@/lib/prompt-builders/sap-page-template";
+import { isCompetitorCsvKeyword } from "@/lib/competitor/competitor-csv-row";
+import {
+  formatCompetitorComparisonChecklistBlock,
+  formatCompetitorChecklistExample,
+} from "@/lib/prompt-builders/competitor-comparison-page-template";
 
 const LINK_FEATURE_PLACEHOLDER = `[LINK]: ${INTERNAL_LINK_PLACEHOLDER_FEATURE_SUFFIX}`;
 
@@ -95,7 +100,8 @@ Output ONLY the numbered checklist items, no additional text.`;
 }
 
 export function buildChecklistPromptMessages(ctx: ChecklistPromptContext): { system: string; user: string } {
-  const isServiceArea = Boolean(ctx.entity?.trim());
+  const competitorComparison = isCompetitorCsvKeyword(ctx.keywordData.keyword) && Boolean(ctx.entity?.trim());
+  const isServiceArea = Boolean(ctx.entity?.trim()) && !competitorComparison;
   const h2Section =
     ctx.selectedH2Sections.length > 0
       ? `\n--- Selected H2 Sections ---\n${ctx.selectedH2Sections.map((h2, i) => `${i + 1}. ${h2}`).join("\n")}\n`
@@ -151,9 +157,11 @@ FORBIDDEN: Never start a checklist line with "Create an agent", "Create a first 
 ${AUTHENTICITY_CHECKLIST_RULE}
 
 ${ctx.firstPartyAuthorityBlock?.trim() ? `${ctx.firstPartyAuthorityBlock.trim()}\n\n` : ""}${
-  isServiceArea
-    ? formatSapChecklistExample(ctx.entity!.trim(), ctx.title)
-    : checklistFormatExample(ctx.selectedH2Sections[0] ?? "Section Topic")
+  competitorComparison
+    ? formatCompetitorChecklistExample(ctx.entity!.trim(), ctx.title)
+    : isServiceArea
+      ? formatSapChecklistExample(ctx.entity!.trim(), ctx.title)
+      : checklistFormatExample(ctx.selectedH2Sections[0] ?? "Section Topic")
 }
 
 ${GLOBAL_FORBIDDEN_WORDS_PROMPT_BLOCK}`;
@@ -164,9 +172,15 @@ ${GLOBAL_FORBIDDEN_WORDS_PROMPT_BLOCK}`;
   }
   user += `Generate a focused checklist for creating a blog template blueprint.
 
-${isServiceArea ? formatSapPageChecklistBlock(ctx.entity!.trim()) : ""}
+${
+  competitorComparison
+    ? formatCompetitorComparisonChecklistBlock(ctx.entity!.trim(), ctx.connectedSite?.name ?? "")
+    : isServiceArea
+      ? formatSapPageChecklistBlock(ctx.entity!.trim())
+      : ""
+}
 
-${buildArticleLengthChecklistBlock(isServiceArea)}
+${buildArticleLengthChecklistBlock(isServiceArea || competitorComparison)}
 
 Blog Details:
 - Title: "${ctx.title}"
@@ -175,7 +189,7 @@ Blog Details:
 - Related Keywords: ${ctx.selectedKeywords.slice(0, 5).join(", ") || ctx.keywordData.keyword}
 
 Requirements:
-1. Create ${isServiceArea ? "6-7" : "5-6"} checklist items. ${isServiceArea ? "Follow SAP PAGE TEMPLATE (local problem, sourced local conditions, What We Offer, Local Recommendation table, Next Steps). Do not emit encyclopedia how-it-works jobs." : "Use the SERP H2 OUTLINE titles exactly as the first words on each checklist line. First H2 is never Introduction/Intro/What is X/Your Guide to X."}
+1. Create ${competitorComparison ? "9" : isServiceArea ? "6-7" : "5-6"} checklist items. ${competitorComparison ? "Follow COMPETITOR COMPARISON PAGE TEMPLATE (provider comparison, not SAP geo)." : isServiceArea ? "Follow SAP PAGE TEMPLATE (local problem, sourced local conditions, What We Offer, Local Recommendation table, Next Steps). Do not emit encyclopedia how-it-works jobs." : "Use the SERP H2 OUTLINE titles exactly as the first words on each checklist line. First H2 is never Introduction/Intro/What is X/Your Guide to X."}
 2. Each item must include mandatory markers: [STRUCTURE], [EXACT PRIMARY PER H2], [FOCUS KEYWORD DENSITY], [PARAGRAPH LENGTH], [WRITING DATE], [LINK].
 3. Include at least one [TABLE], one [LIST]: bullet, and one [LIST]: number (max 2 [TABLE] total). ${isServiceArea ? "The two tables are What We Offer and Local Recommendation (Product | Best for | Budget | Reason)." : "Put [DECISION] on one item, [TRADEOFF] on one item, [ILLUSTRATIVE] on one item, and [RECOMMENDATION] on the last item."}
 4. ${isServiceArea ? "Local Recommendation H2: four-column table plus connected business name." : "Last H2: site-first [RECOMMENDATION] with exact primary keyword once in body."}

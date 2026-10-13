@@ -5,7 +5,7 @@ section: DataForSEO MCP
 method: POST
 path: /api/mcp/DataForSEO_serp_google_maps_live_advanced
 auth: open
-order: 810
+order: 870
 ---
 
 POST `/api/mcp/DataForSEO_serp_google_maps_live_advanced`.

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { formatEdmontonClock } from "@/lib/edmonton-time";
+import { Clock } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatEdmontonCalendarTooltip } from "@/lib/edmonton-time";
 import { cn } from "@/lib/utils";
 
 type PulseAssistClockProps = {
@@ -7,21 +9,31 @@ type PulseAssistClockProps = {
 };
 
 export function PulseAssistClock({ className }: PulseAssistClockProps) {
-  const [label, setLabel] = useState(() => formatEdmontonClock());
+  const [tooltip, setTooltip] = useState(() => formatEdmontonCalendarTooltip());
 
   useEffect(() => {
-    setLabel(formatEdmontonClock());
-    const id = window.setInterval(() => setLabel(formatEdmontonClock()), 1000);
+    setTooltip(formatEdmontonCalendarTooltip());
+    const id = window.setInterval(() => setTooltip(formatEdmontonCalendarTooltip()), 1000);
     return () => window.clearInterval(id);
   }, []);
 
   return (
-    <div
-      className={cn("flex min-w-0 items-center gap-2 text-base text-muted-foreground", className)}
-      aria-live="off"
-    >
-      <span className="pulse-assist-clock__city shrink-0 text-muted-foreground">Edmonton</span>
-      <span className="min-w-0 truncate font-medium tabular-nums text-foreground">{label}</span>
-    </div>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "pulse-assist-panel-header__icon-btn pulse-assist-clock shrink-0 text-white",
+            className,
+          )}
+          aria-label={tooltip}
+        >
+          <Clock className="h-4 w-4 shrink-0" aria-hidden />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-none text-base">
+        {tooltip}
+      </TooltipContent>
+    </Tooltip>
   );
 }

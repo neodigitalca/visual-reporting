@@ -5,7 +5,7 @@ section: Knowledge Model
 method: GET
 path: /api/knowledge-model/progress/([a-zA-Z0-9-]+)
 auth: open
-order: 600
+order: 640
 ---
 
 GET `/api/knowledge-model/progress/([a-zA-Z0-9-]+)`.

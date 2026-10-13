@@ -28,6 +28,17 @@ type SlugAgentResponse = {
   slugs?: unknown;
 };
 
+function slugFallbackFromRow(row: CSVRow): string {
+  const kw = (row.keyword ?? "").trim();
+  const fromKw = sanitizeWordPressSlugSegment(kw.replace(/\s+/g, "-").toLowerCase());
+  if (fromKw.length >= 2) return fromKw.slice(0, 80);
+  const fromTitle = sanitizeWordPressSlugSegment(
+    (row.title ?? "").trim().toLowerCase().replace(/\s+/g, "-"),
+  );
+  if (fromTitle.length >= 2) return fromTitle.slice(0, 80);
+  return "blog-post";
+}
+
 function slugsFromOpenRouterContent(raw: string): string[] {
   try {
     const parsed = JSON.parse(raw) as SlugAgentResponse;
@@ -72,10 +83,7 @@ async function fetchSlugsBatch(
   });
 
   if (!response.ok) {
-    const errText = await response.text().catch(() => "");
-    throw new Error(
-      `URL slug agent failed (${response.status})${errText ? `: ${errText.slice(0, 200)}` : ""}`,
-    );
+    return rows.map((row) => slugFallbackFromRow(row));
   }
 
   const data = (await response.json()) as {
@@ -83,23 +91,15 @@ async function fetchSlugsBatch(
   };
   const raw = data.choices?.[0]?.message?.content ?? "";
   const slugs = slugsFromOpenRouterContent(raw);
-  if (slugs.length < rows.length) {
-    throw new Error(
-      `URL slug agent returned ${slugs.length}/${rows.length} slugs.`,
-    );
-  }
+  const out: string[] = [];
   for (let i = 0; i < rows.length; i++) {
-    const slug = slugs[i] ?? "";
+    let slug = (slugs[i] ?? "").trim();
     if (slug.length < 2) {
-      throw new Error(`URL slug agent returned an empty slug for row ${i + 1}.`);
+      slug = slugFallbackFromRow(rows[i]!);
     }
-    if (!slug.includes("-") && (rows[i]?.keyword ?? "").trim().includes(" ")) {
-      throw new Error(
-        `URL slug agent returned a non-hyphenated slug for row ${i + 1}. Regenerate Ideas.`,
-      );
-    }
+    out.push(slug);
   }
-  return slugs.slice(0, rows.length);
+  return out;
 }
 
 export type FillBlogRowSlugOptions = {
@@ -132,7 +132,12 @@ export async function fillBlogRowSlugFromOpenRouter(
         (_, j) => chunkStart + j,
       );
       const chunkRows = chunkIndices.map((i) => out[i]!);
-      const slugs = await fetchSlugsBatch(apiKey, model, options.siteId, chunkRows);
+      let slugs: string[];
+      try {
+        slugs = await fetchSlugsBatch(apiKey, model, options.siteId, chunkRows);
+      } catch {
+        slugs = chunkRows.map((row) => slugFallbackFromRow(row));
+      }
       for (let i = 0; i < chunkIndices.length; i++) {
         const idx = chunkIndices[i]!;
         out[idx] = { ...out[idx]!, target_slug: slugs[i] };

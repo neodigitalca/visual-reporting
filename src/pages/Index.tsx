@@ -38,9 +38,20 @@ import { useAutosave, loadDraft, clearDraft, hasDraft } from "../hooks/use-autos
 import { applyPrimaryHexToDocument, initPrimaryColorFromStorage } from "../hooks/use-persisted-color";
 import {
   type BlogGeneratorSectionId,
+  coerceBlogGeneratorSectionId,
   readStoredBlogGeneratorSection,
   writeStoredBlogGeneratorSection,
 } from "@/components/blog-generator/blog-generator-sections";
+import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { useWordPressSites } from "@/hooks/use-wordpress-sites";
+import { useActiveWordPressSite } from "@/contexts/active-wordpress-site-context";
+import { prefetchOrganicDashboardBundle } from "@/lib/organic-dashboard/organic-dashboard-prefetch";
+import {
+  NEO_PULSE_OPEN_ORGANIC_REPORTING_EVENT,
+  ORGANIC_REPORTING_MANAGER_TAB,
+  type OpenOrganicReportingDetail,
+} from "@/lib/organic-dashboard/organic-reporting-nav";
 import { DraftRecoveryDialog } from "../components/DraftRecoveryDialog";
 import { useGenerationProgress } from "../hooks/use-generation-progress";
 import { GenerationProgress } from "../components/GenerationProgress";
@@ -110,11 +121,16 @@ const VALID_MANAGER_TABS = new Set([
   "ppc-meta",
   "api",
   "pulse-forge",
+  "organic-reporting",
   "pulse-host",
 ]);
 
 const Index = () => {
   const { teamId } = useTeam();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { sites } = useWordPressSites();
+  const { activeWordPressSiteId, setActiveWordPressSiteId } = useActiveWordPressSite();
   const { hydrateScopeFromRun, clearAgentRunOptimizerScope, scope: agentRunOptimizerScope } =
     useAgentRunOptimizerScope();
   const [apiKey, setApiKey] = useState<string>(loadApiKey());
@@ -123,6 +139,9 @@ const Index = () => {
   const [managerTab, setManagerTab] = useState<string>(() => {
     try {
       const hashTab = window.location.hash.replace(/^#/, "").trim();
+      if (hashTab === ORGANIC_REPORTING_MANAGER_TAB) {
+        return ORGANIC_REPORTING_MANAGER_TAB;
+      }
       if (parseAgentRunIdFromLocationHash() !== null || isGeneratorHash(window.location.hash)) {
         return "generator";
       }
@@ -225,10 +244,64 @@ const Index = () => {
     []
   );
 
+  const openOrganicReportingTab = useCallback(
+    (siteId: string) => {
+      const enabled = sites.filter((s) => s.enabled !== false);
+      const site = enabled.find((s) => s.id === siteId);
+      if (!site) return;
+      prefetchOrganicDashboardBundle(queryClient, site);
+      setActiveWordPressSiteId(site.id);
+      handleManagerTabChange(ORGANIC_REPORTING_MANAGER_TAB);
+    },
+    [sites, queryClient, setActiveWordPressSiteId, handleManagerTabChange],
+  );
+
+  useEffect(() => {
+    const onOpen = (event: Event) => {
+      const detail = (event as CustomEvent<OpenOrganicReportingDetail>).detail;
+      if (detail?.siteId) openOrganicReportingTab(detail.siteId);
+    };
+    window.addEventListener(NEO_PULSE_OPEN_ORGANIC_REPORTING_EVENT, onOpen);
+    return () => window.removeEventListener(NEO_PULSE_OPEN_ORGANIC_REPORTING_EVENT, onOpen);
+  }, [openOrganicReportingTab]);
+
+  useEffect(() => {
+    const syncTabFromHash = () => {
+      const hashTab = window.location.hash.replace(/^#/, "").trim();
+      if (hashTab === ORGANIC_REPORTING_MANAGER_TAB && managerTab !== ORGANIC_REPORTING_MANAGER_TAB) {
+        setManagerTab(ORGANIC_REPORTING_MANAGER_TAB);
+      }
+    };
+    syncTabFromHash();
+    window.addEventListener("hashchange", syncTabFromHash);
+    return () => window.removeEventListener("hashchange", syncTabFromHash);
+  }, [managerTab]);
+
+  const navigateToOrganicReporting = useCallback(() => {
+    const enabled = sites.filter((s) => s.enabled !== false);
+    const site =
+      (activeWordPressSiteId
+        ? enabled.find((s) => s.id === activeWordPressSiteId)
+        : undefined) ?? enabled[0];
+    if (site) {
+      openOrganicReportingTab(site.id);
+      return;
+    }
+    handleManagerDashboardClusterChange("properties");
+    handleManagerTabChange("dashboard");
+  }, [
+    sites,
+    activeWordPressSiteId,
+    openOrganicReportingTab,
+    handleManagerDashboardClusterChange,
+    handleManagerTabChange,
+  ]);
+
   const navigateToGeneratorSection = useCallback(
     (section: BlogGeneratorSectionId, options?: { keepAgentScope?: boolean }) => {
+      const coerced = coerceBlogGeneratorSectionId(section);
       try {
-        writeStoredBlogGeneratorSection(section);
+        writeStoredBlogGeneratorSection(coerced);
         localStorage.setItem(MANAGER_TAB_STORAGE_KEY, "generator");
       } catch {
         /* ignore */
@@ -239,7 +312,7 @@ const Index = () => {
       setManagerTab("generator");
       if (!options?.keepAgentScope) {
         try {
-          writeGeneratorSectionHash(section);
+          writeGeneratorSectionHash(coerced);
         } catch {
           /* ignore */
         }
@@ -252,11 +325,14 @@ const Index = () => {
     const runId = parseAgentRunIdFromLocationHash();
     if (runId && teamId) {
       const section = parseGeneratorSectionFromHash(window.location.hash);
-      if (section && readStoredBlogGeneratorSection() !== section) {
-        try {
-          writeStoredBlogGeneratorSection(section as BlogGeneratorSectionId);
-        } catch {
-          /* ignore */
+      if (section) {
+        const coerced = coerceBlogGeneratorSectionId(section);
+        if (readStoredBlogGeneratorSection() !== coerced) {
+          try {
+            writeStoredBlogGeneratorSection(coerced);
+          } catch {
+            /* ignore */
+          }
         }
       }
       if (agentRunOptimizerScope?.runId === runId) {
@@ -313,9 +389,15 @@ const Index = () => {
         onPulseForgeHash: (hash) => {
           setPulseForgeHash(parsePulseForgeRouteFromHash(hash.startsWith("#") ? hash : `#${hash}`));
         },
+        onOrganicReporting: navigateToOrganicReporting,
       });
     },
-    [handleManagerTabChange, navigateToGeneratorSection, handleManagerDashboardClusterChange],
+    [
+      handleManagerTabChange,
+      navigateToGeneratorSection,
+      handleManagerDashboardClusterChange,
+      navigateToOrganicReporting,
+    ],
   );
 
   const [knowledgeFiles, setKnowledgeFiles] = useState<StoredFile[]>([]);

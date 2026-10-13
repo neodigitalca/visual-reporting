@@ -1,4 +1,6 @@
 import type { WordPressSite } from "@/components/IntegrationsTab";
+import type { GscSiteQueryRow } from "@/lib/competitor-research/types";
+import { sortGscQueriesByStats } from "@/lib/bulk/bulk-gsc-site-queries";
 import {
   isBlockedContentTopicPhrase,
 } from "@/lib/content-topic-blocklist";
@@ -123,6 +125,30 @@ export function revokePromptBulkSiteKwHostedLink(
   link: PromptBulkSiteKwHostedLink | null | undefined,
 ): void {
   revokePressReleaseInventoryHostedLink(link?.href);
+}
+
+export function buildPromptBulkSiteKwFromGscQueries(
+  site: WordPressSite,
+  queries: GscSiteQueryRow[],
+): PromptBulkSiteKwScrapeResult {
+  const siteUrl = site.siteUrl?.trim() || "";
+  const companyName = site.name?.trim() || "";
+  const gscRows = sortGscQueriesByStats(queries.filter((q) => q.query?.trim()))
+    .map((row) => row.query.trim());
+  const json: PromptBulkSiteKwJson = {
+    siteUrl,
+    generatedAt: new Date().toISOString(),
+    sortMethod: "GSC queries sorted by clicks and impressions (metrics stripped for Ideas).",
+    semrush: [],
+    gsc: uniqueKeywords(gscRows, 500, companyName),
+  };
+  const keywordsJsonText = JSON.stringify(json, null, 2);
+  const hostedLink = createPromptBulkSiteKwHostedLink(
+    siteUrl,
+    keywordsJsonText,
+    json.gsc.length + json.semrush.length,
+  );
+  return { json, keywordsJsonText, hostedLink };
 }
 
 export async function scrapePromptBulkSiteKwJson(

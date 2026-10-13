@@ -7,6 +7,8 @@ import {
 } from "@/lib/competitor/filter-connected-site-competitors";
 import type { CompetitorPageMeta } from "@/lib/competitor/types";
 import type { CompetitorGridPlaceRow } from "@/lib/competitor-research/local-dominator-grid-parse";
+import { profileGeoToDataForSeoLocationName } from "@/lib/competitor-research/dfs-profile-location-name";
+import { resolveProfileMapsGeo } from "@/lib/competitor-research/discover-competitor-places-from-dfs";
 import { getPublicSiteUrl } from "@/lib/wordpress-site-public-url";
 import type { WordPressSite } from "@/components/integrations/types";
 
@@ -131,6 +133,14 @@ function serpLocationFromPlace(site: WordPressSite, place: CompetitorGridPlaceRo
     return {
       locationCoordinate: `${place.latitude},${place.longitude},10000`,
     };
+  }
+  if (place.dfsKeyword.startsWith("host:")) {
+    try {
+      const geo = resolveProfileMapsGeo(site);
+      return { locationName: profileGeoToDataForSeoLocationName(geo) };
+    } catch {
+      /* profile geo unavailable */
+    }
   }
   const fromSite = hostnameFromUrl(getPublicSiteUrl(site));
   if (fromSite?.endsWith(".ca")) {

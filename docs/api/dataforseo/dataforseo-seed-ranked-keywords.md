@@ -5,7 +5,7 @@ section: DataForSEO
 method: POST
 path: /api/dataforseo/seed-ranked-keywords
 auth: open
-order: 120
+order: 130
 ---
 
 POST `/api/dataforseo/seed-ranked-keywords`.

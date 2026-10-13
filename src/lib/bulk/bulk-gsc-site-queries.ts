@@ -1,5 +1,8 @@
 import type { WordPressSite } from "@/components/integrations/types";
-import { fetchCompetitorGscQueries } from "@/lib/competitor-research/competitor-gsc-queries";
+import {
+  COMPETITOR_GSC_QUERY_ROW_LIMIT,
+  fetchCompetitorGscQueries,
+} from "@/lib/competitor-research/competitor-gsc-queries";
 import type { GscCompetitorDateRange, GscSiteQueryRow } from "@/lib/competitor-research/types";
 import { isBlockedContentTopicPhrase } from "@/lib/content-topic-blocklist";
 import { isOffensiveGscQuery } from "@/lib/gsc-offensive-word-blocklist";
@@ -10,8 +13,8 @@ export const BULK_GSC_QUERY_ROW_LIMIT = 10000;
 /** Extra GSC rows beyond SAP budget so short-tail filtering still has candidates. */
 export const ENTITY_GSC_ROW_BUFFER = 20;
 
-/** Max GSC rows fetched into the entity site warm cache (full property export). */
-export const ENTITY_SITE_WARM_GSC_ROW_LIMIT = BULK_GSC_QUERY_ROW_LIMIT;
+/** Max GSC rows in entity site warm cache and Details drawer export (last 90 days). */
+export const ENTITY_SITE_WARM_GSC_ROW_LIMIT = COMPETITOR_GSC_QUERY_ROW_LIMIT;
 
 /** GSC fetch rowLimit for Entity Clusters: SAP budget + buffer (not full history / 10k). */
 export function entityGscRowLimitForSapBudget(sapRowCount: number): number {

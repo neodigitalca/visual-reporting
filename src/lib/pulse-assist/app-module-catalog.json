@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-09-16T16:16:14.191Z",
+  "generatedAt": "2026-10-11T14:54:14.993Z",
   "modules": [
     {
       "id": "dashboard/properties",
@@ -128,7 +128,7 @@
         "GBP credentials"
       ],
       "relatedModules": [
-        "generator/report",
+        "reporting/performance",
         "gbp-post"
       ]
     },
@@ -451,23 +451,24 @@
       ]
     },
     {
-      "id": "generator/report",
-      "label": "Report",
-      "menuPath": "SEO → Generator → Report",
-      "section": "seo",
-      "hash": "#generator",
-      "pulseNav": "pulse:nav/generator/report",
-      "managerTab": "generator",
-      "generatorSection": "report",
-      "description": "GSC reporting and performance analytics.",
+      "id": "reporting/performance",
+      "label": "Performance",
+      "menuPath": "Reporting → Performance",
+      "section": "reporting",
+      "hash": "#reporting",
+      "pulseNav": "pulse:nav/reporting/performance",
+      "managerTab": "reporting-performance",
+      "description": "Organic reporting dashboard: GA4, Search Console, client PDF deck, and share links.",
       "aliases": [
         "gsc report",
         "reporting",
-        "gsc reporting"
+        "gsc reporting",
+        "organic dashboard",
+        "client report"
       ],
       "relatedModules": [
         "dashboard/google",
-        "generator/opt"
+        "dashboard/properties"
       ]
     },
     {
@@ -507,7 +508,7 @@
         "benchmarks"
       ],
       "relatedModules": [
-        "generator/report"
+        "reporting/performance"
       ]
     },
     {
@@ -1445,33 +1446,33 @@
       ]
     },
     {
-      "id": "generator/report/overview",
-      "moduleId": "generator/report",
-      "label": "GSC reporting",
-      "question": "How do I view GSC reports?",
-      "pulseNav": "pulse:nav/generator/report",
+      "id": "reporting/performance/overview",
+      "moduleId": "reporting/performance",
+      "label": "Organic reporting",
+      "question": "How do I view GSC and GA4 performance reports?",
+      "pulseNav": "pulse:nav/reporting/performance",
       "steps": [
-        "Open [SEO → Generator → Report](pulse:nav/generator/report).",
-        "Select a connected property with GSC configured.",
-        "Browse performance reporting tabs and date ranges."
+        "Open [Reporting → Performance](pulse:nav/reporting/performance).",
+        "Select a connected property with GSC and GA4 configured.",
+        "Use the date range control and section pills (Performance, Indexing, Speed)."
       ],
       "aliases": [
         "gsc report",
         "gsc reporting",
-        "search console report"
+        "search console report",
+        "organic reporting"
       ]
     },
     {
-      "id": "generator/report/ppc",
-      "moduleId": "generator/report",
-      "label": "PPC reporting",
+      "id": "reporting/performance/ppc",
+      "moduleId": "reporting/performance",
+      "label": "PPC reporting tasks",
       "question": "How do I generate a Google Ads PPC report?",
-      "pulseNav": "pulse:nav/generator/report",
+      "pulseNav": "pulse:nav/reporting/performance",
       "steps": [
-        "Open [SEO → Generator → Report](pulse:nav/generator/report).",
-        "Select the **PPC** mode pill.",
-        "Use a property with a 10-digit Google Ads customer ID on Dashboard → Properties.",
-        "Click **Generate** on the black toolbar, or install ads-monthly-mom-report / ads-monthly-yoy-report on Pulse Forge."
+        "Use Pulse Forge recipes **ads-monthly-mom-report** or **ads-monthly-yoy-report** for automated PPC markdown reports.",
+        "Assign a property with a 10-digit Google Ads customer ID on Dashboard → Properties.",
+        "Track runs under Forge → Task Builder or agent runs."
       ],
       "aliases": [
         "ppc report",

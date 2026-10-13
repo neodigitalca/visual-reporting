@@ -63,21 +63,42 @@ export function buildLinkTargetQueries(args: {
   for (let i = 0; i < sections.length; i++) {
     const sectionTitle = sections[i]!;
     const words = queryWordsFromTitle(sectionTitle);
+    const base = words || sectionTitle;
+    const tokens = base.split(/\s+/).filter(Boolean);
+    const tailWords = tokens.slice(Math.max(0, tokens.length - 5)).join(" ") || base;
+    const headWords = tokens.slice(0, 5).join(" ") || base;
+    const keywordTail =
+      keyword && tokens.length
+        ? `${keyword} ${tokens.slice(0, 3).join(" ")}`.trim()
+        : base;
+
     queries.push({
-      id: `section-${i}-page`,
-      query: words || sectionTitle,
+      id: `section-${i}-page-a`,
+      query: headWords,
       anchor: sectionTitle,
       bucket: "PAGE",
     });
     queries.push({
-      id: `section-${i}-blog`,
-      query: words || sectionTitle,
+      id: `section-${i}-page-b`,
+      query: keywordTail || base,
+      anchor: sectionTitle,
+      bucket: "PAGE",
+    });
+    queries.push({
+      id: `section-${i}-blog-a`,
+      query: base,
       anchor: sectionTitle,
       bucket: "BLOG",
     });
     queries.push({
-      id: `section-${i}-related`,
-      query: words || sectionTitle,
+      id: `section-${i}-blog-b`,
+      query: tailWords,
+      anchor: sectionTitle,
+      bucket: "BLOG",
+    });
+    queries.push({
+      id: `section-${i}-page-c`,
+      query: keyword || headWords,
       anchor: sectionTitle,
       bucket: "PAGE",
     });
@@ -163,7 +184,7 @@ export function formatLinkTargetsPlanMarkdown(plan: LinkTargetsPlan): string {
   return lines.join("\n").trim();
 }
 
-/** Intent match: one page + one blog query per section, one pick each (~2×sections + 1 links). */
+/** Intent match: five distinct queries per body H2 section, one pick each (~5×sections + 1 global). */
 export async function runContentLinkTargetsHarness(args: {
   apiKey: string;
   siteId: string;

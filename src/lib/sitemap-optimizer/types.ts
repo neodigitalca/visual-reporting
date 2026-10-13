@@ -3,8 +3,14 @@ import type { GridCompressionLevel } from "@/lib/sitemap-optimizer/grid-compress
 
 export type { GridCompressionLevel } from "@/lib/sitemap-optimizer/grid-compression-policy";
 
-/** User-selectable REST collections for a run. */
-export type SitemapOptimizerCollectionKey = "posts" | "pages" | "entity";
+/** User-selectable REST collections for a run. Built-ins plus `custom:{slug}` from property tags. */
+export type SitemapOptimizerCollectionKey = "posts" | "pages" | "entity" | `custom:${string}`;
+
+export function isCustomSitemapOptimizerCollectionKey(
+  key: string,
+): key is `custom:${string}` {
+  return key.startsWith("custom:");
+}
 
 export type SitemapOptimizerGscDateRange = {
   startDate: string;

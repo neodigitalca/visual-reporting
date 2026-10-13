@@ -5,8 +5,8 @@ import {
 } from "@/lib/bulk/prompt-bulk-keyword-focus-agent";
 import type { CSVRow } from "@/lib/bulk/bulk-csv-parser";
 
-vi.mock("@/lib/openrouter-agent-category-api", () => ({
-  callAgentCategoryOpenRouterChat: vi.fn(),
+vi.mock("@/lib/openrouter-app-api", () => ({
+  postOpenRouterAppChat: vi.fn(),
 }));
 
 describe("validateDistilledFocusKeyword", () => {
@@ -37,10 +37,8 @@ describe("fillBlogRowKeywordFocusFromOpenRouter", () => {
   });
 
   it("sets keyword and keyword_focus from agent output", async () => {
-    const { callAgentCategoryOpenRouterChat } = await import(
-      "@/lib/openrouter-agent-category-api"
-    );
-    vi.mocked(callAgentCategoryOpenRouterChat).mockResolvedValue({
+    const { postOpenRouterAppChat } = await import("@/lib/openrouter-app-api");
+    vi.mocked(postOpenRouterAppChat).mockResolvedValue({
       content: JSON.stringify({
         focusKeywords: ["hunter douglas top down shades"],
       }),
@@ -67,10 +65,8 @@ describe("fillBlogRowKeywordFocusFromOpenRouter", () => {
   });
 
   it("preserves user-locked slot keyword but still sets keyword_focus", async () => {
-    const { callAgentCategoryOpenRouterChat } = await import(
-      "@/lib/openrouter-agent-category-api"
-    );
-    vi.mocked(callAgentCategoryOpenRouterChat).mockResolvedValue({
+    const { postOpenRouterAppChat } = await import("@/lib/openrouter-app-api");
+    vi.mocked(postOpenRouterAppChat).mockResolvedValue({
       content: JSON.stringify({
         focusKeywords: ["custom blinds edmonton"],
       }),
@@ -89,11 +85,41 @@ describe("fillBlogRowKeywordFocusFromOpenRouter", () => {
     expect(out[0]!.keyword_focus).toBe("custom blinds edmonton");
   });
 
+  it("retries when first focus keyword is blocklisted", async () => {
+    const { postOpenRouterAppChat } = await import("@/lib/openrouter-app-api");
+    vi.mocked(postOpenRouterAppChat)
+      .mockResolvedValueOnce({
+        content: JSON.stringify({
+          focusKeywords: ["healthy meal prep guide"],
+        }),
+        raw: {},
+      })
+      .mockResolvedValueOnce({
+        content: JSON.stringify({
+          focusKeywords: ["healthy meal prep"],
+        }),
+        raw: {},
+      });
+
+    const rows: CSVRow[] = [
+      {
+        keyword: "Healthy Meal Prep Guide",
+        title: "Healthy Meal Prep Guide For Busy Weeks",
+      },
+    ];
+
+    const out = await fillBlogRowKeywordFocusFromOpenRouter(rows, {
+      apiKey: "sk-test",
+      strict: true,
+    });
+
+    expect(postOpenRouterAppChat).toHaveBeenCalledTimes(2);
+    expect(out[0]!.keyword_focus).toBe("healthy meal prep");
+  });
+
   it("throws when agent JSON is invalid", async () => {
-    const { callAgentCategoryOpenRouterChat } = await import(
-      "@/lib/openrouter-agent-category-api"
-    );
-    vi.mocked(callAgentCategoryOpenRouterChat).mockResolvedValue({
+    const { postOpenRouterAppChat } = await import("@/lib/openrouter-app-api");
+    vi.mocked(postOpenRouterAppChat).mockResolvedValue({
       content: "not json at all",
       raw: {},
     });

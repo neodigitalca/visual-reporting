@@ -8,6 +8,10 @@ function parseImageFeature(feature: string): { alt: string; url: string } | null
 }
 
 import { TABLE_NO_LINK_ONLY_COLUMN_RULE } from "@/lib/prompt-builders/table-prompt-rules";
+import {
+  MIN_INTERNAL_LINKS_PER_BODY_H2,
+  TARGET_INTERNAL_LINKS_PER_BODY_H2,
+} from "@/lib/content-generation/link-anchor-text-case";
 
 /** Writer contract: markdown quotes use `>`, never the word blockquote as a wrapper. */
 export const MARKDOWN_QUOTE_OUTPUT_RULE =
@@ -100,8 +104,8 @@ export const mapFeatureToInstruction = (
   // 3. Link placeholders (harness internal links)
   if (normalizedFeature.startsWith("[link]")) {
     return useMarkdown
-      ? "[LINK: Use 3–5 [[LINK:query|anchor]] placeholders woven into sentences. Brand, product, and service queries use PAGES titles. Informational queries use BLOG POSTS titles. No raw https:// internal URLs.]"
-      : "[LINK: Use 3–5 [[LINK:query|anchor]] placeholders woven into sentences. Brand, product, and service queries use PAGES titles. Informational queries use BLOG POSTS titles. No raw https:// internal URLs in body HTML.]";
+      ? `[LINK: Use ${MIN_INTERNAL_LINKS_PER_BODY_H2}-${TARGET_INTERNAL_LINKS_PER_BODY_H2} [[LINK:query|anchor]] placeholders woven into sentences and table cells. Brand, product, and service queries use PAGES titles. Informational queries use BLOG POSTS titles. No raw https:// internal URLs.]`
+      : `[LINK: Use ${MIN_INTERNAL_LINKS_PER_BODY_H2}-${TARGET_INTERNAL_LINKS_PER_BODY_H2} [[LINK:query|anchor]] placeholders woven into sentences and table cells. Brand, product, and service queries use PAGES titles. Informational queries use BLOG POSTS titles. No raw https:// internal URLs in body HTML.]`;
   }
 
   // 4. Original switch for predefined features

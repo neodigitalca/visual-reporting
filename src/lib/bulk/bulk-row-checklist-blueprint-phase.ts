@@ -26,6 +26,7 @@ import type { LinkTargetsPlan } from "./bulk-generation-wp-inventory";
 import { getBulkGenerationWpInventoryIfReady } from "./bulk-generation-inventory-cache-store";
 import { runContentLinkTargetsHarness } from "../overview/overview-content-link-targets-harness-run";
 import { OptimizationFileManager } from "../optimization-file-manager";
+import { resolveBulkPrimaryKeyword } from "./bulk-primary-keyword";
 import { bulkRowSerpLocationName } from "./bulk-row-research-enrichment";
 import type { ExternalLinkPair } from "../content-generation/external-link-placeholders";
 import type { LlmAuditAuthorityLinkLike } from "./modifier-external-links";
@@ -134,6 +135,8 @@ export async function runBulkRowChecklistAndBlueprintPhase(input: {
     // Generate checklist (after SERP + LLM brief)
     options.onProgress?.(rowIndex, 0, 'Reading blacklist...');
     options.onProgress?.(rowIndex, 0, 'Generating checklist...');
+    const prosePrimaryKeyword = resolveBulkPrimaryKeyword(row, enrichedRow, keywordData, enrichedRow.title);
+
     let checklistResult = await generateChecklistFromSelections(
       selectedKeywords,
       selectedH2Sections,
@@ -165,7 +168,7 @@ export async function runBulkRowChecklistAndBlueprintPhase(input: {
         dfsArticleAuditBlock: dfsArticleAuditBlock || undefined,
         firstPartyAuthorityBlock: firstPartyAuthorityBlock || undefined,
         siteId: serpSite?.id ?? connectedSite?.id,
-        primaryKeyword: keywordData.keyword,
+        primaryKeyword: prosePrimaryKeyword,
         currentPageUrl: destinationPageUrl || undefined,
         ...(llmAuditAuthorityLinks.length ? { llmAuditAuthorityLinks } : {}),
         ...(importedH2Outline.length ? { importedH2Outline } : {}),
@@ -250,7 +253,7 @@ export async function runBulkRowChecklistAndBlueprintPhase(input: {
       linkTargetsPlan = await runContentLinkTargetsHarness({
         apiKey: linkApiKey,
         siteId: linkSiteId,
-        primaryKeyword: keywordData.keyword,
+        primaryKeyword: prosePrimaryKeyword,
         bodySectionTitles: bodyTitlesForLinkPlan,
         linkPool: bulkPostsToExtraTextLinkRows(linkPoolSource),
         fileManager: linkOptFileManager,

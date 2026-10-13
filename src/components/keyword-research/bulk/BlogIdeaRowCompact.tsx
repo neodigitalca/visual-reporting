@@ -30,6 +30,7 @@ import { buildSapSlugFromKeywordEntity } from "@/lib/sap-slug-from-keyword-entit
 import { googleDirectionsSearchUrl } from "@/lib/google-directions-search-url";
 import { PPC_CAMPAIGN_ROW_FIELD_CELL } from "@/components/ppc/google/google-ads-row-constants";
 import { PPC_DETAIL_INPUT_CLASS } from "@/components/ppc/google/google-ads-row-details-styles";
+import { BULK_GENERATOR_ROW_GRID_MIN_CLASS } from "@/components/keyword-research/blog-generator-tab-classes";
 import { cn } from "@/lib/utils";
 import type { CSSProperties, ReactNode } from "react";
 
@@ -38,27 +39,34 @@ const EXPANDED_INPUT_CLASS = "min-h-9 min-w-0";
 
 /** Left select | title (1fr) | keyword (1fr) | expand. */
 const BLOG_IDEA_ROW_GRID_CLASS = cn(
-  "grid w-full min-w-0 min-h-[3rem] grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)_minmax(4.75rem,auto)] items-center gap-x-2 sm:min-h-[3.25rem] sm:gap-x-3",
+  "grid w-full min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)_minmax(4.75rem,auto)] items-center gap-x-2 sm:gap-x-3",
+  BULK_GENERATOR_ROW_GRID_MIN_CLASS,
 );
 /** Left select | title | keyword | publish date | expand. */
 const BLOG_IDEA_ROW_GRID_WITH_DATE_CLASS = cn(
-  "grid w-full min-w-0 min-h-[3rem] grid-cols-[2.25rem_minmax(0,1.2fr)_minmax(0,1fr)_minmax(7.5rem,0.7fr)_minmax(4.75rem,auto)] items-center gap-x-2 sm:min-h-[3.25rem] sm:gap-x-3",
+  "grid w-full min-w-0 grid-cols-[2.25rem_minmax(0,1.2fr)_minmax(0,1fr)_minmax(7.5rem,0.7fr)_minmax(4.75rem,auto)] items-center gap-x-2 sm:gap-x-3",
+  BULK_GENERATOR_ROW_GRID_MIN_CLASS,
 );
 const BLOG_IDEA_ROW_SLOT_GRID_CLASS = cn(
-  "grid w-full min-w-0 min-h-[3rem] grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)_minmax(4.75rem,auto)] items-center gap-x-2 sm:min-h-[3.25rem] sm:gap-x-3",
+  "grid w-full min-w-0 grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)_minmax(4.75rem,auto)] items-center gap-x-2 sm:gap-x-3",
+  BULK_GENERATOR_ROW_GRID_MIN_CLASS,
 );
 const BLOG_PROMPT_SLOT_INPUT_CLASS = cn(PPC_DETAIL_INPUT_CLASS, "h-9 w-full min-w-0 text-zinc-100");
 const BLOG_IDEA_ROW_GRID_NO_SELECT_CLASS = cn(
-  "grid w-full min-w-0 min-h-[3rem] grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(4.75rem,auto)] items-center gap-x-2 sm:min-h-[3.25rem] sm:gap-x-3",
+  "grid w-full min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(4.75rem,auto)] items-center gap-x-2 sm:gap-x-3",
+  BULK_GENERATOR_ROW_GRID_MIN_CLASS,
 );
 const BLOG_IDEA_ROW_GRID_NO_SELECT_WITH_DEST_CLASS = cn(
-  "grid w-full min-w-0 min-h-[3rem] grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(7.5rem,0.7fr)_minmax(4.75rem,auto)] items-center gap-x-2 sm:min-h-[3.25rem] sm:gap-x-3",
+  "grid w-full min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(7.5rem,0.7fr)_minmax(4.75rem,auto)] items-center gap-x-2 sm:gap-x-3",
+  BULK_GENERATOR_ROW_GRID_MIN_CLASS,
 );
 const BLOG_IDEA_ROW_GRID_NO_SELECT_WITH_DATE_CLASS = cn(
-  "grid w-full min-w-0 min-h-[3rem] grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(7.5rem,0.7fr)_minmax(4.75rem,auto)] items-center gap-x-2 sm:min-h-[3.25rem] sm:gap-x-3",
+  "grid w-full min-w-0 grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(7.5rem,0.7fr)_minmax(4.75rem,auto)] items-center gap-x-2 sm:gap-x-3",
+  BULK_GENERATOR_ROW_GRID_MIN_CLASS,
 );
 const BLOG_IDEA_ROW_GRID_NO_SELECT_WITH_DEST_DATE_CLASS = cn(
-  "grid w-full min-w-0 min-h-[3rem] grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(7.5rem,0.7fr)_minmax(7.5rem,0.7fr)_minmax(4.75rem,auto)] items-center gap-x-2 sm:min-h-[3.25rem] sm:gap-x-3",
+  "grid w-full min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(7.5rem,0.7fr)_minmax(7.5rem,0.7fr)_minmax(4.75rem,auto)] items-center gap-x-2 sm:gap-x-3",
+  BULK_GENERATOR_ROW_GRID_MIN_CLASS,
 );
 
 export const BLOG_IDEA_ROW_SELECT_CHECKBOX_CLASS = DASHBOARD_LIST_CHECKBOX_CLASS;
@@ -646,15 +654,16 @@ export function BlogIdeaRowCompact({
           ? BLOG_IDEA_ROW_GRID_NO_SELECT_WITH_DATE_CLASS
           : BLOG_IDEA_ROW_GRID_NO_SELECT_CLASS;
 
-  if (placeholder) {
-    if (slotMode) {
-      return (
-        <div
-          className={cn(contentOptimizerRowStripeClass(stripeIndex), "min-h-[3rem] flex-1 sm:min-h-[3.25rem]")}
-          aria-hidden
-        />
-      );
-    }
+  if (placeholder && slotMode) {
+    return (
+      <div
+        className={cn(contentOptimizerRowStripeClass(stripeIndex), BLOG_IDEA_ROW_SLOT_GRID_CLASS)}
+        aria-hidden
+      />
+    );
+  }
+
+  if (placeholder && !slotMode) {
     return (
       <div className={cn(contentOptimizerRowStripeClass(stripeIndex), gridClass)} aria-hidden>
         {showSelect ? (
@@ -696,8 +705,14 @@ export function BlogIdeaRowCompact({
   );
 
   if (slotMode) {
-    const slotHeader = (
-      <div className={BLOG_IDEA_ROW_SLOT_GRID_CLASS}>
+    const slotRowShellClass = cn(
+      contentOptimizerRowStripeClass(stripeIndex, { isActiveOptimize: activeOptimize }),
+      BLOG_IDEA_ROW_SLOT_GRID_CLASS,
+      drag?.isDragging && "opacity-90",
+    );
+
+    const slotFields = (
+      <>
         <div className={cn(PPC_CAMPAIGN_ROW_FIELD_CELL, "pl-[5px]")}>
           <Input
             type="text"
@@ -730,23 +745,29 @@ export function BlogIdeaRowCompact({
           showDirections={false}
           onToggleExpand={onToggleExpand}
         />
-      </div>
+      </>
     );
 
     if (isExpanded) {
-      return rowShell(slotHeader);
+      return (
+        <div ref={drag?.setNodeRef} style={drag?.style}>
+          <div className={slotRowShellClass}>{slotFields}</div>
+          <ExpandedFields
+            row={row}
+            fieldId={fieldId}
+            isProcessing={isProcessing}
+            publishDateLabel={publishDateLabel}
+            draftOnly={draftOnly}
+            onRowChange={onRowChange}
+            previewUrl={previewUrl}
+          />
+        </div>
+      );
     }
 
     return (
-      <div
-        ref={drag?.setNodeRef}
-        style={drag?.style}
-        className={cn(
-          contentOptimizerRowStripeClass(stripeIndex, { isActiveOptimize: activeOptimize }),
-          drag?.isDragging && "opacity-90",
-        )}
-      >
-        {slotHeader}
+      <div ref={drag?.setNodeRef} style={drag?.style} className={slotRowShellClass}>
+        {slotFields}
       </div>
     );
   }

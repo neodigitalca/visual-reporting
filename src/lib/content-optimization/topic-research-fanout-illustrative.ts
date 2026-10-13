@@ -1,6 +1,6 @@
 import type { WordPressSite } from "@/components/integrations/types";
 import { callOpenRouterChatCompletion } from "@/lib/competitor-research/competitor-report-openrouter";
-import { parseJsonWithRepair } from "@/lib/json-repair-utility";
+import { parseJsonStrict } from "@/lib/json-repair-utility";
 import { getResearchModel } from "@/lib/optimization-settings-storage";
 import { resolveOpenRouterApiKeyForHarness } from "@/lib/openrouter-api-key-resolve";
 import type { IllustrativeExample, QueryFanoutSerpRow } from "@/lib/overview-seo-content-brief";
@@ -221,16 +221,9 @@ export async function extractIllustrativeExample(input: {
   });
   let parsed: unknown;
   try {
-    const { parsed: repaired } = parseJsonWithRepair<unknown>(content, {
-      onParseFailure: "storeRaw",
-    });
-    if (repaired == null) {
-      console.warn("[Illustrative extract] JSON parse failed; continuing without stored persona");
-      return undefined;
-    }
-    parsed = repaired;
-  } catch (err) {
-    console.warn("[Illustrative extract] JSON repair failed; continuing without stored persona:", err);
+    parsed = parseJsonStrict(content);
+  } catch {
+    console.warn("[Illustrative extract] JSON parse failed; continuing without stored persona");
     return undefined;
   }
   const normalized = normalizeIllustrativeExample(parsed, input.researchAsOf, input.illustrativeH2Title);

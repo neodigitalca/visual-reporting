@@ -634,9 +634,16 @@ async function fillDistinctNeighbourhoodSlotsForBucket(
         globalUsedNames.push(entity);
         slots.push({ entity, wiki });
       }
-    } catch {
-      // Keep wiki-pool slots when neighbourhood supplement fails.
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new Error(`Neighbourhood supplement failed for ${parentLabel}: ${msg}`);
     }
+  }
+
+  if (slots.length < ads) {
+    throw new Error(
+      `Only ${slots.length} of ${ads} distinct neighbourhoods for ${parentLabel}.`,
+    );
   }
 
   return slots;
@@ -937,8 +944,12 @@ export async function runEntityLocationClusterFromBuckets(
           globalUsedKeys: usedKeys,
           globalUsedNames: entitiesUsed,
         });
-        const rowSlots = cycleItemsForRowCount(slots, sapPageCount);
-        for (const slot of rowSlots) {
+        if (slots.length < sapPageCount) {
+          throw new Error(
+            `Only ${slots.length} of ${sapPageCount} distinct neighbourhoods for ${parentLabel}.`,
+          );
+        }
+        for (const slot of slots.slice(0, sapPageCount)) {
           clusterPlans.push({
             bucket,
             entity: slot.entity,
@@ -1058,7 +1069,9 @@ export async function runEntityLocationClusterFromBuckets(
       throw new Error(`Grid clustering produced 0 of ${targetRows} configured entity rows.`);
     }
     if (sapRows.length !== targetRows) {
-      sapRows = cycleItemsForRowCount(sapRows, targetRows);
+      throw new Error(
+        `Grid clustering produced ${sapRows.length} entity row(s), expected ${targetRows}.`,
+      );
     }
   }
 

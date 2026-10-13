@@ -15,6 +15,12 @@ export function parsePulseAssistHref(href: string): AssistNavigateTarget | null 
   if (!isPulseAssistHref(href)) return null;
   const path = href.slice(PULSE_NAV_PREFIX.length);
   const parts = path.split("/").filter(Boolean);
+  if (parts[0] === "generator" && parts[1] === "report") {
+    return { kind: "organicReporting" };
+  }
+  if (parts[0] === "reporting") {
+    return { kind: "organicReporting" };
+  }
   if (parts[0] === "generator" && parts[1]) {
     return { kind: "generatorSection", section: parts[1] };
   }
@@ -85,6 +91,7 @@ export type AssistNavigationHandlers = {
   onGeneratorSectionChange: (section: string) => void;
   onDashboardClusterChange: (cluster: string) => void;
   onPulseForgeHash?: (hash: string) => void;
+  onOrganicReporting?: () => void;
 };
 
 export function executeAssistNavigation(
@@ -95,7 +102,15 @@ export function executeAssistNavigation(
     handlers.onManagerTabChange(target.tab);
     return;
   }
+  if (target.kind === "organicReporting") {
+    handlers.onOrganicReporting?.();
+    return;
+  }
   if (target.kind === "generatorSection") {
+    if (target.section === "report") {
+      handlers.onOrganicReporting?.();
+      return;
+    }
     handlers.onManagerTabChange("generator");
     handlers.onGeneratorSectionChange(target.section);
     return;

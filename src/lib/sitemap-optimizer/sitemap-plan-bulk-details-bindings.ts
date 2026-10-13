@@ -3,6 +3,7 @@ import type { SitemapPlanDetailsPanelProps } from "@/components/research/sitemap
 import type { BulkHarnessSectionUi } from "@/hooks/use-bulk-auto-generate";
 import type { CSVRow } from "@/lib/bulk-auto-generate";
 import type { SitemapOptimizerCollectionKey, SitemapOptimizerProgress } from "@/lib/sitemap-optimizer/types";
+import { isCustomSitemapOptimizerCollectionKey } from "@/lib/sitemap-optimizer/types";
 import { resolveContentPrepBatchSectionTitles } from "@/lib/overview/overview-content-prep-harness-sections";
 import { buildSitemapApproveHarnessSections } from "@/lib/sitemap-optimizer/sitemap-approve-harness";
 import {
@@ -14,11 +15,18 @@ import {
   stepsForRunMode,
 } from "@/lib/sitemap-optimizer/progress-display";
 
-const INVENTORY_LABELS: Record<SitemapOptimizerCollectionKey, string> = {
+const BUILTIN_INVENTORY_LABELS = {
   posts: "Posts",
   pages: "Pages",
   entity: "SAP",
-};
+} as const;
+
+function inventoryLabel(key: SitemapOptimizerCollectionKey): string {
+  if (isCustomSitemapOptimizerCollectionKey(key)) {
+    return key.slice("custom:".length).replace(/-/g, " ");
+  }
+  return BUILTIN_INVENTORY_LABELS[key];
+}
 
 function stepStatusToHarness(status: "pending" | "active" | "done"): BulkHarnessSectionUi["status"] {
   if (status === "active") return "generating";
@@ -174,7 +182,7 @@ function buildBatchPrepHarnessSections(
 
 function buildPlanLiveMessage(input: SitemapPlanDetailsPanelProps): string | undefined {
   const parts: string[] = [
-    INVENTORY_LABELS[input.selectedInventory],
+    inventoryLabel(input.selectedInventory),
     input.workspaceMode === "temp"
       ? "Temp seed"
       : input.siteConnected

@@ -39,6 +39,7 @@ import {
   formatSapChecklistExample,
   formatSapPageChecklistBlock,
 } from "@/lib/prompt-builders/sap-page-template";
+import { isCompetitorCsvKeyword } from "@/lib/competitor/competitor-csv-row";
 import {
   ARTICLE_MAX_WORDS,
   buildArticleLengthChecklistBlock,
@@ -71,9 +72,6 @@ import {
   ensureConnectedSiteHarnessMarkers,
 } from "@/lib/bulk/connected-site-harness-markers";
 import { buildPredeterminedBlogBodyHarnessTitlesFromOutline } from "@/lib/overview/overview-content-optimize-pipeline";
-
-import type { AgentConfig } from "@/types/agent-config";
-import { getResearchModel } from "./optimization-settings-storage";
 import type { BlogTemplateContext } from "./blog-template-builder-types";
 import {
   buildSemrushExactPromptParts,
@@ -121,6 +119,8 @@ export async function generateBlueprintFromTemplate(
     typeof (options as { entity?: string }).entity === "string"
       ? (options as { entity?: string }).entity!.trim() || undefined
       : undefined;
+  const routeKeyword = context.keywordData?.keyword?.trim() ?? "";
+  const competitorComparisonBlueprint = isCompetitorCsvKeyword(routeKeyword) && Boolean(sapEntity);
 
   const userPromptSection = context.userPrompt && context.userPrompt.trim()
     ? `\n--- PROMPT MODIFIER (PRIMARY FOCUS FOR THIS BLOG) ---
@@ -168,7 +168,11 @@ Internal links use [[LINK:query|anchor]] from PAGES and BLOG POSTS titles above.
         })
       : "";
   const entityTitleRule = entityOption
-    ? `\n*** TARGET ENTITY: ${entityOption} ***
+    ? competitorComparisonBlueprint
+      ? `\n*** COMPETITOR COMPARISON: ${entityOption} ***
+Title is a provider comparison (topic + competitor business name). Forbidden: "near ${entityOption}", colons, or treating the competitor as geography.
+${entityWikiBlueprintSection}`
+      : `\n*** TARGET ENTITY: ${entityOption} ***
 The title MUST include the word "near" (e.g. "Blinds & Shades Near ${entityOption}").
 No colons in titles. The word "near" is MANDATORY.
 ${entityWikiBlueprintSection}`
@@ -328,7 +332,7 @@ ${buildBlueprintArticleLengthBlock()}
 --- Your Task ---
 Generate a complete blueprint JSON structure with:
 1. A clear, SEO-friendly "title" for the blog article
-   ${entityTitleRule}   *** ENTITY PAGES: NON-NEGOTIABLE *** When the checklist mentions entity, location, Local Recommendation, or service area: The word "near" MUST appear in the title (e.g. "Blinds & Shades Near Ben Hill Atlanta"). No colons in titles. If your title does not contain "near", it is WRONG.
+   ${entityTitleRule}   ${competitorComparisonBlueprint ? "*** COMPETITOR COMPARISON *** Follow comparison checklist titles. No SAP \"near\" title rule." : "*** ENTITY PAGES: NON-NEGOTIABLE *** When the checklist mentions entity, location, Local Recommendation, or service area: The word \"near\" MUST appear in the title (e.g. \"Blinds & Shades Near Ben Hill Atlanta\"). No colons in titles. If your title does not contain \"near\", it is WRONG."}
    Never stitch the primary keyword and a second title with a colon. One flowing headline only (not "Keyword: Other Title").
    ${blueprintTitleLengthRule}
 ${context.userPrompt && context.userPrompt.trim() ? `   **TITLE MUST REFLECT USER REQUIREMENTS**: If User Requirements (Prompt Modifier) specify a theme or focus (e.g. "creative structures only"), the article title MUST reflect that theme (e.g. reference the focus or structural angle). Do not output a generic title that ignores the User Requirements.` : ""}

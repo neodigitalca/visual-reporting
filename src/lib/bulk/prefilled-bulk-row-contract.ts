@@ -1,4 +1,8 @@
 import type { CSVRow } from "@/lib/bulk/bulk-csv-parser";
+import {
+  COMPETITOR_COMPARISON_PROSE_PROMPT_BLOCK,
+  isCompetitorCsvKeyword,
+} from "@/lib/competitor/competitor-csv-row";
 
 export type PrefilledBulkRowFields = {
   keyword?: string;
@@ -49,18 +53,47 @@ Rules:
 }
 
 export function formatPrefilledBulkRowContractFromCsvRow(row: CSVRow): string {
-  return formatPrefilledBulkRowContract({
-    keyword: row.keyword,
-    title: row.title,
-    entity: row.entity,
-    wikipedia_url: row.wikipedia_url,
-    wikipedia_title: row.wikipedia_title,
-    meta_description: row.meta_description,
-    target_slug: row.target_slug,
-    publish_date_gmt: row.publish_date_gmt,
-    featuredImage: row.featuredImage,
-    modifier: row.modifier,
-  });
+  if (!isCompetitorCsvKeyword(row.keyword)) {
+    return formatPrefilledBulkRowContract({
+      keyword: row.keyword,
+      title: row.title,
+      entity: row.entity,
+      wikipedia_url: row.wikipedia_url,
+      wikipedia_title: row.wikipedia_title,
+      meta_description: row.meta_description,
+      target_slug: row.target_slug,
+      publish_date_gmt: row.publish_date_gmt,
+      featuredImage: row.featuredImage,
+      modifier: row.modifier,
+    });
+  }
+
+  const focus = row.keyword_focus?.trim();
+  const lines = [
+    line("title", row.title),
+    line("entity", row.entity),
+    focus ? line("focus_keyword (SEO phrase for body copy)", focus) : null,
+    line("meta_description", row.meta_description),
+    line("target_slug", row.target_slug),
+    line("publish_date_gmt", row.publish_date_gmt),
+    line("featuredImage", row.featuredImage),
+    line("modifier", row.modifier),
+  ].filter((x): x is string => Boolean(x));
+
+  if (lines.length === 0) return "";
+
+  return `
+=== PREFILLED BULK ROW (USE VERBATIM) ===
+${lines.join("\n")}
+
+Rules:
+- Treat title, entity, focus_keyword, meta description, slug, and modifier as finalized for this row.
+- Do NOT invent alternate title, meta description, or slug.
+- The CSV keyword route label "competitor - …" is NOT reader-facing copy. Never quote it in the article.
+
+${COMPETITOR_COMPARISON_PROSE_PROMPT_BLOCK}
+=== END PREFILLED BULK ROW ===
+`;
 }
 
 export function hasCsvFilledTitle(row: Pick<CSVRow, "title">): boolean {

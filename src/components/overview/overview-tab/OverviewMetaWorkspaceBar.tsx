@@ -5,9 +5,10 @@ import type { ContentOptimizerSectionId } from "@/components/content-optimizer/c
 import type { ContentOptimizerGeneratorChrome } from "@/components/content-optimizer/content-optimizer-generator-chrome";
 import { BlogGeneratorWorkspaceChrome } from "@/components/blog-generator/BlogGeneratorWorkspaceChrome";
 import { UnifiedWorkspaceChrome } from "@/components/shared/UnifiedWorkspaceChrome";
-import { WorkspacePill } from "@/components/shared/WorkspacePill";
+import { SitemapScopeDropdown } from "@/components/shared/SitemapScopeDropdown";
 import {
   OVERVIEW_SITEMAP_SOURCE_LABELS,
+  isOverviewSapSourceAvailable,
   type OverviewSitemapSource,
 } from "@/lib/overview/overview-sitemap-source";
 import { buildOverviewBulkActionClusters } from "@/lib/overview/overview-bulk-action-clusters";
@@ -49,28 +50,27 @@ function OverviewContentSitemapMenu({ ctrl: c }: { ctrl: OverviewTabController }
     );
   }
 
+  const sourceOptions = (["pages", "posts", "sap"] as OverviewSitemapSource[])
+    .filter((source) => source !== "sap" || isOverviewSapSourceAvailable(c.site))
+    .map((source) => ({
+      id: source,
+      label: OVERVIEW_SITEMAP_SOURCE_LABELS[source],
+    }));
+
   return (
-    <div
-      className="flex min-w-0 flex-nowrap items-center gap-1"
-      role="group"
-      aria-label="Content source"
-    >
-      {(Object.keys(OVERVIEW_SITEMAP_SOURCE_LABELS) as OverviewSitemapSource[]).map((source) => (
-        <WorkspacePill
-          key={source}
-          label={OVERVIEW_SITEMAP_SOURCE_LABELS[source]}
-          active={c.sitemapSource === source}
-          square
-          onClick={() => {
-            if (c.sitemapSource === source) {
-              rescrapeSitemap();
-              return;
-            }
-            c.setSitemapSource(source);
-          }}
-        />
-      ))}
-    </div>
+    <SitemapScopeDropdown
+      options={sourceOptions}
+      value={c.sitemapSource}
+      onChange={(source) => {
+        const next = source as OverviewSitemapSource;
+        if (c.sitemapSource === next) {
+          rescrapeSitemap();
+          return;
+        }
+        c.setSitemapSource(next);
+      }}
+      ariaLabel="Content source"
+    />
   );
 }
 

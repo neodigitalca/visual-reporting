@@ -5,7 +5,7 @@ section: Images
 method: POST
 path: /api/images/prepare-local-image
 auth: open
-order: 520
+order: 550
 ---
 
 POST `/api/images/prepare-local-image`.

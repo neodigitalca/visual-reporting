@@ -5,7 +5,7 @@ section: DataForSEO MCP
 method: POST
 path: /api/mcp/DataForSEO_serp_organic_live_advanced
 auth: open
-order: 820
+order: 880
 ---
 
 POST `/api/mcp/DataForSEO_serp_organic_live_advanced`.

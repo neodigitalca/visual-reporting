@@ -5,7 +5,7 @@ section: Google Business Profile
 method: POST
 path: /api/gmb/performance
 auth: open
-order: 230
+order: 240
 ---
 
 POST `/api/gmb/performance`.

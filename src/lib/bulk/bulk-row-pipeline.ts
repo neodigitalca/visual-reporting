@@ -7,6 +7,7 @@ import { BulkProcessingOptions, PrefetchedBulkKeywordResearch } from './bulk-aut
 import type { CSVRow } from './bulk-csv-parser';
 import { keepBlogPlayLinkTargets } from './bulk-generation-wp-inventory';
 import { populateACFFieldsFromDFS } from '@/lib/bulk/bulk-row-acf-meta';
+import { isCompetitorCsvKeyword } from '@/lib/competitor/competitor-csv-row';
 import { buildSitesToPostFromPosting } from '@/lib/bulk/bulk-wordpress-link-prefetch';
 import { publishBulkRowToWordPressSites } from '@/lib/bulk/bulk-wordpress-publish-row';
 import { runBulkRowResearchEnrichmentPhase } from './bulk-row-research-enrichment';
@@ -117,7 +118,10 @@ export async function generateBlueprintAndContent(
     date_modifier: row.date_modifier || acfFieldsFromDFS.date_modifier,
     prompt_modifier: row.prompt_modifier || acfFieldsFromDFS.prompt_modifier,
     service_area_fields: row.service_area_fields || acfFieldsFromDFS.service_area_fields,
-    ...(row.sitemap_type === 'entity' || acfFieldsFromDFS.origin
+    competitor: row.competitor || acfFieldsFromDFS.competitor,
+    competitor_fields: row.competitor_fields || acfFieldsFromDFS.competitor_fields,
+    ...(!isCompetitorCsvKeyword(row.keyword) &&
+    (row.sitemap_type === 'entity' || acfFieldsFromDFS.origin)
       ? { origin: row.origin || acfFieldsFromDFS.origin }
       : {}),
   };

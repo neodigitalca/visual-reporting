@@ -15,6 +15,35 @@ import { WORDPRESS_SITES_STORAGE_KEY } from "./types";
 
 const ACTIVE_WP_SITE_STORAGE_KEY = "neo-pulse-active-wp-site-id";
 
+/** One-time undo for header display-name edits that overwrote or shortened property names. */
+export const WP_SITES_RESTORE_ORIGINAL_NAMES_ONCE_KEY =
+  "neo-pulse-wp-sites-restore-original-names-v1";
+
+function pickLongestTrimmedName(...candidates: string[]): string {
+  const trimmed = candidates.map((c) => c.trim()).filter(Boolean);
+  if (trimmed.length === 0) return "";
+  return trimmed.sort((a, b) => b.length - a.length)[0];
+}
+
+function restoreOriginalIntegrationsSiteName(
+  site: WordPressSite,
+  mirrorRow?: WordPressSite,
+): WordPressSite {
+  const nap = site.napInfo?.name?.trim() ?? "";
+  const mirrorName = mirrorRow?.name?.trim() ?? "";
+  const bestName = pickLongestTrimmedName(site.name, nap, mirrorName);
+
+  let next: WordPressSite =
+    bestName && bestName !== site.name.trim() ? { ...site, name: bestName } : { ...site };
+
+  if (next.menuDisplayName !== undefined) {
+    const { menuDisplayName: _menu, ...rest } = next;
+    next = rest as WordPressSite;
+  }
+
+  return next;
+}
+
 /** Node worker override for server post creator harness (no browser localStorage). */
 let serverHarnessSitesOverride: WordPressSite[] | null = null;
 
@@ -58,6 +87,7 @@ export async function syncWordPressSitesToServer(sites: WordPressSite[]): Promis
       optimizationPackage: s.optimizationPackage,
       editorialCountsPeriodStartYmd: s.editorialCountsPeriodStartYmd,
       entitySitemapUrl: s.entitySitemapUrl,
+      competitorEntitySitemapUrl: s.competitorEntitySitemapUrl,
       manualEndpoint: s.manualEndpoint,
     }))
     .filter((s) => s.siteUrl?.trim() && s.username?.trim() && s.appPassword?.trim());
@@ -114,6 +144,7 @@ export function minimalSiteForLocalStorage(site: WordPressSite): WordPressSite {
   return {
     id: slim.id,
     name: slim.name,
+    menuDisplayName: slim.menuDisplayName,
     siteUrl: slim.siteUrl,
     productionSiteUrl: slim.productionSiteUrl,
     username: slim.username,
@@ -124,6 +155,7 @@ export function minimalSiteForLocalStorage(site: WordPressSite): WordPressSite {
     capabilities: slim.capabilities,
     enabled: slim.enabled,
     entitySitemapUrl: slim.entitySitemapUrl,
+    competitorEntitySitemapUrl: slim.competitorEntitySitemapUrl,
     manualEndpoint: slim.manualEndpoint,
     ga4PropertyId: slim.ga4PropertyId,
     googleAdsCustomerId: slim.googleAdsCustomerId,
@@ -291,6 +323,46 @@ export function saveSites(sites: WordPressSite[]): void {
     console.error("Failed to save WordPress sites:", e);
     notify.error(NOTIFY_COULD_NOT_SAVE_SITES_TO_LOCAL_STORAGE);
   }
+}
+
+/**
+ * Restores Integrations property names from NAP + server mirror (longest label wins).
+ * Clears header-only `menuDisplayName` overrides. Runs once per browser profile.
+ */
+export async function restoreOriginalPropertyNamesOnce(): Promise<boolean> {
+  if (typeof localStorage === "undefined") return false;
+  if (localStorage.getItem(WP_SITES_RESTORE_ORIGINAL_NAMES_ONCE_KEY)) return false;
+
+  const stored = localStorage.getItem(WORDPRESS_SITES_STORAGE_KEY);
+  if (!stored) {
+    localStorage.setItem(WP_SITES_RESTORE_ORIGINAL_NAMES_ONCE_KEY, "1");
+    return false;
+  }
+
+  let sites: WordPressSite[];
+  try {
+    sites = JSON.parse(stored) as WordPressSite[];
+  } catch {
+    localStorage.setItem(WP_SITES_RESTORE_ORIGINAL_NAMES_ONCE_KEY, "1");
+    return false;
+  }
+
+  const serverSites = await fetchWordPressSitesMirror();
+  let changed = false;
+  const restored = sites.map((site) => {
+    const mirror = findMirrorSiteRow(site, serverSites);
+    const before = JSON.stringify({ name: site.name, menuDisplayName: site.menuDisplayName });
+    let next = restoreOriginalIntegrationsSiteName(site, mirror);
+    next = applyInTheShadeSemrushPositionTrackingDefaults(applyShutterSpotDisplayNameMigration(next));
+    if (JSON.stringify({ name: next.name, menuDisplayName: next.menuDisplayName }) !== before) {
+      changed = true;
+    }
+    return next;
+  });
+
+  localStorage.setItem(WP_SITES_RESTORE_ORIGINAL_NAMES_ONCE_KEY, "1");
+  if (changed) saveSites(restored);
+  return changed;
 }
 
 /** Load property mirror from WordPress (sites.json). */

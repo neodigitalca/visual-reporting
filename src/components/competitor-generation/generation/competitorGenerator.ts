@@ -9,7 +9,6 @@ export async function runCompetitorGenerator(args: {
   keyword: string;
   promptModifier?: string;
   apiKey: string;
-  model: string;
   siteId?: string;
   onProgress?: (message: string) => void;
 }): Promise<{ rows: GeneratedCompetitorRow[]; suggestedTitleFormat: string }> {
@@ -20,8 +19,7 @@ export async function runCompetitorGenerator(args: {
       keyword: args.keyword,
       promptModifier: args.promptModifier,
       apiKey: args.apiKey,
-      model: args.model,
-      siteId: args.siteId,
+      siteId: args.siteId ?? args.site.id,
     },
     (message) => args.onProgress?.(message),
   );

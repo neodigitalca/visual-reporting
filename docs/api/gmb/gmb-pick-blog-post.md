@@ -5,7 +5,7 @@ section: Google Business Profile
 method: POST
 path: /api/gmb/pick-blog-post
 auth: open
-order: 240
+order: 250
 ---
 
 POST `/api/gmb/pick-blog-post`.

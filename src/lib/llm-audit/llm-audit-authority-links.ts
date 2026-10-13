@@ -1,5 +1,5 @@
 import { callOpenRouterChatCompletion } from "@/lib/competitor-research/competitor-report-openrouter";
-import { parseJsonWithRepair } from "@/lib/json-repair-utility";
+import { parseJsonStrict } from "@/lib/json-repair-utility";
 import { getResearchModel } from "@/lib/optimization-settings-storage";
 import { resolveOpenRouterApiKeyForHarness } from "@/lib/openrouter-api-key-resolve";
 import type { SeoContentBriefV1 } from "@/lib/overview-seo-content-brief";
@@ -174,23 +174,16 @@ function parseClassifierJson(
     onFailure?.({ rawText: "", error: "empty content", repairSteps: [] });
     return null;
   }
-  const result = parseJsonWithRepair<unknown>(trimmed, {
-    onParseFailure: onFailure ? "storeRaw" : "throw",
-  });
-  if (result.parsed != null) return result.parsed;
-  if (onFailure) {
-    onFailure({
-      rawText: result.rawText ?? trimmed,
-      error: result.parseError ?? "parse failed",
-      repairSteps: result.repairSteps,
-    });
-    return null;
+  try {
+    return parseJsonStrict(trimmed);
+  } catch (e) {
+    const error = e instanceof Error ? e.message : String(e);
+    if (onFailure) {
+      onFailure({ rawText: trimmed, error, repairSteps: [] });
+      return null;
+    }
+    throw new Error(`LLM audit authority classifier returned invalid JSON (${error})`);
   }
-  throw new Error(
-    result.parseError
-      ? `LLM audit authority classifier returned invalid JSON (${result.parseError})`
-      : "LLM audit authority classifier returned invalid JSON",
-  );
 }
 
 async function classifyLlmAuditAuthorityLinkBatchOpenRouter(input: {
@@ -206,7 +199,7 @@ async function classifyLlmAuditAuthorityLinkBatchOpenRouter(input: {
 
   const city = cityTokenFromLocation(input.location ?? "");
   const apiKey = await resolveOpenRouterApiKeyForHarness();
-  const { content } = await callOpenRouterChatCompletion({
+  const { content, parsed: structuredParsed } = await callOpenRouterChatCompletion({
     apiKey,
     model: getResearchModel(input.siteId),
     system: LLM_AUDIT_AUTHORITY_CLASSIFY_SYSTEM,
@@ -231,6 +224,9 @@ async function classifyLlmAuditAuthorityLinkBatchOpenRouter(input: {
     },
   });
 
+  if (structuredParsed != null && typeof structuredParsed === "object") {
+    return normalizeClassifiedAuthorityLinks(structuredParsed, urls);
+  }
   const parsed = parseClassifierJson(content, input.onClassifierJsonFailure);
   if (parsed == null) return [];
   return normalizeClassifiedAuthorityLinks(parsed, urls);

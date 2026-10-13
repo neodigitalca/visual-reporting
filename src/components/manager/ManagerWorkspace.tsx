@@ -38,6 +38,7 @@ import {
 import { PulseAssistContextProvider } from "@/contexts/pulse-assist-context";
 import { PulseAssistRoot } from "@/components/pulse-assist/PulseAssistRoot";
 import { AgentRunsShell } from "@/components/agent-runs/AgentRunsShell";
+import { OrganicReportingEmbeddedPanel } from "@/components/organic-dashboard/OrganicReportingEmbeddedPanel";
 
 export interface ManagerWorkspaceProps {
   variant: "embedded" | "overlay";
@@ -155,7 +156,12 @@ export const ManagerWorkspace: React.FC<ManagerWorkspaceProps> = ({
       showReset
     />
   );
-  const chatFullBleed = embedded && (managerTab === "chat" || managerTab === "tasks" || managerTab === "pulse-forge" || managerTab === "api");
+  const chatFullBleed =
+    embedded &&
+    (managerTab === "chat" ||
+      managerTab === "tasks" ||
+      managerTab === "pulse-forge" ||
+      managerTab === "api");
   /** Radix tabpanel must participate in flex-1 chain when embedded; parent-only selectors are unreliable. */
   const embeddedTabPanelStretch = embedded ? "flex h-full min-h-0 flex-1 flex-col overflow-hidden" : undefined;
   const showResetToolbar = embedded && onResetBlueprint && onResetWorkspace;
@@ -163,6 +169,42 @@ export const ManagerWorkspace: React.FC<ManagerWorkspaceProps> = ({
   /** Embedded: small air gap below the sticky mega menu; overlay keeps classic inset. */
   const embeddedTabPanelTopClass = embedded ? "mt-0" : "mt-2";
   const embeddedMainColumnTopClass = embedded ? "pt-3 md:pt-4" : "pt-2 md:pt-3";
+
+  const embeddedManagerStickyHeader =
+    embedded && showResetToolbar ? (
+      <div className="neo-pulse-embedded-sticky-chrome sticky top-0 z-[60] w-full shrink-0 bg-black">
+        <div
+          data-neo-pulse-manager-sticky-nav
+          className={cn(
+            "flex w-full shrink-0 flex-col pt-2.5 pb-2.5 text-foreground shadow-none md:pt-3 md:pb-3",
+            MANAGER_TOP_BAR_CLASS,
+          )}
+        >
+          <div className="relative z-[1] flex w-full min-w-0 flex-nowrap items-center gap-2.5 py-1.5 pl-3 pr-0 md:pl-5">
+            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+              {embeddedTopBarStart ? (
+                <div className="flex shrink-0 items-center">{embeddedTopBarStart}</div>
+              ) : null}
+              <div className="flex min-w-0 items-center overflow-x-auto">
+                <ManagerMegaMenuNav
+                  managerTab={managerTab}
+                  onManagerTabChange={onManagerTabChange}
+                  variant="embedded"
+                  dashboardCluster={managerDashboardCluster}
+                  onDashboardClusterChange={onManagerDashboardClusterChange}
+                />
+              </div>
+            </div>
+            <div className="ml-auto flex shrink-0">{displayConsole}</div>
+          </div>
+        </div>
+        {embeddedTopBarProgress ? (
+          <div className="relative z-[1] shrink-0 bg-zinc-900 px-3 py-1.5 md:px-5 md:py-2">
+            {embeddedTopBarProgress}
+          </div>
+        ) : null}
+      </div>
+    ) : null;
 
   const inner = (
     <ManagerErrorLogProvider>
@@ -187,40 +229,7 @@ export const ManagerWorkspace: React.FC<ManagerWorkspaceProps> = ({
       ) : null}
 
       <Tabs value={managerTab} onValueChange={onManagerTabChange} className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
-        {embedded && showResetToolbar ? (
-          <>
-            <div
-              data-neo-pulse-manager-sticky-nav
-              className={cn(
-                "sticky top-0 z-50 flex w-full shrink-0 flex-col pt-2.5 pb-2.5 text-foreground shadow-none md:pt-3 md:pb-3",
-                MANAGER_TOP_BAR_CLASS,
-              )}
-            >
-              <div className="flex w-full min-w-0 flex-nowrap items-center gap-2.5 py-1.5 pl-3 md:pl-5">
-                <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-                  {embeddedTopBarStart ? (
-                    <div className="flex shrink-0 items-center">{embeddedTopBarStart}</div>
-                  ) : null}
-                  <div className="flex min-w-0 items-center overflow-x-auto">
-                    <ManagerMegaMenuNav
-                      managerTab={managerTab}
-                      onManagerTabChange={onManagerTabChange}
-                      variant="embedded"
-                      dashboardCluster={managerDashboardCluster}
-                      onDashboardClusterChange={onManagerDashboardClusterChange}
-                    />
-                  </div>
-                </div>
-                <div className="ml-auto flex shrink-0">{displayConsole}</div>
-              </div>
-            </div>
-            {embeddedTopBarProgress ? (
-              <div className="shrink-0 bg-zinc-900 px-3 py-1.5 md:px-5 md:py-2">
-                {embeddedTopBarProgress}
-              </div>
-            ) : null}
-          </>
-        ) : (
+        {embedded && showResetToolbar ? null : (
           <div className="mb-2 flex shrink-0 flex-col gap-1.5 text-foreground">
             <div className="flex flex-wrap items-center gap-2.5 justify-between">
               <div className="min-w-0 flex-1 overflow-x-auto px-1">
@@ -268,13 +277,27 @@ export const ManagerWorkspace: React.FC<ManagerWorkspaceProps> = ({
                   managerTab === "chat" ||
                   managerTab === "tasks" ||
                   managerTab === "pulse-forge" ||
-                  managerTab === "api"
+                  managerTab === "api" ||
+                  managerTab === "organic-reporting"
                   ? "overflow-y-hidden"
-                  : "overflow-y-auto",
+                  : "neo-pulse-embedded-tab-scroller overflow-y-auto",
               ),
             !embedded && "flex flex-col overflow-hidden"
           )}
         >
+        <TabsContent
+          value="organic-reporting"
+          forceMount
+          className={cn(
+            embeddedTabPanelTopClass,
+            "data-[state=inactive]:hidden",
+            embeddedTabPanelStretch,
+            embedded && "overflow-hidden",
+          )}
+        >
+          <OrganicReportingEmbeddedPanel />
+        </TabsContent>
+
         <TabsContent
           value="knowledge"
           className={cn(
@@ -479,7 +502,6 @@ export const ManagerWorkspace: React.FC<ManagerWorkspaceProps> = ({
           </Suspense>
         </TabsContent>
         </div>
-        {embedded && embeddedFooter ? <div className="w-full shrink-0">{embeddedFooter}</div> : null}
         </div>
       </Tabs>
     </div>
@@ -507,9 +529,21 @@ export const ManagerWorkspace: React.FC<ManagerWorkspaceProps> = ({
   return (
     <AgentRunsShell>
       <PulseAssistContextProvider managerTab={managerTab} onAssistNavigate={onAssistNavigate}>
-        <div className="flex h-full min-h-0 flex-1 overflow-hidden bg-background">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{inner}</div>
-          <PulseAssistRoot layout="docked" />
+        <div className="flex h-full min-h-0 min-w-0 w-full max-w-none flex-1 flex-col overflow-hidden bg-background">
+          {embeddedManagerStickyHeader}
+          <div className="relative flex min-h-0 min-w-0 w-full flex-1 flex-row gap-0 overflow-hidden">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pr-[var(--neo-pulse-shortcut-rail-width)]">
+              {inner}
+              {embeddedFooter ? (
+                <div className="neo-pulse-embedded-footer-chrome relative z-[60] w-full shrink-0">
+                  {embeddedFooter}
+                </div>
+              ) : null}
+            </div>
+            <div className="neo-pulse-docked-rail-slot pointer-events-none absolute inset-y-0 right-0 z-30 w-[var(--neo-pulse-shortcut-rail-width)]">
+              <PulseAssistRoot layout="docked" />
+            </div>
+          </div>
         </div>
       </PulseAssistContextProvider>
     </AgentRunsShell>

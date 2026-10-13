@@ -7,13 +7,13 @@ export default defineConfig({
     environment: 'node',
     include: [
       'src/**/*.test.ts',
-      'hosting/**/*.test.ts',
       'wordpress-plugins/neo-pulse-app/tests/**/*.test.mjs',
       'wordpress-plugins/neo-pulse-wp/tests/**/*.test.mjs',
       'scripts/research/browser-automation/__tests__/**/*.test.mjs',
       'scripts/template-client-migrate/__tests__/**/*.test.ts',
       'scripts/edmonton-internal-links/__tests__/**/*.test.ts',
       'scripts/firstrank-teardown/__tests__/**/*.test.ts',
+      'hosting/**/*.test.ts',
     ],
   },
   resolve: {

@@ -123,6 +123,10 @@ class Neo_Pulse_App_Semrush_Competitor_Shared {
 				if ( isset( $lower[ $us ] ) && trim( (string) $lower[ $us ] ) !== '' ) {
 					return $lower[ $us ];
 				}
+				$sp = str_replace( '_', ' ', $kk );
+				if ( $sp !== $kk && isset( $lower[ $sp ] ) && trim( (string) $lower[ $sp ] ) !== '' ) {
+					return $lower[ $sp ];
+				}
 			}
 			return null;
 		};
@@ -135,11 +139,11 @@ class Neo_Pulse_App_Semrush_Competitor_Shared {
 		return array(
 			'domain'           => $dn,
 			'competitionLevel' => Neo_Pulse_App_Semrush_Table_Parse::num( $pick( array( 'cr', 'competition', 'competition_level' ) ) ),
-			'commonKeywords'   => Neo_Pulse_App_Semrush_Table_Parse::num( $pick( array( 'np', 'common_keywords' ) ) ),
-			'organicTraffic'   => Neo_Pulse_App_Semrush_Table_Parse::num( $pick( array( 'or', 'organic_traffic', 'traffic' ) ) ),
-			'trafficCost'      => Neo_Pulse_App_Semrush_Table_Parse::num( $pick( array( 'ot', 'traffic_cost', 'traffic_value' ) ) ),
-			'organicKeywords'  => Neo_Pulse_App_Semrush_Table_Parse::num( $pick( array( 'oc', 'organic_keywords' ) ) ),
-			'adsKeywords'      => Neo_Pulse_App_Semrush_Table_Parse::num( $pick( array( 'ad', 'paid_keywords', 'ads_keywords' ) ) ),
+			'commonKeywords'   => Neo_Pulse_App_Semrush_Table_Parse::num( $pick( array( 'np', 'common_keywords', 'common keywords' ) ) ),
+			'organicTraffic'   => Neo_Pulse_App_Semrush_Table_Parse::num( $pick( array( 'or', 'organic_traffic', 'organic traffic', 'traffic' ) ) ),
+			'trafficCost'      => Neo_Pulse_App_Semrush_Table_Parse::num( $pick( array( 'ot', 'traffic_cost', 'organic cost', 'organic traffic_cost', 'traffic_value' ) ) ),
+			'organicKeywords'  => Neo_Pulse_App_Semrush_Table_Parse::num( $pick( array( 'oc', 'organic_keywords', 'organic keywords' ) ) ),
+			'adsKeywords'      => Neo_Pulse_App_Semrush_Table_Parse::num( $pick( array( 'ad', 'paid_keywords', 'adwords keywords', 'ads_keywords' ) ) ),
 		);
 	}
 

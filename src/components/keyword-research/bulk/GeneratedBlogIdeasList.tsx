@@ -23,9 +23,15 @@ import {
   CONTENT_OPTIMIZER_MULTI_SITE_ROW_WRAPPER_CLASS,
   contentOptimizerRowStripeClass,
 } from "@/components/overview/overview-tab/overview-tab-content-constants";
+import { BULK_GENERATOR_ROW_GRID_MIN_CLASS } from "@/components/keyword-research/blog-generator-tab-classes";
 import { cn } from "@/lib/utils";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+
+const BULK_GENERATOR_LIST_ROW_WRAPPER_CLASS = cn(
+  CONTENT_OPTIMIZER_MULTI_SITE_ROW_WRAPPER_CLASS,
+  "shrink-0",
+);
 
 interface GeneratedBlogIdeasListProps {
   hasGeneratedChecklist: boolean;
@@ -61,7 +67,8 @@ type ListItem = {
   placeholder?: boolean;
 };
 
-function padListWithPlaceholders(items: ListItem[], targetCount: number): ListItem[] {
+/** Pad real rows with zebra placeholder stripes up to targetCount (Prompt workspace BG). */
+export function padListWithPlaceholders(items: ListItem[], targetCount: number): ListItem[] {
   if (targetCount <= 0 || items.length >= targetCount) {
     return items;
   }
@@ -176,13 +183,19 @@ export function GeneratedBlogIdeasList({
     sortable && rowOrder.length === previewRows.length && previewRows.length > 0;
 
   const listItems = useMemo((): ListItem[] => {
-    if (slotMode && generatedRows.length > 0) {
-      return generatedRows.map((row, generatedIdx) => ({
-        generatedIdx,
-        row,
-        slotIdx: generatedIdx,
-        sortableId: String(generatedIdx),
-      }));
+    if (slotMode && placeholderCount > 0) {
+      const contentCount = generatedRows.length;
+      const target = Math.max(contentCount, placeholderCount);
+      return Array.from({ length: target }, (_, rowIndex) => {
+        const isPad = rowIndex >= contentCount;
+        return {
+          generatedIdx: isPad ? -1 : rowIndex,
+          row: isPad ? {} : generatedRows[rowIndex]!,
+          slotIdx: rowIndex,
+          sortableId: isPad ? `placeholder-${rowIndex}` : String(rowIndex),
+          placeholder: isPad,
+        };
+      });
     }
 
     if (!hasGeneratedChecklist && placeholderCount > 0) {
@@ -220,6 +233,7 @@ export function GeneratedBlogIdeasList({
       }));
     }
 
+    // Always pad to placeholderCount when set (18-row zebra background after Ideas).
     return padListWithPlaceholders(items, placeholderCount);
   }, [
     slotMode,
@@ -307,13 +321,14 @@ export function GeneratedBlogIdeasList({
   const showSelectAll = hasGeneratedChecklist && selectableIndices.length > 0;
 
   const selectAllHeader = showSelectAll ? (
-    <div className={CONTENT_OPTIMIZER_MULTI_SITE_ROW_WRAPPER_CLASS}>
+    <div className={BULK_GENERATOR_LIST_ROW_WRAPPER_CLASS}>
       <div
         className={cn(
           contentOptimizerRowStripeClass(0),
           showPublishDates
-            ? "grid w-full min-w-0 min-h-[3rem] grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)_minmax(7.5rem,0.7fr)_2.25rem] items-center gap-x-2 sm:min-h-[3.25rem] sm:gap-x-3"
-            : "grid w-full min-w-0 min-h-[3rem] grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)_2.25rem] items-center gap-x-2 sm:min-h-[3.25rem] sm:gap-x-3",
+            ? "grid w-full min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)_minmax(7.5rem,0.7fr)_2.25rem] items-center gap-x-2 sm:gap-x-3"
+            : "grid w-full min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)_2.25rem] items-center gap-x-2 sm:gap-x-3",
+          BULK_GENERATOR_ROW_GRID_MIN_CLASS,
         )}
       >
         <div className="flex shrink-0 items-center justify-center pl-0.5">
@@ -331,7 +346,7 @@ export function GeneratedBlogIdeasList({
   const renderRow = (item: ListItem, stripeIndex: number) => {
     if (item.placeholder) {
       return (
-        <div key={item.sortableId} className={CONTENT_OPTIMIZER_MULTI_SITE_ROW_WRAPPER_CLASS}>
+        <div key={item.sortableId} className={BULK_GENERATOR_LIST_ROW_WRAPPER_CLASS}>
           <BlogIdeaRowCompact
             row={item.row}
             index={item.generatedIdx}
@@ -368,10 +383,10 @@ export function GeneratedBlogIdeasList({
     return (
       <div
         key={item.placeholder ? item.sortableId : item.generatedIdx}
-        className={CONTENT_OPTIMIZER_MULTI_SITE_ROW_WRAPPER_CLASS}
+        className={BULK_GENERATOR_LIST_ROW_WRAPPER_CLASS}
       >
         {sortable && orderInSync && !item.placeholder ? (
-          <SortableBlogIdeaRow {...common} sortableDisabled={sortableDisabled} slotMode={slotMode} draftOnly={draftOnly} />
+          <SortableBlogIdeaRow {...common} sortableDisabled={sortableDisabled} slotMode={slotMode && !item.placeholder} draftOnly={draftOnly} />
         ) : (
           <BlogIdeaRowCompact
             row={item.row}
@@ -385,7 +400,7 @@ export function GeneratedBlogIdeasList({
             draftOnly={draftOnly}
             showPublishDate={showPublishDates}
             placeholder={item.placeholder}
-            slotMode={slotMode}
+            slotMode={slotMode && !item.placeholder}
             showSelect={!slotMode}
             onToggleSelect={common.onToggleSelect}
             onToggleExpand={common.onToggleExpand}
@@ -397,20 +412,11 @@ export function GeneratedBlogIdeasList({
     );
   };
 
-  const hasTrailingPlaceholders = listItems.some((item) => item.placeholder);
   const placeholderOnly = listItems.length > 0 && listItems.every((item) => item.placeholder);
 
   const list = (
-    <div
-      className={cn(
-        CONTENT_OPTIMIZER_MULTI_SITE_ROW_STACK_CLASS,
-        hasTrailingPlaceholders && embedded && "flex min-h-0 flex-1 flex-col overflow-hidden",
-      )}
-    >
-      <div
-        className={cn(hasTrailingPlaceholders && embedded && "flex min-h-0 flex-1 flex-col overflow-hidden")}
-        aria-hidden={placeholderOnly && embedded ? true : undefined}
-      >
+    <div className={CONTENT_OPTIMIZER_MULTI_SITE_ROW_STACK_CLASS}>
+      <div aria-hidden={placeholderOnly && embedded ? true : undefined}>
         {selectAllHeader}
         {sortable && orderInSync ? (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>

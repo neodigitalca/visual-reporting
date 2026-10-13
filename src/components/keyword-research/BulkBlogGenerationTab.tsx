@@ -9,6 +9,7 @@ import { BulkCsvWorkspaceHeader } from "@/components/keyword-research/bulk/BulkC
 import { BulkPromptWorkspaceHeader } from "@/components/keyword-research/bulk/BulkPromptWorkspaceHeader";
 import { BulkGeneratorScheduleMenu } from "@/components/keyword-research/bulk/BulkGeneratorScheduleMenu";
 import { BulkGeneratorSitemapMenu } from "@/components/keyword-research/bulk/BulkGeneratorSitemapMenu";
+import { generatorTitleRowPrimarySelectSlotProps } from "@/components/blog-generator/generator-title-row-select-width";
 import type { BulkGeneratorWorkspaceBindings } from "@/components/keyword-research/bulk/bulk-generator-workspace-bindings";
 import type { BulkGeneratedFile } from "@/lib/bulk-file-manager";
 import type { BlogGeneratorSectionId } from "@/components/blog-generator/blog-generator-sections";
@@ -39,6 +40,8 @@ import { notify } from "@/lib/app-notifications";
 import { notifyLoadedCsvX, NOTIFY_OPENROUTER_API_KEY_IS_REQUIRED } from "@/lib/notify-messages";
 import { resolveOpenRouterApiKeyForHarness } from "@/lib/openrouter-api-key-resolve";
 import { GOOGLE_IMAGE_ENTITY_SAP_PIPELINE_TITLES } from "@/lib/overview/overview-content-optimize-pipeline";
+import { overviewBulkDetailsCanOpenFromWarm } from "@/lib/overview/overview-bulk-details-bindings";
+import { buildPromptChecklistHarnessSections } from "@/lib/bulk/prompt-bulk-checklist-harness-sections";
 
 export interface BulkBlogGenerationTabProps {
   variant: "csv" | "prompt" | "blog-import" | "press-release";
@@ -177,6 +180,11 @@ export function BulkBlogGenerationTab({
     setPressReleaseBindings(bindings);
   }, []);
 
+  const promptSiteContextBlocked =
+    isPrompt &&
+    Boolean(bulkBindings?.connectedSite) &&
+    !bulkBindings?.promptSiteContextReady;
+
   const workspaceBusy = isPressRelease
     ? Boolean(pressReleaseBindings?.isProcessing)
     : Boolean(bulkBindings?.isProcessing) ||
@@ -195,9 +203,9 @@ export function BulkBlogGenerationTab({
       const pct = bulkBindings.checklistProgressPct;
       return {
         phase: bulkBindings.checklistPhase?.trim() || "Generating blog ideas",
-        completed: typeof pct === "number" ? pct : 0,
-        total: 100,
-        progressPct: typeof pct === "number" ? pct : undefined,
+        completed: 0,
+        total: 1,
+        progressPct: typeof pct === "number" ? pct : 0,
         harnessActive: false,
       };
     }
@@ -282,9 +290,12 @@ export function BulkBlogGenerationTab({
       }
     : null;
 
-  const sitemapMenu = useMemo(() => {
-    if (!bulkBindings || isPressRelease) return null;
-    if (!isCsv && !isPrompt && !isBlogImport) return null;
+  const sitemapScopeSlot = useMemo(() => {
+    if (isPressRelease || (!isCsv && !isPrompt && !isBlogImport)) return undefined;
+    if (!bulkBindings) {
+      const reserve = generatorTitleRowPrimarySelectSlotProps();
+      return <div className={reserve.className} style={reserve.style} aria-hidden />;
+    }
     return (
       <BulkGeneratorSitemapMenu
         postDestination={postDestination}
@@ -382,6 +393,15 @@ export function BulkBlogGenerationTab({
     entitySapRowDisplay: bulkBindings?.featuredImageType === "google-maps",
   };
 
+  const promptWarmCanOpenDetails =
+    isPrompt && bulkBindings?.connectedSite
+      ? overviewBulkDetailsCanOpenFromWarm(
+          bulkBindings.sitemapInventoryLinks ?? [],
+          bulkBindings.gscHostedLink ?? null,
+          Boolean(bulkBindings.sitemapInventoryLoading),
+        )
+      : false;
+
   const canOpenDetails = isPressRelease
     ? workspaceBusy ||
       Boolean(pressReleaseBindings?.inventoryJsonLink) ||
@@ -389,10 +409,12 @@ export function BulkBlogGenerationTab({
       Boolean(pressReleaseBindings?.keyword.trim()) ||
       Boolean(pressReleaseBindings?.title.trim())
     : workspaceBusy ||
+      promptWarmCanOpenDetails ||
       Boolean(importedFileName) ||
       Boolean(bulkBindings?.csvFileName) ||
       Boolean(bulkBindings?.hasGeneratedChecklist) ||
       (bulkBindings?.sitemapInventoryLinks?.length ?? 0) > 0 ||
+      Boolean(bulkBindings?.gscHostedLink) ||
       Boolean(bulkBindings?.siteKwHostedLink) ||
       Boolean(bulkBindings && bulkBindings.stats.completed > 0);
 
@@ -486,7 +508,7 @@ export function BulkBlogGenerationTab({
             onRun={() => void bulkBindings?.handleStartProcessing()}
             onCancel={() => bulkBindings?.cancelProcessing()}
             onClear={handleCsvClear}
-            sitemapMenu={sitemapMenu}
+            sitemapScopeSlot={sitemapScopeSlot}
             scheduleMenu={scheduleMenu}
             detailsProps={{
               ...baseDetailsProps,
@@ -531,14 +553,26 @@ export function BulkBlogGenerationTab({
             onCancel={() => bulkBindings?.cancelProcessing()}
             onClear={handlePromptClear}
             scheduleMenu={scheduleMenu}
-            sitemapMenu={sitemapMenu}
+            sitemapScopeSlot={sitemapScopeSlot}
+            promptSiteContextBlocked={promptSiteContextBlocked}
             detailsProps={{
               ...baseDetailsProps,
               variant: "prompt",
               generatedRowCount: bulkBindings?.generatedRows.length ?? 0,
               selectedCount: bulkBindings?.selectedBlogIndices.size ?? 0,
               sitemapInventoryLinks: bulkBindings?.sitemapInventoryLinks ?? [],
-              siteKwHostedLink: bulkBindings?.siteKwHostedLink ?? null,
+              siteKwHostedLink: bulkBindings?.gscHostedLink ?? bulkBindings?.siteKwHostedLink ?? null,
+              sitemapInventoryLoading: bulkBindings?.sitemapInventoryLoading,
+              isGeneratingChecklist: bulkBindings?.isGeneratingChecklist,
+              checklistPhase: bulkBindings?.checklistPhase,
+              liveMessage: bulkBindings?.isGeneratingChecklist
+                ? bulkBindings?.checklistPhase?.trim() || "Generating blog ideas"
+                : null,
+              batchPrepHarnessSections: buildPromptChecklistHarnessSections(
+                bulkBindings?.checklistPhase ?? "",
+                Boolean(bulkBindings?.isGeneratingChecklist),
+              ),
+              prepAccordionTitle: "Ideas checklist",
               filesByRow: bulkBindings?.filesByRow,
               downloadFile: bulkBindings?.downloadFile,
               publishDateLabelByIndex: bulkBindings?.publishDateLabelByIndex,
@@ -578,7 +612,7 @@ export function BulkBlogGenerationTab({
             canDownloadBlog={canDownloadBlog}
             onDownloadBlog={handleDownloadBlog}
             scheduleMenu={scheduleMenu}
-            sitemapMenu={sitemapMenu}
+            sitemapScopeSlot={sitemapScopeSlot}
             detailsProps={{
               ...baseDetailsProps,
               variant: "blog-import",

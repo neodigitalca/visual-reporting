@@ -5,7 +5,7 @@ section: Semrush
 method: POST
 path: /api/semrush/site-audit-url
 auth: open
-order: 960
+order: 1030
 ---
 
 POST `/api/semrush/site-audit-url`.

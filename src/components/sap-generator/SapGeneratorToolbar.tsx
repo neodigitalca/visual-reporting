@@ -156,7 +156,7 @@ export function SapGeneratorToolbar({
             className={cn(BULK_HEADER_TOOL_BTN, "h-8 w-8 shrink-0 p-0")}
             disabled={workspaceBusy || runLoading}
             aria-label="Apply remaining entity count for this period"
-            title="No grid: fills Location from site city if empty. Sets entity count to 15 minus published this period (manual, no AI)."
+            title="Sets entity count to period target minus published this period (manual, no AI)."
             onClick={onApplyRemainingEntityCount}
           >
             <Wand2 className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
@@ -228,16 +228,13 @@ export function SapGeneratorToolbar({
             type="button"
             size="sm"
             className={BULK_HEADER_RUN_BTN}
-            disabled={workspaceBusy}
+            disabled={runLoading || workspaceBusy}
+            aria-busy={runLoading}
             aria-label="Run clusters"
             title="Run clusters"
             onClick={() => void onRunClusters()}
           >
-            {runLoading ? (
-              <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-            ) : (
-              <Wand2 className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-            )}
+            <Wand2 className="h-4 w-4 shrink-0 text-black" strokeWidth={2} aria-hidden />
             Clusters
           </Button>
           <Button

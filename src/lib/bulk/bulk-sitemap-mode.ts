@@ -4,14 +4,42 @@ import type { PromptBulkSitemapInventoryBuckets } from "@/lib/bulk/prompt-bulk-s
 
 export type BulkSitemapMode = "post" | "entity" | "custom";
 export type BulkRowSitemapType = "post" | "entity";
-export type BulkSitemapScopeTag = "pages" | "posts" | "entities";
+export type BulkSitemapScopeTag =
+  | "pages"
+  | "posts"
+  | "entities"
+  | `custom:${string}`;
+
+const BUILTIN_SCOPE_TAGS = new Set<string>(["pages", "posts", "entities"]);
+
+export function isCustomBulkScopeTag(tag: string): tag is `custom:${string}` {
+  return tag.startsWith("custom:");
+}
+
+export function splitBulkScopeTags(scopes: BulkSitemapScopeTag[]): {
+  builtin: Array<"pages" | "posts" | "entities">;
+  custom: `custom:${string}`[];
+} {
+  const builtin: Array<"pages" | "posts" | "entities"> = [];
+  const custom: `custom:${string}`[] = [];
+  for (const tag of scopes) {
+    if (BUILTIN_SCOPE_TAGS.has(tag)) {
+      builtin.push(tag as "pages" | "posts" | "entities");
+    } else if (isCustomBulkScopeTag(tag)) {
+      custom.push(tag);
+    }
+  }
+  return { builtin, custom };
+}
 
 const EMPTY_SCOPE_BUCKET: PromptBulkSitemapInventoryBuckets[OverviewSitemapSource] = {
   json: "",
   rowCount: 0,
 };
 
-export function scopeTagToOverviewSource(tag: BulkSitemapScopeTag): OverviewSitemapSource {
+export function scopeTagToOverviewSource(
+  tag: Extract<BulkSitemapScopeTag, "pages" | "posts" | "entities">,
+): OverviewSitemapSource {
   if (tag === "pages") return "pages";
   if (tag === "posts") return "posts";
   return "sap";
@@ -21,9 +49,15 @@ export function normalizeBulkSitemapScopeTags(raw: unknown): BulkSitemapScopeTag
   if (!Array.isArray(raw)) return [];
   const out: BulkSitemapScopeTag[] = [];
   for (const item of raw) {
-    const v = String(item).trim().toLowerCase();
-    if (v === "pages" || v === "posts" || v === "entities") {
-      if (!out.includes(v)) out.push(v);
+    const v = String(item).trim();
+    const lower = v.toLowerCase();
+    if (lower === "pages" || lower === "posts" || lower === "entities") {
+      if (!out.includes(lower)) out.push(lower as BulkSitemapScopeTag);
+      continue;
+    }
+    if (lower.startsWith("custom:")) {
+      const id = `custom:${lower.slice("custom:".length)}` as `custom:${string}`;
+      if (!out.includes(id)) out.push(id);
     }
   }
   return out;
@@ -36,16 +70,49 @@ export function filterPromptBulkSitemapBucketsByScopes(
 ): PromptBulkSitemapInventoryBuckets {
   const selected = normalizeBulkSitemapScopeTags(scopes ?? []);
   if (selected.length === 0) return buckets;
-  const allowed = new Set(selected.map(scopeTagToOverviewSource));
+  const { builtin } = splitBulkScopeTags(selected);
+  if (builtin.length === 0) {
+    return {
+      pages: { ...EMPTY_SCOPE_BUCKET },
+      posts: { ...EMPTY_SCOPE_BUCKET },
+      sap: { ...EMPTY_SCOPE_BUCKET },
+      customByScope: buckets.customByScope,
+    };
+  }
+  const allowed = new Set(builtin.map(scopeTagToOverviewSource));
   return {
     pages: allowed.has("pages") ? buckets.pages : { ...EMPTY_SCOPE_BUCKET },
     posts: allowed.has("posts") ? buckets.posts : { ...EMPTY_SCOPE_BUCKET },
     sap: allowed.has("sap") ? buckets.sap : { ...EMPTY_SCOPE_BUCKET },
+    customByScope: buckets.customByScope,
   };
 }
 
+export function filterCustomBucketsByScopes(
+  customByScope: PromptBulkSitemapInventoryBuckets["customByScope"],
+  scopes: BulkSitemapScopeTag[] | undefined,
+): PromptBulkSitemapInventoryBuckets["customByScope"] {
+  const selected = normalizeBulkSitemapScopeTags(scopes ?? []);
+  if (selected.length === 0) return customByScope;
+  const { builtin, custom } = splitBulkScopeTags(selected);
+  if (custom.length === 0) {
+    return builtin.length > 0 ? undefined : customByScope;
+  }
+  const out: NonNullable<PromptBulkSitemapInventoryBuckets["customByScope"]> = {};
+  for (const scopeId of custom) {
+    const block = customByScope?.[scopeId];
+    out[scopeId] = block ?? { json: "", rowCount: 0, label: scopeId };
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 export function totalRowsInScopedBuckets(buckets: PromptBulkSitemapInventoryBuckets): number {
-  return buckets.pages.rowCount + buckets.posts.rowCount + buckets.sap.rowCount;
+  let total =
+    buckets.pages.rowCount + buckets.posts.rowCount + buckets.sap.rowCount;
+  for (const block of Object.values(buckets.customByScope ?? {})) {
+    total += block.rowCount;
+  }
+  return total;
 }
 
 const POST_ALIASES = new Set(["post", "posts", "blog", "blogs"]);

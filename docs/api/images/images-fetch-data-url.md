@@ -5,7 +5,7 @@ section: Images
 method: POST
 path: /api/images/fetch-data-url
 auth: open
-order: 510
+order: 540
 ---
 
 POST `/api/images/fetch-data-url`.

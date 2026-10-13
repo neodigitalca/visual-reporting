@@ -5,7 +5,7 @@ section: DataForSEO MCP
 method: POST
 path: /api/mcp/DataForSEO_serp_google_ai_mode
 auth: open
-order: 790
+order: 850
 ---
 
 POST `/api/mcp/DataForSEO_serp_google_ai_mode`.

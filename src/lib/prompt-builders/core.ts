@@ -16,6 +16,7 @@ import {
 import { UNIFIED_COPY_FORMATTING_RULE, HARNESS_HEADING_TITLE_CASE_RULE } from "@/lib/prompt-builders/title-rules";
 import { UNIQUE_DYNAMIC_BODY_H2_RULE } from "@/lib/content-optimization/harness-heading-titles";
 import { HARNESS_LABELED_LIST_HTML_RULE } from "@/lib/prompt-builders/harness-labeled-list-html-rule";
+import { INTERNAL_LINKS_PER_SECTION_RULE } from "@/lib/content-generation/link-anchor-text-case";
 
 // --- System Prompt Core ---
 
@@ -275,7 +276,7 @@ ${FORBIDDEN_WORDS_USER_PROMPT_REMINDER}`;
       isFirstAgent && contentKind === "press_release"
         ? "\n**PRESS RELEASE OPENING (SECTION 1 ONLY)**: First output line is ## plus a topical headline for the keyword (service/expertise angle, not a fake launch). Next paragraph: start with the exact Wire dateline from ACF when provided (once only in the full release); otherwise city, region, and full date in AP style. Never [CITY], [STATE], [Month DD, YYYY], or bracket templates. Then a lead about the business and topic. Neutral AP tone. Do not frame as a new announcement unless user context says so."
         : isSeoOpenerSection
-          ? "\n**CRITICAL FIRST BODY SECTION**: Write exactly 3 short paragraphs (2-3 sentences each). Sentence 1 must be a sourced fact NEW to this H2's job (number, named constraint, process step), not Answer's headline fact, not a dictionary definition, and not the company name as a greeting. Do not start with the writing keyword as the subject (\"{keyword} offers/provides/involves\"). The keyword may appear later in the paragraph. Then expand. **MINIMAL LINKING**: Only link entity to Wikipedia (if entity) and main service to its page. **CRITICAL**: H2 MUST be active and SEO-friendly (e.g. 'Child-Safe Window Treatment Key Rules') - NEVER 'Introduction', 'Intro', 'Understanding…', 'Navigating…', or colon subtitles. Markdown only."
+          ? "\n**CRITICAL FIRST BODY SECTION**: Write exactly 3 short paragraphs (2-3 sentences each). Sentence 1 must be a sourced fact NEW to this H2's job (number, named constraint, process step), not Answer's headline fact, not a dictionary definition, and not the company name as a greeting. Do not start with the writing keyword as the subject (\"{keyword} offers/provides/involves\"). The keyword may appear later in the paragraph. Then expand. **INTERNAL LINKS**: Same as other body H2s — follow INTERNAL LINKS PER SECTION rules in the system prompt (THIS SECTION LINK ASSIGNMENTS when present). **CRITICAL**: H2 MUST be active and SEO-friendly (e.g. 'Child-Safe Window Treatment Key Rules') - NEVER 'Introduction', 'Intro', 'Understanding…', 'Navigating…', or colon subtitles. Markdown only."
           : "";
     const prTopicBlock =
       contentKind === "press_release" && topicAnchor?.trim()
@@ -287,7 +288,7 @@ ${FORBIDDEN_WORDS_USER_PROMPT_REMINDER}`;
         : "";
     const prInternalLinkRule =
       contentKind === "press_release"
-        ? "\n**INTERNAL LINKS**: Include at least 1 [[LINK:query|anchor]] in this section, woven into a complete sentence. Query is PAGES or BLOG POSTS title words, never a raw URL. Forbidden: markdown [text](https://...) to third-party or competitor URLs; raw https:// internal URLs."
+        ? "\n**INTERNAL LINKS**: Include at least 2 [[LINK:query|anchor]] placeholders in this section, woven into complete sentences. Query is PAGES or BLOG POSTS title words, never a raw URL. Forbidden: markdown [text](https://...) to third-party or competitor URLs; raw https:// internal URLs."
         : "";
     const harnessBodyContract =
       contentKind !== "press_release" &&
@@ -331,7 +332,7 @@ ${illustrativeHarnessContract}
       : "";
     const quoteFormatNoteHtml = hasBlockquoteFeature ? `\n**QUOTE FORMAT**: ${HTML_QUOTE_OUTPUT_RULE}` : "";
     firstAgentSpecialInstructions = isSeoOpenerSection
-      ? "\n**CRITICAL FIRST BODY SECTION**: Write exactly 2 short <p> paragraphs (2-3 sentences each). Sentence 1 must be a sourced fact NEW to this H2's job (number, named constraint, process step), not Answer's headline fact, not a dictionary definition, and not the company name as a greeting. Do not start with the writing keyword as the subject (\"{keyword} offers/provides/involves\"). The keyword may appear later in the paragraph. Then expand. **MINIMAL LINKING**: Only link entity to Wikipedia (if entity) and main service to its page. **H2 TITLE (NON-NEGOTIABLE)**: Use the exact <h2> title from this section block — do not paraphrase or invent a different heading. HTML only."
+      ? "\n**CRITICAL FIRST BODY SECTION**: Write exactly 2 short <p> paragraphs (2-3 sentences each). Sentence 1 must be a sourced fact NEW to this H2's job (number, named constraint, process step), not Answer's headline fact, not a dictionary definition, and not the company name as a greeting. Do not start with the writing keyword as the subject (\"{keyword} offers/provides/involves\"). The keyword may appear later in the paragraph. Then expand. **INTERNAL LINKS**: Same as other body H2s — follow INTERNAL LINKS PER SECTION rules in the system prompt (THIS SECTION LINK ASSIGNMENTS when present). **H2 TITLE (NON-NEGOTIABLE)**: Use the exact <h2> title from this section block — do not paraphrase or invent a different heading. HTML only."
       : "";
     const harnessBodyContract =
       contentKind !== "press_release" &&
@@ -369,7 +370,14 @@ ${illustrativeHarnessContract}
       agent.id !== BLOG_HARNESS_SUMMARY_AGENT_ID
         ? `\n${HARNESS_LABELED_LIST_HTML_RULE}`
         : "";
-    contentInstruction = `[Write content in HTML. Based on: ${agent.description}${agent.features.length > 0 ? `\nKey points: ${featureInstructions}` : ''}${harnessBodyContract}${authenticityNote}${harnessHeadingTitleCaseNote}${laterSectionOpeningNote}${illustrativeBlockquoteNote}${nonIllustrativeHypotheticalBan}${firstAgentSpecialInstructions}${harnessScopeNote}${harnessKeywordNote}${harnessLabeledListNote}${sublistPreventionNote}${listFormatNote}${quoteFormatNoteHtml} Use <${hTag}>, <p>, <ul><li>, <ol><li>, <a href=\"...\">text</a>, <table>, <blockquote><p>. NEVER markdown, never **asterisks**, never a keyword or [[LINK]] after the final period or as the last words of a sentence. After a period, capitalize the next sentence. Never wrap a quote with the word blockquote.]`;
+    const harnessBodyInternalLinksNote =
+      contentKind !== "press_release" &&
+      agent.id !== BLOG_HARNESS_ANSWER_AGENT_ID &&
+      agent.id !== BLOG_HARNESS_SUMMARY_AGENT_ID &&
+      !hasFAQFeature
+        ? `\n${INTERNAL_LINKS_PER_SECTION_RULE}`
+        : "";
+    contentInstruction = `[Write content in HTML. Based on: ${agent.description}${agent.features.length > 0 ? `\nKey points: ${featureInstructions}` : ''}${harnessBodyContract}${authenticityNote}${harnessHeadingTitleCaseNote}${laterSectionOpeningNote}${illustrativeBlockquoteNote}${nonIllustrativeHypotheticalBan}${firstAgentSpecialInstructions}${harnessScopeNote}${harnessKeywordNote}${harnessBodyInternalLinksNote}${harnessLabeledListNote}${sublistPreventionNote}${listFormatNote}${quoteFormatNoteHtml} Use <${hTag}>, <p>, <ul><li>, <ol><li>, <table>, <blockquote><p>. Same-site links MUST be [[LINK:query|anchor]] placeholders only (from PAGES and BLOG POSTS / LINK TARGETS PLAN). FORBIDDEN: raw same-site <a href=\"https://...\"> and homepage-only links. External Wikipedia only when explicitly allowed. NEVER markdown, never **asterisks**, never a keyword or [[LINK]] after the final period or as the last words of a sentence. After a period, capitalize the next sentence. Never wrap a quote with the word blockquote.]`;
   }
 
   let sectionPrompt =

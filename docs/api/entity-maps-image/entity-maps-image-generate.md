@@ -5,7 +5,7 @@ section: Entity Maps
 method: POST
 path: /api/entity-maps-image/generate
 auth: open
-order: 140
+order: 150
 ---
 
 POST `/api/entity-maps-image/generate`.

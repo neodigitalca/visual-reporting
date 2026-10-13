@@ -133,6 +133,12 @@ class Neo_Pulse_App_Api_Dispatcher {
 			return;
 		}
 
+		if ( 0 === strpos( $route, 'organic-dashboard/' ) ) {
+			@set_time_limit( 180 );
+			Neo_Pulse_App_Organic_Dashboard_Route_Handlers::dispatch_http( substr( $route, 18 ), $method, $body );
+			return;
+		}
+
 		if ( 0 === strpos( $route, 'gmb/' ) ) {
 			Neo_Pulse_App_Gmb_Route_Handlers::dispatch_http( substr( $route, 4 ), $method, $body );
 			return;
@@ -259,11 +265,6 @@ class Neo_Pulse_App_Api_Dispatcher {
 		if ( 0 === strpos( $route, 'internal/emcp/' ) ) {
 			@set_time_limit( 180 );
 			Neo_Pulse_App_Hub_Internal_Emcp_Route_Handlers::dispatch_http( substr( $route, 14 ), $method, $body );
-			return;
-		}
-
-		if ( 0 === strpos( $route, 'internal/email-desk/' ) ) {
-			Neo_Pulse_App_Hub_Internal_Email_Desk_Route_Handlers::dispatch_http( substr( $route, 20 ), $method, $body );
 			return;
 		}
 

@@ -5,7 +5,7 @@ section: Knowledge Model
 method: POST
 path: /api/knowledge-model/auto-graph
 auth: open
-order: 560
+order: 600
 ---
 
 POST `/api/knowledge-model/auto-graph`.

@@ -5,7 +5,7 @@ section: Google Search Console
 method: POST
 path: /api/gsc/fetch-historical-stats
 auth: open
-order: 350
+order: 360
 ---
 
 POST `/api/gsc/fetch-historical-stats`.

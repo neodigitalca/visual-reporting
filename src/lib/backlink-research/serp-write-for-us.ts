@@ -16,22 +16,62 @@ export function buildWriteForUsKeyword(industry: string): string {
   return `${industry} write for us`;
 }
 
-export function extractOrganicRowsFromSerpJson(serpJson: unknown): SerpOrganicRow[] {
+function serpTopLevelItems(serpJson: unknown): unknown[] {
   const root = serpJson as {
+    status_code?: number;
     tasks?: Array<{
       status_code?: number;
-      result?: Array<{ items?: unknown[] }>;
+      result?: Array<{ items?: unknown[]; items_count?: number }>;
     }>;
   };
   const t0 = root.tasks?.[0];
-  if (t0?.status_code != null && t0.status_code !== 20000) {
+  const taskStatus = t0?.status_code ?? root.status_code;
+  if (taskStatus != null && taskStatus !== 20000) {
     return [];
   }
   const items = t0?.result?.[0]?.items;
-  if (!Array.isArray(items)) return [];
+  return Array.isArray(items) ? items : [];
+}
+
+function pushSerpRow(
+  o: {
+    type?: string;
+    title?: string;
+    description?: string;
+    snippet?: string;
+    url?: string;
+    link?: string;
+  },
+  out: SerpOrganicRow[],
+  seen: Set<string>,
+): void {
+  const type = o.type;
+  const isOrganic = type === undefined || type === "organic" || type === "organic_result";
+  const isLocalPack = type === "local_pack";
+  if (!isOrganic && !isLocalPack) return;
+
+  const url = typeof o.url === "string" ? o.url : typeof o.link === "string" ? o.link : "";
+  if (!url.startsWith("http")) return;
+  const key = url.split("#")[0] ?? url;
+  if (seen.has(key)) return;
+  seen.add(key);
+  out.push({
+    title: typeof o.title === "string" ? o.title : "",
+    description:
+      typeof o.description === "string"
+        ? o.description
+        : typeof o.snippet === "string"
+          ? o.snippet
+          : "",
+    url,
+  });
+}
+
+/** Organic blue-link rows only (legacy callers). */
+export function extractOrganicRowsFromSerpJson(serpJson: unknown): SerpOrganicRow[] {
   const out: SerpOrganicRow[] = [];
   const seen = new Set<string>();
-  for (const it of items) {
+  for (const it of serpTopLevelItems(serpJson)) {
     if (!it || typeof it !== "object") continue;
     const o = it as {
       type?: string;
@@ -40,23 +80,44 @@ export function extractOrganicRowsFromSerpJson(serpJson: unknown): SerpOrganicRo
       snippet?: string;
       url?: string;
       link?: string;
+      items?: unknown[];
     };
-    if (o.type != null && o.type !== "organic") continue;
-    const url = typeof o.url === "string" ? o.url : typeof o.link === "string" ? o.link : "";
-    if (!url.startsWith("http")) continue;
-    const key = url.split("#")[0] ?? url;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push({
-      title: typeof o.title === "string" ? o.title : "",
-      description:
-        typeof o.description === "string"
-          ? o.description
-          : typeof o.snippet === "string"
-            ? o.snippet
-            : "",
-      url,
-    });
+    if (o.type === "local_pack") continue;
+    pushSerpRow(o, out, seen);
+    if (Array.isArray(o.items)) {
+      for (const nested of o.items) {
+        if (!nested || typeof nested !== "object") continue;
+        pushSerpRow(nested as typeof o, out, seen);
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Local competitor discovery: organic results plus Google local pack businesses (SERP order).
+ */
+export function extractCompetitorDiscoverySerpRows(serpJson: unknown): SerpOrganicRow[] {
+  const out: SerpOrganicRow[] = [];
+  const seen = new Set<string>();
+  for (const it of serpTopLevelItems(serpJson)) {
+    if (!it || typeof it !== "object") continue;
+    const o = it as {
+      type?: string;
+      title?: string;
+      description?: string;
+      snippet?: string;
+      url?: string;
+      link?: string;
+      items?: unknown[];
+    };
+    pushSerpRow(o, out, seen);
+    if (Array.isArray(o.items)) {
+      for (const nested of o.items) {
+        if (!nested || typeof nested !== "object") continue;
+        pushSerpRow(nested as typeof o, out, seen);
+      }
+    }
   }
   return out;
 }

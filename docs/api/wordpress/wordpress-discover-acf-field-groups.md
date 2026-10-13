@@ -5,7 +5,7 @@ section: WordPress
 method: POST
 path: /api/wordpress/discover-acf-field-groups
 auth: open
-order: 2290
+order: 2610
 ---
 
 POST `/api/wordpress/discover-acf-field-groups`.

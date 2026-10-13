@@ -257,7 +257,6 @@ export function BulkCsvRunProgressGrid({
   }, [displayRows, placeholderRowCount]);
 
   const contentRowCount = displayRows.length;
-  const hasTrailingPlaceholders = contentRowCount < placeholderRowCount;
   const isPlaceholderSlot = (rowIndex: number) => rowIndex >= contentRowCount;
 
   const toggleRow = (rowIndex: number) => {
@@ -285,16 +284,6 @@ export function BulkCsvRunProgressGrid({
     const panelId = `bulk-csv-row-${rowIndex}`;
     const rowActive = status === "generating";
     const canDownloadRow = !placeholder && rowCanDownload(files);
-    const rowErrorMessage =
-      status === "error"
-        ? (failedRowMessages[rowIndex]?.trim() ||
-            (processingStatus.startsWith("Failed:")
-              ? processingStatus.slice("Failed:".length).trim()
-              : "") ||
-            processingStatus.trim() ||
-            "Row failed")
-        : "";
-
     const rowBody = (
       <BlogIdeaRowCompact
         row={row}
@@ -323,14 +312,14 @@ export function BulkCsvRunProgressGrid({
 
     if (!isExpanded) {
       return (
-        <div key={rowIndex} className={CONTENT_OPTIMIZER_MULTI_SITE_ROW_WRAPPER_CLASS}>
+        <div key={rowIndex} className={cn(CONTENT_OPTIMIZER_MULTI_SITE_ROW_WRAPPER_CLASS, "shrink-0")}>
           {rowBody}
         </div>
       );
     }
 
     return (
-      <div key={rowIndex} className={CONTENT_OPTIMIZER_MULTI_SITE_ROW_WRAPPER_CLASS}>
+      <div key={rowIndex} className={cn(CONTENT_OPTIMIZER_MULTI_SITE_ROW_WRAPPER_CLASS, "shrink-0")}>
         <div
           id={panelId}
           className={cn(
@@ -348,10 +337,6 @@ export function BulkCsvRunProgressGrid({
             }
             disabled={sitemapControlDisabled || isProcessing}
           />
-
-          {status === "error" && rowErrorMessage ? (
-            <p className="px-2.5 pb-2 text-base text-red-400 sm:px-3">{rowErrorMessage}</p>
-          ) : null}
 
           {files.length > 0 ? (
             <BulkCsvRowFilesAccordion
@@ -383,12 +368,7 @@ export function BulkCsvRunProgressGrid({
   };
 
   return (
-    <div
-      className={cn(
-        CONTENT_OPTIMIZER_MULTI_SITE_ROW_STACK_CLASS,
-        hasTrailingPlaceholders && "flex min-h-0 flex-1 flex-col overflow-hidden",
-      )}
-      aria-label="CSV rows"
+    <div className={CONTENT_OPTIMIZER_MULTI_SITE_ROW_STACK_CLASS} aria-label="CSV rows"
       onDragOver={
         onDropFiles
           ? (e) => {
@@ -407,9 +387,7 @@ export function BulkCsvRunProgressGrid({
           : undefined
       }
     >
-      <div
-        className={cn(hasTrailingPlaceholders && "flex min-h-0 flex-1 flex-col overflow-hidden")}
-      >
+      <div>
         {rowsToRender.map((row, rowIndex) => renderRow(row, rowIndex))}
       </div>
     </div>

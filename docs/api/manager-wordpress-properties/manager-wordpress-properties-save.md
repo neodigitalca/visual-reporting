@@ -5,7 +5,7 @@ section: Manager WordPress Properties
 method: POST
 path: /api/manager-wordpress-properties/save
 auth: open
-order: 650
+order: 690
 ---
 
 POST `/api/manager-wordpress-properties/save`.

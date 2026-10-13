@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-07T22:06:21.842Z",
+  "generatedAt": "2026-10-07T23:11:47.962Z",
   "repoRoot": "B:/Neo Pulse",
   "scope": "desktop-app",
   "excludes": [
@@ -9,6 +9,7 @@
     "monolith": 500,
     "watch": 300
   },
+  "scriptsTree500Plus": [],
   "summary": {
     "monolith": 143,
     "watch": 262,
@@ -25,7 +26,8 @@
         "monolith": 51,
         "watch": 58
       }
-    }
+    },
+    "scriptsTree500Count": 0
   },
   "files": [
     {

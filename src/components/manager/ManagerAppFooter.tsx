@@ -42,7 +42,11 @@ export function ManagerAppFooter({ currentTab, onTabChange, onDashboardBrandClic
   };
 
   return (
-    <footer className="relative mt-0 w-full shrink-0 overflow-hidden bg-black" role="contentinfo">
+    <footer
+      data-neo-pulse-manager-footer
+      className="relative z-[1] mt-0 w-full shrink-0 overflow-hidden bg-black"
+      role="contentinfo"
+    >
       <div className="flex w-full min-w-0 flex-nowrap items-center gap-4 px-5 py-2.5 md:px-6 md:py-3">
         <div className="flex shrink-0 items-center">
           <NeoPulseAppBrand variant="default" onClick={handleBrandClick} />
@@ -75,8 +79,6 @@ export function ManagerAppFooter({ currentTab, onTabChange, onDashboardBrandClic
           <span className="hidden whitespace-nowrap sm:inline">© {year} NEO Pulse</span>
         </div>
       </div>
-
-      <div className="pointer-events-none h-1 w-full shrink-0 bg-primary" aria-hidden />
     </footer>
   );
 }

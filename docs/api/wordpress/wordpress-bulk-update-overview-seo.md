@@ -5,7 +5,7 @@ section: WordPress
 method: POST
 path: /api/wordpress/bulk-update-overview-seo
 auth: open
-order: 2170
+order: 2490
 ---
 
 POST `/api/wordpress/bulk-update-overview-seo`.

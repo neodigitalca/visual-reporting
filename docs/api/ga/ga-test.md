@@ -5,7 +5,7 @@ section: Google Analytics
 method: POST
 path: /api/ga/test
 auth: open
-order: 170
+order: 180
 ---
 
 POST `/api/ga/test`.

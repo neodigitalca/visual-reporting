@@ -10,7 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DASHBOARD_SETTINGS_FIELD_CLASS } from "@/components/manager/dashboard/dashboard-panel-styles";
 import type { WordPressSite } from "@/components/integrations/types";
-import { wordpressSiteDisplayName } from "@/lib/wordpress-site-display-name";
+import {
+  wordpressSiteCanonicalName,
+  wordpressSiteMenuDisplayName,
+} from "@/lib/wordpress-site-display-name";
 
 const INPUT_CLASS = `${DASHBOARD_SETTINGS_FIELD_CLASS} min-w-0 w-full h-12`;
 
@@ -19,6 +22,8 @@ export type SiteDisplayNameDialogProps = {
   site: WordPressSite | null;
   onOpenChange: (open: boolean) => void;
   onSave: (siteId: string, name: string) => void;
+  /** Menu label (header) vs stored property name (Integrations list). */
+  variant?: "menu" | "canonical";
 };
 
 export function SiteDisplayNameDialog({
@@ -26,13 +31,18 @@ export function SiteDisplayNameDialog({
   site,
   onOpenChange,
   onSave,
+  variant = "menu",
 }: SiteDisplayNameDialogProps) {
   const [name, setName] = useState("");
+  const title = variant === "canonical" ? "Property name" : "Display name";
+  const fieldLabel = variant === "canonical" ? "Property name" : "Display name";
 
   useEffect(() => {
     if (!open || !site) return;
-    setName(wordpressSiteDisplayName(site));
-  }, [open, site]);
+    setName(
+      variant === "canonical" ? wordpressSiteCanonicalName(site) : wordpressSiteMenuDisplayName(site),
+    );
+  }, [open, site, variant]);
 
   const trimmedName = name.trim();
   const canSave = Boolean(site && trimmedName);
@@ -47,12 +57,12 @@ export function SiteDisplayNameDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md rounded-none border-0 bg-zinc-950 p-6 text-white">
         <DialogHeader>
-          <DialogTitle className="text-base font-semibold text-white">Display name</DialogTitle>
+          <DialogTitle className="text-base font-semibold text-white">{title}</DialogTitle>
         </DialogHeader>
         <Input
           value={name}
           onChange={(event) => setName(event.target.value)}
-          aria-label="Display name"
+          aria-label={fieldLabel}
           className={INPUT_CLASS}
           autoFocus
           onKeyDown={(event) => {

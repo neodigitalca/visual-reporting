@@ -5,7 +5,7 @@ section: Vertical Benchmarks
 method: POST
 path: /api/vertical-benchmarks/classify-clients
 auth: open
-order: 2120
+order: 2440
 ---
 
 POST `/api/vertical-benchmarks/classify-clients`.

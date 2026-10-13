@@ -1,11 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { notify } from "@/lib/app-notifications";
+import React, { useCallback, useMemo, useState } from "react";
+import { notify, notifyHeaderError } from "@/lib/app-notifications";
 import type { CSVRow } from "@/lib/bulk/bulk-csv-parser";
 import type { WordPressSite } from "@/components/integrations/types";
 import type { BlogGeneratorSectionId } from "@/components/blog-generator/blog-generator-sections";
 import { CompetitorGeneratorWorkspaceHeader } from "@/components/competitor-generator/CompetitorGeneratorWorkspaceHeader";
 import {
-  COMPETITOR_DEFAULT_BUDGET,
   COMPETITOR_DEFAULT_BUDGET_INPUT,
   parseCompetitorBudgetInput,
 } from "@/components/competitor-generator/competitor-budget-input";
@@ -16,19 +15,29 @@ import type { CompetitorWorkspaceControls } from "@/components/competitor-genera
 import { buildCompetitorMicroSnapshot } from "@/lib/competitor-analysis/competitor-comparison-harness-state";
 import { allRowIndicesSet } from "@/lib/bulk-processing-order";
 import { downloadLocalAnalysisBulkCsv } from "@/lib/local-analysis-csv-export";
-import { seedPromptBlogSlots, syncPromptBlogRowsToCount } from "@/lib/bulk/prompt-blog-slots";
 import {
-  SEO_WORKSPACE_BODY_SCROLL_CLASS,
-  SEO_WORKSPACE_HEADER_CLASS,
-  SEO_WORKSPACE_INNER_CLASS,
-} from "@/components/seo/seo-workspace-layout";
+  BULK_GENERATOR_EMPTY_ROW_COUNT,
+  BLOG_GENERATOR_WORKSPACE_BODY_CLASS,
+  BLOG_GENERATOR_WORKSPACE_HEADER_CLASS,
+} from "@/components/keyword-research/blog-generator-tab-classes";
+import { EntitySubmodePills } from "@/components/sap-generator/EntitySubmodePills";
+import type { EntityGeneratorSubmode } from "@/components/sap-generator/entity-generator-submode";
+import type { LocalAnalysisWorkspaceControls } from "@/components/sap-generator/LocalAnalysisPanel";
+import { discoverCompetitorPlacesFromDfs } from "@/lib/competitor-research/discover-competitor-places-from-dfs";
+import {
+  logClustersButtonPress,
+  logClustersPipeline,
+} from "@/lib/local-analysis/entity-clusters-console-log";
+import { useOverviewSiteWarmDetails } from "@/hooks/overview/use-overview-site-warm-details";
 import { cn } from "@/lib/utils";
 
 export type CompetitorAnalysisPanelProps = {
   site: WordPressSite;
-  workspace: CompetitorWorkspaceControls;
+  workspace: LocalAnalysisWorkspaceControls;
   activeSection: BlogGeneratorSectionId;
   onSectionChange: (id: BlogGeneratorSectionId) => void;
+  entitySubmode: EntityGeneratorSubmode;
+  onEntitySubmodeChange: (mode: EntityGeneratorSubmode) => void;
 };
 
 export function CompetitorAnalysisPanel({
@@ -36,6 +45,8 @@ export function CompetitorAnalysisPanel({
   workspace,
   activeSection,
   onSectionChange,
+  entitySubmode,
+  onEntitySubmodeChange,
 }: CompetitorAnalysisPanelProps) {
   const {
     gridPlaces,
@@ -56,55 +67,40 @@ export function CompetitorAnalysisPanel({
 
   const [sapPageBudgetInput, setSapPageBudgetInput] = useState(COMPETITOR_DEFAULT_BUDGET_INPUT);
   const [suggestFocusKeyword, setSuggestFocusKeyword] = useState("");
-  const [entitySlotRows, setEntitySlotRows] = useState<CSVRow[]>(() =>
-    seedPromptBlogSlots(COMPETITOR_DEFAULT_BUDGET),
-  );
   const [entitySelectedRowIndices, setEntitySelectedRowIndices] = useState<Set<number>>(() => new Set());
-  const parsedBudget = useMemo(
-    () => parseCompetitorBudgetInput(sapPageBudgetInput),
-    [sapPageBudgetInput],
-  );
+  const [clustersRunBusy, setClustersRunBusy] = useState(false);
 
-  useEffect(() => {
-    if (generatedRows.length > 0) return;
-    if (parsedBudget === null) {
-      setEntitySlotRows([]);
-      return;
-    }
-    setEntitySlotRows((prev) => syncPromptBlogRowsToCount(prev, parsedBudget));
-  }, [parsedBudget, generatedRows.length]);
+  const {
+    sitemapInventoryLinks,
+    gscHostedLink,
+    sitemapInventoryLoading,
+  } = useOverviewSiteWarmDetails(site);
 
-  const workspaceBusy = isGenerating || csvParsing;
+  const workspaceBusy = isGenerating || csvParsing || clustersRunBusy;
   const hasGeneratedRows = generatedRows.length > 0;
-  const displayRows = hasGeneratedRows ? generatedRows : entitySlotRows;
-  const entityHasEmptyKeywordRow = displayRows.some((r) => !r.keyword?.trim());
-  const hideIdleProgressTrack = !progress && (!hasGeneratedRows || entityHasEmptyKeywordRow);
+  const competitorIdleEmptyStripes =
+    !hasGeneratedRows || generatedRows.length < BULK_GENERATOR_EMPTY_ROW_COUNT;
 
   const progressSnapshot = useMemo(() => {
-    if (!progress?.currentMessage?.trim()) return null;
-    return buildCompetitorMicroSnapshot({
-      phase: progress.currentMessage,
-      harnessGroups: progress.harnessGroups ?? [],
-    });
-  }, [progress]);
+    if (progress?.currentMessage?.trim()) {
+      return buildCompetitorMicroSnapshot({
+        phase: progress.currentMessage,
+        harnessGroups: progress.harnessGroups ?? [],
+      });
+    }
+    if (workspaceBusy) {
+      return {
+        label: "Competitor clusters",
+        completed: 0,
+        total: 1,
+        progressPct: 0,
+        statusMessage: clustersRunBusy ? "Discovering from Google Search…" : undefined,
+      };
+    }
+    return null;
+  }, [progress, clustersRunBusy, workspaceBusy]);
 
   const gridUploadLabel = gridCsvName ?? "";
-
-  const canOpenDetails = useMemo(
-    () =>
-      workspaceBusy ||
-      Boolean(progress?.harnessGroups?.length) ||
-      Boolean(gridUploadLabel.trim()) ||
-      hasGeneratedRows ||
-      gridPlaces.length > 0,
-    [
-      workspaceBusy,
-      progress?.harnessGroups?.length,
-      gridUploadLabel,
-      hasGeneratedRows,
-      gridPlaces.length,
-    ],
-  );
 
   const onDownloadTargetsCsv = useCallback(() => {
     if (generatedRows.length === 0) return;
@@ -116,36 +112,105 @@ export function CompetitorAnalysisPanel({
   }, [generatedRows, site.name, suggestFocusKeyword]);
 
   const onRunClusters = useCallback(() => {
-    const count = parseCompetitorBudgetInput(sapPageBudgetInput);
+    const parsedCount = parseCompetitorBudgetInput(sapPageBudgetInput);
+    const keywordTrim = suggestFocusKeyword.trim();
+    logClustersButtonPress("competitors", {
+      site: {
+        id: site.id,
+        name: site.name,
+        siteUrl: site.siteUrl,
+        enabled: site.enabled,
+      },
+      sapPageBudgetInput,
+      parsedCompetitorCount: parsedCount,
+      suggestFocusKeyword: keywordTrim,
+      gridCsvName,
+      gridPlacesCount: gridPlaces.length,
+      gridPlacesPreview: gridPlaces.slice(0, 25).map((p) => ({
+        businessName: p.businessName,
+        dfsKeyword: p.dfsKeyword,
+        rank: p.rank,
+      })),
+      discoverySource: gridPlaces.length > 0 ? "grid-csv" : "dataforseo-organic",
+      generatedRowsBeforeRun: generatedRows.length,
+      workspaceBusy,
+      sitemapInventoryLinkCount: sitemapInventoryLinks.length,
+      gscHostedLink: gscHostedLink
+        ? {
+            filename: gscHostedLink.filename,
+            rowCount: gscHostedLink.rowCount,
+            label: gscHostedLink.label,
+          }
+        : null,
+      sitemapInventoryLoading,
+    });
+
+    const count = parsedCount;
     if (count === null) {
+      logClustersPipeline("competitors", "blocked", { reason: "invalid_competitor_count" });
       notify.error("Enter a competitor count.");
       return;
     }
-    const keyword = suggestFocusKeyword.trim();
+    const keyword = keywordTrim;
     if (!keyword) {
+      logClustersPipeline("competitors", "blocked", { reason: "missing_keyword" });
       notify.error("Enter a keyword.");
       return;
     }
-    if (gridPlaces.length === 0) {
-      notify.error("Upload a Local Dominator grid CSV first.");
-      return;
-    }
-    void handleGenerate(site, gridPlaces, keyword, count, undefined, (rows) => {
-      setEntitySelectedRowIndices(allRowIndicesSet(rows.length));
-    });
+    void (async () => {
+      setClustersRunBusy(true);
+      try {
+        logClustersPipeline("competitors", "run_started", {
+          keyword,
+          count,
+          discoverySource: gridPlaces.length > 0 ? "grid-csv" : "dataforseo-organic",
+        });
+        const places =
+          gridPlaces.length > 0
+            ? gridPlaces
+            : await discoverCompetitorPlacesFromDfs({ site, keyword, limit: count });
+        logClustersPipeline("competitors", "places_ready", {
+          placeCount: places.length,
+          placesPreview: places.slice(0, 25).map((p) => ({
+            businessName: p.businessName,
+            dfsKeyword: p.dfsKeyword,
+            rank: p.rank,
+          })),
+        });
+        await handleGenerate(site, places, keyword, count, undefined, (rows) => {
+          logClustersPipeline("competitors", "rows_update", { rowCount: rows.length });
+          setEntitySelectedRowIndices(allRowIndicesSet(rows.length));
+        });
+        logClustersPipeline("competitors", "run_finished");
+      } catch (e) {
+        logClustersPipeline("competitors", "run_failed", {
+          message: e instanceof Error ? e.message : String(e),
+          stack: e instanceof Error ? e.stack : undefined,
+        });
+        notifyHeaderError(e, "Competitor discovery failed");
+      } finally {
+        setClustersRunBusy(false);
+      }
+    })();
   }, [
     handleGenerate,
     site,
     gridPlaces,
+    gridCsvName,
     sapPageBudgetInput,
     suggestFocusKeyword,
+    generatedRows.length,
+    workspaceBusy,
+    sitemapInventoryLinks.length,
+    gscHostedLink,
+    sitemapInventoryLoading,
   ]);
 
   const onClear = useCallback(() => {
     clearGridCsv();
     clearResults();
     setSapPageBudgetInput(COMPETITOR_DEFAULT_BUDGET_INPUT);
-    setEntitySlotRows(seedPromptBlogSlots(COMPETITOR_DEFAULT_BUDGET));
+    setSuggestFocusKeyword("");
     setEntitySelectedRowIndices(new Set());
   }, [clearGridCsv, clearResults]);
 
@@ -174,28 +239,25 @@ export function CompetitorAnalysisPanel({
     [updateGeneratedRowAt],
   );
 
-  const updateEntitySlotRowAt = useCallback((globalIdx: number, patch: Partial<CSVRow>) => {
-    setEntitySlotRows((prev) => {
-      if (globalIdx < 0 || globalIdx >= prev.length) return prev;
-      const next = [...prev];
-      next[globalIdx] = { ...next[globalIdx], ...patch };
-      return next;
-    });
-  }, []);
-
-  const listRows = hasGeneratedRows ? generatedRows : entitySlotRows;
+  const competitorWorkspace = workspace as CompetitorWorkspaceControls;
 
   return (
-    <div className={cn(SEO_WORKSPACE_INNER_CLASS, "local-analysis-panel")}>
-      <div className={SEO_WORKSPACE_HEADER_CLASS}>
+    <>
+      <div className={BLOG_GENERATOR_WORKSPACE_HEADER_CLASS}>
         <CompetitorGeneratorWorkspaceHeader
           activeSection={activeSection}
           onSectionChange={onSectionChange}
-          workspace={workspace}
+          titleRowMenu={
+            <EntitySubmodePills
+              submode={entitySubmode}
+              onSubmodeChange={onEntitySubmodeChange}
+              disabled={workspaceBusy}
+            />
+          }
+          workspace={competitorWorkspace}
           workspaceBusy={workspaceBusy}
           progressSnapshot={progressSnapshot}
-          hideIdleProgressTrack={hideIdleProgressTrack}
-          canOpenDetails={canOpenDetails}
+          canOpenDetails
           isProcessing={workspaceBusy}
           csvParsing={csvParsing}
           uploadLabel={gridUploadLabel}
@@ -203,7 +265,7 @@ export function CompetitorAnalysisPanel({
           onSapPageBudgetInputChange={setSapPageBudgetInput}
           suggestFocusKeyword={suggestFocusKeyword}
           onSuggestFocusKeywordChange={setSuggestFocusKeyword}
-          runLoading={isGenerating}
+          runLoading={isGenerating || clustersRunBusy}
           onPickFile={onPickFile}
           onRunClusters={onRunClusters}
           onClear={onClear}
@@ -212,31 +274,35 @@ export function CompetitorAnalysisPanel({
           detailsProps={{
             workspaceBusy,
             progress,
-            displayRows: listRows,
+            displayRows: generatedRows,
             keyword: suggestFocusKeyword,
+            sitemapInventoryLinks,
+            gscHostedLink,
+            sitemapInventoryLoading,
           }}
         />
       </div>
 
       <div
         className={cn(
-          SEO_WORKSPACE_BODY_SCROLL_CLASS,
-          "relative flex w-full min-w-0 flex-col",
-          listRows.length === 0 && "overflow-y-hidden",
+          BLOG_GENERATOR_WORKSPACE_BODY_CLASS,
+          "relative flex flex-col",
+          competitorIdleEmptyStripes && "overflow-y-hidden",
         )}
       >
         <BulkEntityWorkspaceBody
           hasGeneratedSapRows={hasGeneratedRows}
-          generatedRows={listRows}
+          entityPreloadMode={false}
+          generatedRows={generatedRows}
           selectedRowIndices={entitySelectedRowIndices}
           setSelectedRowIndices={setEntitySelectedRowIndices}
           isGenerating={isGenerating}
           isProcessing={workspaceBusy}
           showBusySpinner={false}
-          onRowChange={hasGeneratedRows ? updateSapRowAt : updateEntitySlotRowAt}
+          onRowChange={updateSapRowAt}
           directionsSiteName={site.name?.trim() || ""}
         />
       </div>
-    </div>
+    </>
   );
 }

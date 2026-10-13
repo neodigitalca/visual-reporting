@@ -7,6 +7,11 @@ import {
   type OverviewSitemapSource,
 } from "@/lib/overview/overview-sitemap-source";
 import {
+  customScopeIdFromLabel,
+  restCollectionsForCustomTag,
+} from "@/lib/sitemap-child-tags";
+import {
+  filterCustomBucketsByScopes,
   filterPromptBulkSitemapBucketsByScopes,
   totalRowsInScopedBuckets,
   type BulkSitemapScopeTag,
@@ -34,10 +39,16 @@ export type PromptBulkSitemapInventoryBucket = {
   rowCount: number;
 };
 
+export type PromptBulkCustomScopeBucket = PromptBulkSitemapInventoryBucket & {
+  label: string;
+};
+
 export type PromptBulkSitemapInventoryBuckets = Record<
   OverviewSitemapSource,
   PromptBulkSitemapInventoryBucket
->;
+> & {
+  customByScope?: Record<string, PromptBulkCustomScopeBucket>;
+};
 
 export type PromptBulkSitemapInventoryResult = {
   links: PromptBulkSitemapInventoryLink[];
@@ -63,7 +74,32 @@ function emptyBuckets(): PromptBulkSitemapInventoryBuckets {
     pages: { json: "", rowCount: 0 },
     posts: { json: "", rowCount: 0 },
     sap: { json: "", rowCount: 0 },
+    customByScope: undefined,
   };
+}
+
+function buildCustomScopeBucketsFromRows(
+  site: WordPressSite,
+  mergedRows: OverviewInventoryRow[],
+): Record<string, PromptBulkCustomScopeBucket> {
+  const out: Record<string, PromptBulkCustomScopeBucket> = {};
+  for (const label of site.customSitemapTagLabels ?? []) {
+    const scopeId = customScopeIdFromLabel(label);
+    const collections = new Set(
+      restCollectionsForCustomTag(site, label).map((c) => c.toLowerCase()),
+    );
+    if (collections.size === 0) continue;
+    const rows = mergedRows.filter((r) =>
+      collections.has((r.collection ?? "").toLowerCase()),
+    );
+    const urls = compactInventoryUrlsForJson(rows);
+    out[scopeId] = {
+      label,
+      json: stringifyContentBucketPostsJson("pages", rows),
+      rowCount: urls.length,
+    };
+  }
+  return out;
 }
 
 export function createBucketHostedLink(
@@ -141,7 +177,16 @@ export async function fetchPromptBulkSitemapInventory(
     links.push(createBucketHostedLink(site.siteUrl, source, urls));
   }
 
+  const customBuilt = buildCustomScopeBucketsFromRows(site, parallel.mergedRows);
+  if (Object.keys(customBuilt).length > 0) {
+    buckets.customByScope = customBuilt;
+  }
+
   const scopedBuckets = filterPromptBulkSitemapBucketsByScopes(buckets, options?.scopeTags);
+  scopedBuckets.customByScope = filterCustomBucketsByScopes(
+    buckets.customByScope,
+    options?.scopeTags,
+  );
   const scopedTotal = totalRowsInScopedBuckets(scopedBuckets);
   const scopedLinks =
     options?.scopeTags?.length && options.scopeTags.length > 0

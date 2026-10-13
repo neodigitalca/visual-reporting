@@ -5,7 +5,7 @@ section: Semrush
 method: GET
 path: /api/semrush/overview-json/{filename}
 auth: open
-order: 950
+order: 1010
 ---
 
 GET `/api/semrush/overview-json/{filename}`.

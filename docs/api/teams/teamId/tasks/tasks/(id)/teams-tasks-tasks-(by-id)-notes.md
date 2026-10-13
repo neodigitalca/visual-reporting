@@ -5,7 +5,7 @@ section: Teams
 method: POST
 path: /api/teams/{teamId}/tasks/tasks/({id})/notes
 auth: session-team
-order: 2020
+order: 2270
 ---
 
 POST `/api/teams/{teamId}/tasks/tasks/({id})/notes`.

@@ -1,6 +1,12 @@
 import { useCallback, useMemo } from "react";
 import { ChevronDown } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { useWordPressSites } from "@/hooks/use-wordpress-sites";
+import { useActiveWordPressSite } from "@/contexts/active-wordpress-site-context";
+import type { WordPressSite } from "@/components/integrations/types";
+import { prefetchOrganicDashboardBundle } from "@/lib/organic-dashboard/organic-dashboard-prefetch";
+import { openOrganicReporting } from "@/lib/organic-dashboard/organic-reporting-nav";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +19,7 @@ import {
 import {
   MANAGER_NAV_DROPDOWN_ITEM_BASE,
   MANAGER_NAV_DROPDOWN_PANEL,
+  MANAGER_NAV_DROPDOWN_Z,
   MANAGER_NAV_TRIGGER_ACTIVE,
   MANAGER_NAV_TRIGGER_BASE,
   MANAGER_NAV_TRIGGER_INACTIVE,
@@ -65,7 +72,10 @@ export function ManagerMegaMenuNav({
   const contentClass = cn(
     variant === "embedded"
       ? MANAGER_NAV_DROPDOWN_PANEL
-      : "z-50 min-w-[16.5rem] rounded-xl border border-primary/45 bg-black/90 p-1.5 shadow-none backdrop-blur-md text-popover-foreground",
+      : cn(
+          MANAGER_NAV_DROPDOWN_Z,
+          "min-w-[16.5rem] rounded-xl border border-primary/45 bg-black/90 p-1.5 shadow-none backdrop-blur-md text-popover-foreground",
+        ),
     "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
     "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-1",
     "duration-200",
@@ -73,12 +83,47 @@ export function ManagerMegaMenuNav({
 
   const { canRead } = useTeamPermission();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { sites } = useWordPressSites();
+  const { activeWordPressSiteId } = useActiveWordPressSite();
+  const queryClient = useQueryClient();
+  const isOrganicDashboardRoute =
+    /^\/sites\/[^/]+\/organic\/?$/.test(location.pathname) ||
+    managerTab === "organic-reporting";
+
+  const resolveOrganicNavSite = useCallback((): WordPressSite | undefined => {
+    const enabled = sites.filter((s) => s.enabled !== false);
+    if (enabled.length === 0) return undefined;
+    if (activeWordPressSiteId) {
+      const byActive = enabled.find((s) => s.id === activeWordPressSiteId);
+      if (byActive) return byActive;
+    }
+    return enabled[0];
+  }, [activeWordPressSiteId, sites]);
+
+  const warmOrganicReportingRoute = useCallback(
+    (site: WordPressSite) => {
+      prefetchOrganicDashboardBundle(queryClient, site);
+    },
+    [queryClient],
+  );
 
   const applyNavItemSelection = useCallback(
     (item: ManagerNavItem) => {
       if (item.children?.length) return;
+      if (item.organicDashboard) {
+        const site = resolveOrganicNavSite();
+        if (site) {
+          warmOrganicReportingRoute(site);
+          openOrganicReporting(navigate, location.pathname, site.id);
+        } else {
+          onDashboardClusterChange("properties");
+          onManagerTabChange("dashboard");
+        }
+        return;
+      }
       if (item.docsPath) {
-        navigate(item.docsPath);
+        navigate(item.docsPath, { flushSync: true });
         return;
       }
       if (item.dashboardCluster) {
@@ -88,7 +133,14 @@ export function ManagerMegaMenuNav({
         onManagerTabChange(item.value);
       }
     },
-    [navigate, onDashboardClusterChange, onManagerTabChange],
+    [
+      navigate,
+      onDashboardClusterChange,
+      onManagerTabChange,
+      resolveOrganicNavSite,
+      warmOrganicReportingRoute,
+      location.pathname,
+    ],
   );
 
   const dropdownItemClass = (index: number, selected: boolean) =>
@@ -135,16 +187,28 @@ export function ManagerMegaMenuNav({
             className={cn(
               variant === "embedded"
                 ? cn(MANAGER_NAV_DROPDOWN_PANEL, "border border-white/[0.08]")
-                : "z-50 min-w-[12rem] rounded-xl border border-primary/45 bg-black/90 p-1.5 shadow-none backdrop-blur-md text-popover-foreground",
+                : cn(
+                    MANAGER_NAV_DROPDOWN_Z,
+                    "min-w-[12rem] rounded-xl border border-primary/45 bg-black/90 p-1.5 shadow-none backdrop-blur-md text-popover-foreground",
+                  ),
             )}
           >
             {item.children.map((child, childIndex) => {
               const ChildIcon = child.icon;
               const selected = isManagerNavItemSelected(managerTab, child, dashboardCluster);
+              const prefetchOnHover =
+                child.organicDashboard === true
+                  ? () => {
+                      const site = resolveOrganicNavSite();
+                      if (site) warmOrganicReportingRoute(site);
+                    }
+                  : undefined;
               return (
                 <DropdownMenuItem
                   key={child.id ?? child.value}
                   className={dropdownItemClass(childIndex, selected)}
+                  onPointerEnter={prefetchOnHover}
+                  onFocus={prefetchOnHover}
                   onSelect={() => applyNavItemSelection(child)}
                 >
                   <div className="flex w-full items-center gap-2.5">
@@ -161,7 +225,9 @@ export function ManagerMegaMenuNav({
       );
     }
 
-    const selected = isManagerNavItemSelected(managerTab, item, dashboardCluster);
+    const selected = item.organicDashboard
+      ? isOrganicDashboardRoute
+      : isManagerNavItemSelected(managerTab, item, dashboardCluster);
     return (
       <DropdownMenuItem
         key={item.id ?? item.value}
@@ -183,7 +249,7 @@ export function ManagerMegaMenuNav({
 
   const navItemAllowed = useCallback(
     (item: ManagerNavItem): boolean => {
-      if (item.docsPath) return true;
+      if (item.docsPath || item.organicDashboard) return true;
       if (item.dashboardCluster) {
         const area = dashboardClusterToArea(item.dashboardCluster);
         return !area || canRead(area);
@@ -226,9 +292,12 @@ export function ManagerMegaMenuNav({
       aria-label="Manager sections"
     >
       {navSections.map((section) => {
-        const active = section.items.some((i) =>
-          isManagerNavItemActive(managerTab, i, dashboardCluster),
-        );
+        const active =
+          section.id === "reporting"
+            ? isOrganicDashboardRoute
+            : section.items.some((i) =>
+                isManagerNavItemActive(managerTab, i, dashboardCluster),
+              );
         const SectionIcon = section.icon;
 
         return (

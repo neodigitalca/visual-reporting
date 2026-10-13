@@ -48,8 +48,15 @@ export type PropertyProfileDialogProps = {
   onScrapeChildSitemap: (childSitemapUrl: string) => void;
   onEntityGeneration?: (sitemapUrl: string) => void;
   onSetEntitySitemap?: (sitemapUrl: string) => void;
+  onSetCompetitorEntitySitemap?: (sitemapUrl: string) => void;
   onToggleChildSitemapDisabled?: (childSitemapUrl: string) => void;
   onAppendManualChildSitemap?: (url: string) => void;
+  onAddCustomSitemapTagLabel?: (label: string) => void;
+  onToggleChildSystemRole?: (
+    childSitemapUrl: string,
+    role: import("@/lib/sitemap-child-tags").SitemapSystemRole,
+  ) => void;
+  onToggleChildCustomTag?: (childSitemapUrl: string, label: string) => void;
   onIndexSitemap?: (sitemapUrl: string) => void;
   onLoadCalendarPosts?: (sitemapUrl: string) => void;
   onExtractNAPAndGraph?: () => void;
@@ -80,8 +87,12 @@ export function PropertyProfileDialog({
   onScrapeChildSitemap,
   onEntityGeneration,
   onSetEntitySitemap,
+  onSetCompetitorEntitySitemap,
   onToggleChildSitemapDisabled,
   onAppendManualChildSitemap,
+  onAddCustomSitemapTagLabel,
+  onToggleChildSystemRole,
+  onToggleChildCustomTag,
   onIndexSitemap,
   onLoadCalendarPosts,
   onExtractNAPAndGraph,
@@ -112,8 +123,12 @@ export function PropertyProfileDialog({
       onScrapeChildSitemap,
       onEntityGeneration,
       onSetEntitySitemap,
+      onSetCompetitorEntitySitemap,
       onToggleChildSitemapDisabled,
       onAppendManualChildSitemap,
+      onAddCustomSitemapTagLabel,
+      onToggleChildSystemRole,
+      onToggleChildCustomTag,
       onIndexSitemap,
       onLoadCalendarPosts,
       onExtractNAPAndGraph,

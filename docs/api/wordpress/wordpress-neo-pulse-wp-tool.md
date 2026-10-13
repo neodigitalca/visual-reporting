@@ -5,7 +5,7 @@ section: WordPress
 method: POST
 path: /api/wordpress/neo-pulse-wp-tool
 auth: open
-order: 2630
+order: 2950
 ---
 
 POST `/api/wordpress/neo-pulse-wp-tool`.

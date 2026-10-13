@@ -142,11 +142,7 @@ export function CompetitorGeneratorToolbar({
             title="Run clusters"
             onClick={() => void onRunClusters()}
           >
-            {runLoading ? (
-              <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-            ) : (
-              <Wand2 className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-            )}
+            <Wand2 className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
             Clusters
           </Button>
           <Button

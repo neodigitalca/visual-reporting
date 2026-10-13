@@ -20,6 +20,10 @@ import {
 } from "./bulk/bulk-generation-wp-inventory";
 import { getLocalEntityPhraseExamples, getLocalExpertisePhrase, getLocalGeneralPhrase } from "./local-entity-phrases";
 import { truncateTitleForSEO } from "./content-generation/content-sanitizer";
+import {
+  COMPETITOR_COMPARISON_PROSE_PROMPT_BLOCK,
+  isCompetitorCsvKeyword,
+} from "@/lib/competitor/competitor-csv-row";
 import type { CheckedExternalLink } from "./external-research";
 import { formatImportedDraftLinksForPrompt, type ImportedDraftLink } from "./bulk/blog-import-draft-links";
 import {
@@ -39,6 +43,10 @@ import {
   formatSapChecklistExample,
   formatSapPageChecklistBlock,
 } from "@/lib/prompt-builders/sap-page-template";
+import {
+  formatCompetitorChecklistExample,
+  formatCompetitorComparisonChecklistBlock,
+} from "@/lib/prompt-builders/competitor-comparison-page-template";
 import {
   ARTICLE_MAX_WORDS,
   buildArticleLengthChecklistBlock,
@@ -360,7 +368,14 @@ export async function generateChecklistFromSelections(
   } = options;
 
   const hasSapEntity = Boolean(options.entity?.trim());
-  const isServiceArea = hasSapEntity;
+  const routeKeyword = keywordData.keyword?.trim() ?? "";
+  const competitorComparisonRow = isCompetitorCsvKeyword(routeKeyword);
+  const isCompetitorComparison = competitorComparisonRow && hasSapEntity;
+  const isServiceArea = hasSapEntity && !competitorComparisonRow;
+  const checklistKeywordData: KeywordData =
+    competitorComparisonRow && options.primaryKeyword?.trim()
+      ? { ...keywordData, keyword: options.primaryKeyword.trim() }
+      : keywordData;
   const importedH2Outline = (options.importedH2Outline ?? [])
     .map((t) => t.trim())
     .filter(Boolean);
@@ -378,7 +393,8 @@ export async function generateChecklistFromSelections(
     } else {
       resolvedH2Sections = await deriveSerpH2Outline({
         apiKey,
-        primaryKeyword: keywordData.keyword?.trim() || options.primaryKeyword?.trim() || title,
+        primaryKeyword:
+          checklistKeywordData.keyword?.trim() || options.primaryKeyword?.trim() || title,
         title,
         siteName: options.connectedSite?.name?.trim() || "",
         siteUrl: options.connectedSite?.siteUrl,
@@ -402,11 +418,11 @@ export async function generateChecklistFromSelections(
     : options;
   // Keep keywords in their natural form (lowercase) - do NOT capitalize them
   // Keywords should only be capitalized when they're proper nouns, geographic locations, or at sentence starts
-  const primaryKeywordNatural = keywordData.keyword.toLowerCase();
+  const primaryKeywordNatural = checklistKeywordData.keyword.toLowerCase();
   const selectedKeywordsNatural = selectedKeywords.map(kw => kw.toLowerCase());
 
   // Define proper case versions for display purposes (used in template strings)
-  const primaryKeywordProper = toProperCase(keywordData.keyword);
+  const primaryKeywordProper = toProperCase(checklistKeywordData.keyword);
   const selectedKeywordsProper = selectedKeywords.map(kw => toProperCase(kw));
 
   const hasFirstPartyAiso = Boolean(options.firstPartyAuthorityBlock?.trim());
@@ -500,9 +516,9 @@ CRITICAL KEYWORD USAGE - NATURAL LANGUAGE PRIORITY (2026 SEO STANDARDS):
   const keywordSection = `
 --- Keyword Context ---
 Primary Keyword: ${primaryKeywordNatural}
-Search Volume: ${keywordData.searchVolume?.toLocaleString() || "N/A"}
-Difficulty: ${keywordData.difficulty || "N/A"}/100
-Intent: ${keywordData.intent || "N/A"}
+Search Volume: ${checklistKeywordData.searchVolume?.toLocaleString() || "N/A"}
+Difficulty: ${checklistKeywordData.difficulty || "N/A"}/100
+Intent: ${checklistKeywordData.intent || "N/A"}
 Selected Keywords: ${selectedKeywordsNatural.join(", ") || "None"}
 
 CRITICAL: Each selected keyword listed above MUST be used as anchor text in internal links within relevant sections. When creating checklist items, explicitly specify which keywords should be used as anchor text in each section's internal links.
@@ -601,7 +617,7 @@ ${resolvedH2Sections.map((h2, idx) => `${idx + 1}. ${h2}`).join("\n")}
         paaQuestions = await selectBestPAAQuestionsWithAI(
           allPaaQuestions,
           options.entity,
-          keywordData.keyword,
+          checklistKeywordData.keyword,
           title,
           options.connectedSite,
           apiKey,
@@ -706,8 +722,11 @@ Entity Wikipedia (MANDATORY): ${entityWikiUrl}${entityWikiTitle ? ` (${entityWik
   const prefilledRowContractSection = options.prefilledRowContract?.trim()
     ? `\n${options.prefilledRowContract.trim()}\n`
     : "";
+  const competitorComparisonProseSection = competitorComparisonRow
+    ? `\n${COMPETITOR_COMPARISON_PROSE_PROMPT_BLOCK}\n`
+    : "";
 
-  const entityContext = options.entity && options.entity.trim()
+  const entityContext = options.entity && options.entity.trim() && !competitorComparisonRow
     ? (() => {
         const entityName = options.entity.trim();
         const generalExamples = getLocalEntityPhraseExamples(entityName, 'general', 6);
@@ -807,7 +826,7 @@ This instruction applies to ALL checklist items that mention links or internal l
   const llmAuditSummarySection = options.llmAuditSummary?.trim()
     ? `
 --- LLM AUDIT RESEARCH (DISTRIBUTE — DO NOT REPEAT) ---
-Multi-platform audit ran before checklist generation. Facts below are topic-tied local detail for '${keywordData?.keyword?.trim() || "this page"}'.
+Multi-platform audit ran before checklist generation. Facts below are topic-tied local detail for '${checklistKeywordData?.keyword?.trim() || "this page"}'.
 
 ${options.llmAuditSummary.trim()}
 
@@ -893,14 +912,19 @@ ${options.semrushScatterContext}
 `
     : "";
 
-  const checklistCountInstruction = `Create a checklist (${isServiceArea ? "6-7" : blogChecklistCountLabel} items${isServiceArea ? " for service area SAP" : useImportedH2Outline ? " from the imported H2 outline" : " for blog"}) based on selected H2 sections.`;
+  const checklistCountInstruction = isCompetitorComparison
+    ? `Create a checklist (9 items for competitor comparison) based on the COMPETITOR COMPARISON PAGE TEMPLATE.`
+    : `Create a checklist (${isServiceArea ? "6-7" : blogChecklistCountLabel} items${isServiceArea ? " for service area SAP" : useImportedH2Outline ? " from the imported H2 outline" : " for blog"}) based on selected H2 sections.`;
 
-  const serpH2OutlinePromptBlock = isServiceArea
-    ? formatSapPageChecklistBlock(options.entity!.trim())
-    : formatSerpH2OutlineBlock(resolvedH2Sections);
+  const connectedSiteName = options.connectedSite?.name?.trim() || "";
+  const serpH2OutlinePromptBlock = isCompetitorComparison
+    ? formatCompetitorComparisonChecklistBlock(options.entity!.trim(), connectedSiteName)
+    : isServiceArea
+      ? formatSapPageChecklistBlock(options.entity!.trim())
+      : formatSerpH2OutlineBlock(resolvedH2Sections);
 
   const checklistStructureRequirements = `Requirements:
-1. Create ${isServiceArea ? "6-7" : blogChecklistCountLabel} checklist items. ${isServiceArea ? "Follow SAP PAGE TEMPLATE (local problem, sourced local conditions, What We Offer, Local Recommendation table, Next Steps). Do not emit encyclopedia how-it-works, vs-adjacent, or cost-guide jobs. Put [ILLUSTRATIVE] on exactly one item (item 4). Write a unique topical H2 for that item. Forbidden: Section N. Forbidden: a second homeowner or example H2." : useImportedH2Outline ? "Use the IMPORTED H2 OUTLINE titles exactly as the first words on each checklist line (one H2 per imported title). Do not add extra H2s. Put [ILLUSTRATIVE] on exactly one item. Forbidden: Section N. Forbidden: LLM Audit Authority Link. Forbidden: a second homeowner or example H2." : "Use the SERP H2 OUTLINE titles exactly as the first words on each checklist line (one H2 per item). Each title must match the outline verbatim. Put [ILLUSTRATIVE] on exactly one item. Forbidden: Section N. Forbidden: a second homeowner or example H2."} **DEPTH IN FEWER H2s**: Cover main topics in fewer, tighter sections. One H2 per major topic when essential - NOT nested as H3s. Meet SEO with concise copy, not extra sections.
+1. Create ${isCompetitorComparison ? "9" : isServiceArea ? "6-7" : blogChecklistCountLabel} checklist items. ${isCompetitorComparison ? "Follow COMPETITOR COMPARISON PAGE TEMPLATE exactly (provider comparison, not SAP geo). Put [ILLUSTRATIVE] on exactly one item (item 6). Forbidden: near {competitor}, treating competitor as geography, superiority claims." : isServiceArea ? "Follow SAP PAGE TEMPLATE (local problem, sourced local conditions, What We Offer, Local Recommendation table, Next Steps). Do not emit encyclopedia how-it-works, vs-adjacent, or cost-guide jobs. Put [ILLUSTRATIVE] on exactly one item (item 4). Write a unique topical H2 for that item. Forbidden: Section N. Forbidden: a second homeowner or example H2." : useImportedH2Outline ? "Use the IMPORTED H2 OUTLINE titles exactly as the first words on each checklist line (one H2 per imported title). Do not add extra H2s. Put [ILLUSTRATIVE] on exactly one item. Forbidden: Section N. Forbidden: LLM Audit Authority Link. Forbidden: a second homeowner or example H2." : "Use the SERP H2 OUTLINE titles exactly as the first words on each checklist line (one H2 per item). Each title must match the outline verbatim. Put [ILLUSTRATIVE] on exactly one item. Forbidden: Section N. Forbidden: a second homeowner or example H2."} **DEPTH IN FEWER H2s**: Cover main topics in fewer, tighter sections. One H2 per major topic when essential - NOT nested as H3s. Meet SEO with concise copy, not extra sections.
 2. Each checklist item must include:
    - [STRUCTURE]: Unmarked H2s: 1-2 paragraphs. Marked H2s ([LIST]/[TABLE]/[DECISION]/[TRADEOFF]/[NUMBERS]/[ILLUSTRATIVE]/[RECOMMENDATION]): 2-3 paragraphs plus the required table or list (each paragraph **moderately short**: **~2–3 sentences**; split long blocks). If more content is needed, use H3 subheadings: "[STRUCTURE]: Include at most 2 H3 subheadings with 1-2 short paragraphs under each covering [specific subtopics]"
    - **DEPTH**: Main topics = H2 agents when essential. H3 = only for minor subtopics under an H2. **MAX 2 H3s** per H2.
@@ -935,7 +959,7 @@ ${FORBIDDEN_H2_PLACEHOLDER_PROMPT_LINE}
 
 --- Blog Title ---
 ${title}
-${importedLinksSection}${modifierLinksSection}${llmAuditAuthorityLinksSection}${llmAuditAuthorityLinksPolicy}${targetSiteContext}${wordPressPostsContext}${currentPageContext}${h2Section}${paaSection}${researchLinksSection}${userPromptSection}${prefilledRowContractSection}${entityContext}${llmAuditSummarySection}${firstPartyAuthoritySection}${dfsArticleAuditSection}${serpDataContext}${semrushKeywordsContextBlock}${semrushScatterContextBlock}${semrushParts.semrushExactBlock}
+${importedLinksSection}${modifierLinksSection}${llmAuditAuthorityLinksSection}${llmAuditAuthorityLinksPolicy}${targetSiteContext}${wordPressPostsContext}${currentPageContext}${h2Section}${paaSection}${researchLinksSection}${userPromptSection}${prefilledRowContractSection}${competitorComparisonProseSection}${entityContext}${llmAuditSummarySection}${firstPartyAuthoritySection}${dfsArticleAuditSection}${serpDataContext}${semrushKeywordsContextBlock}${semrushScatterContextBlock}${semrushParts.semrushExactBlock}
 
 ${buildArticleLengthChecklistBlock(isServiceArea)}
 
@@ -1016,7 +1040,9 @@ ${FORBIDDEN_H2_PLACEHOLDER_PROMPT_LINE}
 
 Example format (NOTE: H2 title first on every line):
 ${
-  isServiceArea
+  isCompetitorComparison
+    ? formatCompetitorChecklistExample(options.entity!.trim(), title)
+    : isServiceArea
       ? formatSapChecklistExample(options.entity!.trim(), title)
     : useImportedH2Outline
       ? importedH2Outline
@@ -1039,7 +1065,7 @@ Output ONLY the numbered checklist items, no additional text or explanations.`;
 
 ${serpH2OutlinePromptBlock}
 
-${buildArticleLengthChecklistBlock(isServiceArea)}
+${buildArticleLengthChecklistBlock(isServiceArea || isCompetitorComparison)}
 
 ${AUTHENTICITY_CHECKLIST_RULE}
 ${importedOutlineOverride}
@@ -1050,7 +1076,7 @@ CRITICAL: Weave keywords elegantly into content using natural, human-like syntax
 
 **PARAGRAPH LENGTH**: The checklist MUST state **[PARAGRAPH LENGTH]** - **moderately short** paragraphs (**~2–4 sentences** typical); **split** long blocks (avoid “paragraph is long” warnings); **do not** use only one-sentence paragraphs throughout (too choppy).
 
-CRITICAL LOCATION VARIATION: Vary location mentions naturally. Use the exact entity name sparingly (2-3 times maximum in entire article) then prefer here / this area / local. SAP pages MAY name the entity (street, neighborhood, district) and sourced streets or housing types. Forbidden: invented neighborhoods not in sources or the entity field. Forbidden: repeating the entity as an SEO slug in every sentence.
+${competitorComparisonRow ? "COMPETITOR COMPARISON: Do not use SAP geo framing. The entity is a competitor business name only." : "CRITICAL LOCATION VARIATION: Vary location mentions naturally. Use the exact entity name sparingly (2-3 times maximum in entire article) then prefer here / this area / local. SAP pages MAY name the entity (street, neighborhood, district) and sourced streets or housing types. Forbidden: invented neighborhoods not in sources or the entity field. Forbidden: repeating the entity as an SEO slug in every sentence."}
 
 MANDATORY REAL-WORLD EXAMPLES: Include [REAL-WORLD EXAMPLE] only when master instructions, existing page HTML, GBP, or audit blocks supply a real installer/process/climate fact. Forbidden: invented counts or fake testimonials. If those sources are empty, omit.
 
@@ -1119,12 +1145,14 @@ ${pageLines}
 - This applies to ALL checklist items that mention links or internal links`;
   }
 
-  const allKeywords = [keywordData.keyword, ...selectedKeywords].filter(Boolean);
+  const allKeywords = [checklistKeywordData.keyword, ...selectedKeywords].filter(Boolean);
   const MIN_CHECKLIST_ITEMS = useImportedH2Outline
     ? importedH2Outline.length
-    : isServiceArea
-      ? 6
-      : 5;
+    : isCompetitorComparison
+      ? 9
+      : isServiceArea
+        ? 6
+        : 5;
 
   let fullResponse = "";
   let checklistFinishReason: string | undefined;
@@ -1154,7 +1182,10 @@ ${pageLines}
 
   const effectiveFinish = checklistFinishReason || streamResult.finishReason;
   if (parsed.length >= MIN_CHECKLIST_ITEMS) {
-    return { items: parsed, h2Outline: isServiceArea ? undefined : resolvedH2Sections };
+    return {
+      items: parsed,
+      h2Outline: isServiceArea || isCompetitorComparison ? undefined : resolvedH2Sections,
+    };
   }
 
   throw new Error(

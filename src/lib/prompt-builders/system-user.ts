@@ -30,6 +30,7 @@ import type { AIDrivenACFContext } from "../content-generation/ai-driven-acf-rea
 import { TABLE_FORMAT, TABLE_FORMAT_MARKDOWN, CRITICAL_LINK_RULE, NO_FAKE_TESTIMONIALS_RULE, TABLE_NO_LINK_ONLY_COLUMN_RULE, AUTHENTICITY_WRITER_RULE, SYSTEM_PROMPT_CORE } from "./core";
 import { HARNESS_LABELED_LIST_HTML_RULE } from "@/lib/prompt-builders/harness-labeled-list-html-rule";
 import { formatSapPageWriterBlock } from "@/lib/prompt-builders/sap-page-template";
+import { formatCompetitorComparisonWriterBlock } from "@/lib/prompt-builders/competitor-comparison-page-template";
 import { MARKDOWN_QUOTE_OUTPUT_RULE } from "../feature-mapping";
 import {
   buildOverviewLinkRulesBlock,
@@ -750,6 +751,10 @@ export const buildBulkHarnessSectionUserPrompt = (
   answerGroundingBlock?: string,
   /** LLM audit liveLinks classified as authority (gov, municipal, news). */
   llmAuditAuthorityExternalPairs?: ExternalLinkPair[],
+  /** Body H2 only: predetermined link assignments for this section title. */
+  sectionLinkTargetsBlock?: string,
+  /** Competitor-comparison entity row (not SAP geo). */
+  competitorComparisonHarness?: boolean,
 ): string => {
   const normalizedSiteUrl = connectedSite?.siteUrl ? connectedSite.siteUrl.replace(/\/+$/, "") : "";
   const storedKeyword = (primaryKeyword ?? acfContext?.keywordFocus ?? "").trim();
@@ -819,25 +824,37 @@ export const buildBulkHarnessSectionUserPrompt = (
     serviceTopicForEntity.toLowerCase() !== storedKeyword.toLowerCase()
       ? `\nService topic for prose: "${writingKw}". Full SEO keyword "${storedKeyword}" is metadata-only — do not paste the geo-stuffed slug in body copy.`
       : "";
-  const entityBlock = hasEntity
-    ? isOverviewSection
+  const entityBlock =
+    competitorComparisonHarness && hasEntity
       ? `
+Competitor business (provider comparison — NOT a geography): ${normalizedEntity}.
+Forbidden: "near ${normalizedEntity}", treating the competitor as a neighborhood, or "homes in ${normalizedEntity}".
+Edmonton / regional climate and home-style facts only as regional context. ${ENTITY_FORBIDDEN}`
+      : hasEntity
+        ? isOverviewSection
+          ? `
 ${entityReferenceBlock}
 Entity: ${normalizedEntity}. Use varied phrases: ${getLocalEntityPhraseExamples(proseEntity, "general", 6).map((ex) => `"${ex}"`).join(", ")}. Place phrases: ${getLocalEntityPhraseExamples(proseEntity, "expertise", 4).map((ex) => `"${ex}"`).join(", ")}. Local landmark/climate/process only if present in master instructions, GBP, inventory, existing HTML, or audit blocks; otherwise omit. Reduce keyword repetition with semantic product/topic variants — not hollow team filler. Overview lead paragraphs only: optional entity Wikipedia link per Overview LINKS block — no site links or # scroll links in lead prose.${geoKeywordNote} ${ENTITY_FORBIDDEN}`
-      : (() => {
-        const general = getLocalEntityPhraseExamples(proseEntity, "general", 6);
-        const expertise = getLocalEntityPhraseExamples(proseEntity, "expertise", 4);
-        return `
+          : (() => {
+            const general = getLocalEntityPhraseExamples(proseEntity, "general", 6);
+            const expertise = getLocalEntityPhraseExamples(proseEntity, "expertise", 4);
+            return `
 ${entityReferenceBlock}
 Entity: ${normalizedEntity}. Use varied phrases: ${general.map((ex) => `"${ex}"`).join(", ")}. Place phrases: ${expertise.map((ex) => `"${ex}"`).join(", ")}. Local landmark/climate/process only if present in master instructions, GBP, inventory, existing HTML, or audit blocks; otherwise omit. Reduce keyword repetition with semantic product/topic variants — not hollow team filler. Short anchors (2–5 words). No nested anchors.${geoKeywordNote} ${ENTITY_FORBIDDEN}`;
-      })()
-    : `
+          })()
+        : `
 No entity. General post; no locations or placeholders. ${ENTITY_FORBIDDEN}`;
 
   const acfParts: string[] = [];
   if (acfContext?.promptModifier?.trim()) acfParts.push(`${OPTIMIZER_INSTRUCTIONS_LABEL}: ${acfContext.promptModifier.trim()}`);
   if (acfContext?.keywordFocus?.trim()) acfParts.push(`Keyword focus: ${acfContext.keywordFocus.trim()}`);
-  if (acfContext?.serviceArea?.trim()) acfParts.push(`Service area: ${acfContext.serviceArea.trim()}`);
+  if (acfContext?.serviceArea?.trim()) {
+    acfParts.push(
+      competitorComparisonHarness
+        ? `Competitor fields: ${acfContext.serviceArea.trim()}`
+        : `Service area: ${acfContext.serviceArea.trim()}`,
+    );
+  }
   if (acfContext?.seoResearch?.trim()) {
     acfParts.push(
       `SEO content brief (JSON text in ACF seo_research - typically merged SERP/GSC/Semrush-style research from Overview; parse for intent - do not paste verbatim or keyword-stuff):\n${acfContext.seoResearch.trim()}`,
@@ -940,7 +957,11 @@ No entity. General post; no locations or placeholders. ${ENTITY_FORBIDDEN}`;
       ? ""
       : NON_ILLUSTRATIVE_HYPOTHETICAL_BAN_RULE,
     AUTHENTICITY_WRITER_RULE,
-    hasEntity && !isPressReleaseHarness ? formatSapPageWriterBlock(normalizedEntity) : "",
+    hasEntity && !isPressReleaseHarness
+      ? competitorComparisonHarness
+        ? formatCompetitorComparisonWriterBlock(normalizedEntity, connectedSite?.name)
+        : formatSapPageWriterBlock(normalizedEntity)
+      : "",
     isPressReleaseHarness || isOverviewSection ? "" : FIRST_PARAGRAPH_AUTHORITY_RULE,
     FIRST_PARTY_AUTHORITY_WRITING_RULE,
     PHRASE_VARIATION_RULE,
@@ -958,6 +979,7 @@ No entity. General post; no locations or placeholders. ${ENTITY_FORBIDDEN}`;
       ? "Before body text, output exactly one ## line you invent: a topical subhead for the keyword and business. Do not use outline or template wording as the ## text. Do not repeat the wire dateline or a calendar date unless this is section 1."
       : "",
     planOrOutlineBlock,
+    sectionLinkTargetsBlock?.trim() ? sectionLinkTargetsBlock.trim() : "",
     "=== SECTION TO WRITE (follow heading and structure exactly) ===",
     singleSectionPrompt,
     "=== END SECTION ===",
@@ -972,7 +994,9 @@ No entity. General post; no locations or placeholders. ${ENTITY_FORBIDDEN}`;
         : 'Output ## Overview, 1-2 lead paragraphs that map remaining sections (NO em dashes; obey WORD BLACKLIST above). Do not recap the published Answer (dates, rates, percentages, dollar figures, statute stack, or closing company sentence). When connected-site rules apply: second lead sentence must state the article includes a labeled real-world hypothetical (one genderless named persona under stated assumptions with a site-level business recommendation) and point forward to the Real-World Example section (do not paste the full scenario in Overview; no payback or savings numbers in Overview). Then a - bullet list with one item per IN-PAGE anchor. The anchor tagged ILLUSTRATIVE MUST use bullet label **Real-World Example** exactly. Each bullet: one sentence with exactly ONE [2-4 words](#exact-id). FORBIDDEN: second link in the same bullet, duplicate #id links, or "including [link]" phrasing. Never "see below". Stop after the bullet list.'
       : connectedSite && !hasWordPressPosts
       ? "CRITICAL: Do NOT add internal links—no linkable URLs from API—for this section unless the system prompt lists URLs."
-      : `MANDATORY: Include at least ${MIN_INTERNAL_LINKS_PER_BODY_H2} [[LINK:query|anchor]] placeholders in this body H2 section (target ${TARGET_INTERNAL_LINKS_PER_BODY_H2} when this section has a table or 3+ paragraphs). Weave into prose and table cells. Use distinct plan queries when LINK TARGETS PLAN is present. Format is exactly [[LINK:query|anchor]] — never {{LINK:...}}, {LINK:...}, or raw https:// internal URLs in body sections.`,
+      : sectionLinkTargetsBlock?.trim()
+        ? `MANDATORY: Ship at least ${MIN_INTERNAL_LINKS_PER_BODY_H2} distinct [[LINK:query|anchor]] placeholders in this body H2 (target ${TARGET_INTERNAL_LINKS_PER_BODY_H2}). Follow THIS SECTION LINK ASSIGNMENTS above first, then add PAGES/BLOG POSTS queries from the system prompt until you reach at least ${MIN_INTERNAL_LINKS_PER_BODY_H2}. Count [[LINK:...]] tokens before you stop. Format is exactly [[LINK:query|anchor]] — never {{LINK:...}}, {LINK:...}, or raw https:// internal URLs in body sections.`
+        : `MANDATORY: Include at least ${MIN_INTERNAL_LINKS_PER_BODY_H2} [[LINK:query|anchor]] placeholders in this body H2 section (target ${TARGET_INTERNAL_LINKS_PER_BODY_H2} when this section has a table or 3+ paragraphs). Weave into prose and table cells. Use distinct plan queries when LINK TARGETS PLAN is present. Format is exactly [[LINK:query|anchor]] — never {{LINK:...}}, {LINK:...}, or raw https:// internal URLs in body sections.`,
     `Follow the section block for lists or quotes. ${MARKDOWN_QUOTE_OUTPUT_RULE} Use Markdown pipe tables only. NEVER HTML. ` + TABLE_NO_LINK_ONLY_COLUMN_RULE,
     hasApprovedExternals
       ? "User-specified externals only: weave [[EXTERNAL:exact-url|exact-anchor]] mid-sentence in a paragraph (same rules as [[LINK:...]]). Copy exact URL and anchor from APPROVED EXTERNAL URLs — never bare domain, never 'for more'/'here', never after the final period."

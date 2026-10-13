@@ -166,13 +166,13 @@ export default {
         "meta-opt-breathe": {
           "0%, 100%": {
             boxShadow:
-              "0 0 14px hsl(var(--semantic-data) / 0.22), 0 0 8px hsl(var(--semantic-publish) / 0.18)",
-            borderColor: "hsl(var(--semantic-data) / 0.35)",
+              "0 0 0 1px hsl(var(--semantic-data) / 0.35), 0 0 16px hsl(var(--semantic-data) / 0.32), 0 0 10px hsl(var(--semantic-publish) / 0.22)",
+            borderColor: "hsl(var(--semantic-data) / 0.45)",
           },
           "50%": {
             boxShadow:
-              "0 0 36px hsl(var(--semantic-data) / 0.48), 0 0 20px hsl(var(--semantic-publish) / 0.42)",
-            borderColor: "hsl(var(--semantic-data) / 0.72)",
+              "0 0 0 1px hsl(var(--semantic-data) / 0.65), 0 0 40px hsl(var(--semantic-data) / 0.52), 0 0 24px hsl(var(--semantic-publish) / 0.45)",
+            borderColor: "hsl(var(--semantic-data) / 0.85)",
           },
         },
         /** Agree & fix indeterminate strip (Analyze uses determinate sectional bar). */

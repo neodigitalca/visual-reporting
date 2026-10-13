@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { BlogGeneratorWorkspaceChrome } from "@/components/blog-generator/BlogGeneratorWorkspaceChrome";
 import type { BlogGeneratorSectionId } from "@/components/blog-generator/blog-generator-sections";
 import type { LocalAnalysisDetailsPanelProps } from "@/components/sap-generator/LocalAnalysisDetailsPanel";
@@ -45,6 +46,7 @@ export type SapGeneratorWorkspaceHeaderProps = {
   useBlindMagicKeywords?: boolean;
   onUseBlindMagicKeywordsChange?: (v: boolean) => void;
   onApplyRemainingEntityCount: () => void;
+  titleRowMenu?: ReactNode;
 };
 
 export function SapGeneratorWorkspaceHeader({
@@ -80,6 +82,7 @@ export function SapGeneratorWorkspaceHeader({
   useBlindMagicKeywords = false,
   onUseBlindMagicKeywordsChange,
   onApplyRemainingEntityCount,
+  titleRowMenu,
 }: SapGeneratorWorkspaceHeaderProps) {
   const showTempUrl =
     workspace.mode === "temp" || (!workspace.showConnectedToggle && workspace.mode !== "connected");
@@ -90,6 +93,7 @@ export function SapGeneratorWorkspaceHeader({
       onSectionChange={onSectionChange}
       sectionSwitchDisabled={isProcessing}
       workspaceBusy={workspaceBusy}
+      titleRowMenu={titleRowMenu}
       progressSnapshot={progressSnapshot}
       hideIdleProgressTrack={hideIdleProgressTrack}
       canOpenDetails={canOpenDetails}

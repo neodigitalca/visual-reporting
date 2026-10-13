@@ -2,12 +2,12 @@ import type { ReactNode } from "react";
 import { UnifiedWorkspaceChrome } from "@/components/shared/UnifiedWorkspaceChrome";
 import { BlogGeneratorSectionPills } from "@/components/blog-generator/BlogGeneratorSectionPills";
 import {
+  blogGeneratorTitleLeadingSlotProps,
   getBlogGeneratorSectionMeta,
   type BlogGeneratorSectionId,
 } from "@/components/blog-generator/blog-generator-sections";
 import type { MetaBulkMicroSnapshot } from "@/components/overview/OverviewBulkMicroProgress";
 import type { MetaBulkActionKey, BulkProgressSlice } from "@/components/overview/overview-tab-constants";
-
 export type BlogGeneratorWorkspaceChromeProps = {
   activeSection: BlogGeneratorSectionId;
   onSectionChange: (id: BlogGeneratorSectionId) => void;
@@ -43,7 +43,7 @@ export function BlogGeneratorWorkspaceChrome({
   progressSnapshot = null,
   bulkActionProgress,
   hideIdleProgressTrack = false,
-  canOpenDetails = false,
+  canOpenDetails = true,
   isProcessing = false,
   detailsPanelId = "blog-generator-details",
   detailsPanel = null,
@@ -64,11 +64,14 @@ export function BlogGeneratorWorkspaceChrome({
     />
   );
 
+  const titleLeadingSlot = blogGeneratorTitleLeadingSlotProps();
+
   if (progressBand === "empty") {
     return (
       <UnifiedWorkspaceChrome
         icon={SectionIcon}
         title={sectionMeta.label}
+        titleLeadingSlot={titleLeadingSlot}
         titleRowMenu={titleRowMenu}
         titleRowEnd={sectionPills}
         toolbar={toolbar}
@@ -83,6 +86,7 @@ export function BlogGeneratorWorkspaceChrome({
     <UnifiedWorkspaceChrome
       icon={SectionIcon}
       title={sectionMeta.label}
+      titleLeadingSlot={titleLeadingSlot}
       titleRowMenu={titleRowMenu}
       titleRowEnd={sectionPills}
       toolbar={toolbar}

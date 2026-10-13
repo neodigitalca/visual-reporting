@@ -16,6 +16,7 @@ import type { LinkTargetsPlan } from "@/lib/bulk/bulk-generation-wp-inventory";
 import { normalizeInternalLinkUrl } from "@/lib/content-generation/internal-link-intent-match";
 import {
   MIN_INTERNAL_LINKS_PER_BODY_H2,
+  TARGET_INTERNAL_LINKS_PER_BODY_H2,
 } from "@/lib/content-generation/link-anchor-text-case";
 
 const LINK_PATTERN = /\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g;
@@ -227,28 +228,73 @@ function weaveLinkIntoParagraphInner(inner: string, href: string, title: string)
 const HTML_INTERNAL_LINK_RE = /<a\s[^>]*href=["']https?:\/\//i;
 const MD_INTERNAL_LINK_RE = /\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/;
 
-/**
- * Inserts one internal link into the first <p> without an http(s) link by wrapping matching anchor text in place.
- */
-export function insertOneInternalLinkIntoHtml(
+function insertOneInternalLinkIntoBlock(
   sectionHtml: string,
   link: { title: string; link: string },
+  tag: "p" | "td",
+  allowAppendFallback: boolean,
 ): string {
   if (!sectionHtml.trim() || !link.link?.trim()) return sectionHtml;
 
   const href = link.link.trim();
+  const anchorLabel = shortAnchorFromPostTitle(link.title);
   let inserted = false;
+  const re = new RegExp(`<${tag}(\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`, "gi");
 
-  const out = sectionHtml.replace(/<p(\s[^>]*)?>([\s\S]*?)<\/p>/gi, (full, attrs, inner) => {
+  const out = sectionHtml.replace(re, (full, attrs, inner) => {
     if (inserted) return full;
     if (HTML_INTERNAL_LINK_RE.test(inner)) return full;
     const woven = weaveLinkIntoParagraphInner(inner, href, link.title);
-    if (!woven) return full;
-    inserted = true;
-    return `<p${attrs || ""}>${woven}</p>`;
+    if (woven) {
+      inserted = true;
+      return `<${tag}${attrs || ""}>${woven}</${tag}>`;
+    }
+    return full;
   });
 
-  return inserted ? out : sectionHtml;
+  if (inserted || !allowAppendFallback) return inserted ? out : sectionHtml;
+
+  return sectionHtml.replace(re, (full, attrs, inner) => {
+    if (inserted) return full;
+    if (HTML_INTERNAL_LINK_RE.test(inner)) return full;
+    inserted = true;
+    const trimmed = inner.trimEnd();
+    const suffix = ` See <a href="${href}">${anchorLabel}</a>.`;
+    return `<${tag}${attrs || ""}>${trimmed}${suffix}</${tag}>`;
+  });
+}
+
+/**
+ * Inserts one internal link into the first <p> or <td> without an http(s) link.
+ */
+export function insertOneInternalLinkIntoHtml(
+  sectionHtml: string,
+  link: { title: string; link: string },
+  options?: { allowAppendFallback?: boolean },
+): string {
+  const allowAppendFallback = options?.allowAppendFallback ?? false;
+  let html = insertOneInternalLinkIntoBlock(sectionHtml, link, "p", allowAppendFallback);
+  if (html === sectionHtml) {
+    html = insertOneInternalLinkIntoBlock(sectionHtml, link, "td", allowAppendFallback);
+  }
+  return html;
+}
+
+/** Adds one more same-site link sentence to the first paragraph (upload prep gap-fill). */
+function appendInternalLinkSentenceToSection(
+  sectionHtml: string,
+  link: { title: string; link: string },
+): string {
+  if (!sectionHtml.trim() || !link.link?.trim()) return sectionHtml;
+  const href = link.link.trim();
+  const anchorLabel = shortAnchorFromPostTitle(link.title);
+  let done = false;
+  return sectionHtml.replace(/<p(\s[^>]*)?>([\s\S]*?)<\/p>/i, (full, attrs, inner) => {
+    if (done) return full;
+    done = true;
+    const trimmed = inner.trimEnd();
+    return `<p${attrs || ""}>${trimmed} Related reading: <a href="${href}">${anchorLabel}</a>.</p>`;
+  });
 }
 
 /**
@@ -517,6 +563,27 @@ export function countEligibleHeadingSections(html: string): number {
   return count;
 }
 
+function allPlannedLinksForSection(
+  sectionTitle: string,
+  plan: LinkTargetsPlan,
+): Array<{ title: string; link: string }> {
+  const key = normSectionTitleKey(sectionTitle);
+  if (!key) return [];
+
+  const picks: Array<{ title: string; link: string }> = [];
+  const seen = new Set<string>();
+  for (const entry of [...plan.pageTargets, ...plan.blogTargets]) {
+    const url = entry.url?.trim();
+    if (!url) continue;
+    if (!entry.sectionHints.some((hint) => normSectionTitleKey(hint) === key)) continue;
+    const urlKey = normalizeInternalLinkUrl(url);
+    if (seen.has(urlKey)) continue;
+    seen.add(urlKey);
+    picks.push({ title: entry.title.trim() || sectionTitle, link: url });
+  }
+  return picks;
+}
+
 function plannedLinksForSection(
   sectionTitle: string,
   plan: LinkTargetsPlan,
@@ -535,6 +602,85 @@ function plannedLinksForSection(
     picks.push({ title: entry.title.trim() || sectionTitle, link: url });
   }
   return picks;
+}
+
+export interface ApplyLinkTargetsPlanDeterministicOptions {
+  htmlContent: string;
+  linkTargetsPlan: LinkTargetsPlan;
+  wordPressPosts: WordPressPost[];
+  currentPageUrl?: string;
+  siteUrl: string;
+}
+
+/**
+ * One deterministic pass: weave planned page/blog URLs into each body H2 section (prose + tables).
+ * No OpenRouter. Ensures at least MIN and up to TARGET internal links per eligible section when inventory allows.
+ */
+export function applyLinkTargetsPlanToHtmlDeterministic(
+  options: ApplyLinkTargetsPlanDeterministicOptions,
+): string {
+  const { htmlContent, linkTargetsPlan, wordPressPosts, currentPageUrl, siteUrl } = options;
+  if (!htmlContent?.trim() || !siteUrl?.trim()) return htmlContent;
+
+  const allowedForLinking = blogPlayLinkPool(wordPressPosts, currentPageUrl);
+  if (!allowedForLinking.length) return htmlContent;
+
+  const siteHost = getSiteHost(siteUrl);
+  const validUrls = buildValidInternalUrlSet(allowedForLinking, siteHost);
+
+  let currentHtml = htmlContent;
+  const headingSections = splitHtmlByHeadingSections(currentHtml);
+  let catalogCursor = 0;
+
+  for (let i = 0; i < headingSections.length; i++) {
+    let section = headingSections[i]!;
+    if (!isEligibleHeadingSection(section)) continue;
+
+    const sectionTitle = sectionHeadingPlainTitle(section);
+    if (!sectionTitle.trim()) continue;
+
+    const planned = allPlannedLinksForSection(sectionTitle, linkTargetsPlan).slice(
+      0,
+      TARGET_INTERNAL_LINKS_PER_BODY_H2,
+    );
+
+    const tryInsert = (pick: { title: string; link: string }) => {
+      const before = section;
+      section = insertOneInternalLinkIntoHtml(section, pick, { allowAppendFallback: true });
+      if (section === before) {
+        section = appendInternalLinkSentenceToSection(section, pick);
+      }
+    };
+
+    for (const pick of planned) {
+      tryInsert(pick);
+    }
+
+    while (
+      countInternalLinksInHtml(section, siteHost, validUrls) < MIN_INTERNAL_LINKS_PER_BODY_H2 &&
+      catalogCursor < allowedForLinking.length
+    ) {
+      const post = allowedForLinking[catalogCursor]!;
+      catalogCursor += 1;
+      if (!post.link?.trim()) continue;
+      tryInsert({ title: post.title, link: post.link });
+    }
+
+    while (
+      countInternalLinksInHtml(section, siteHost, validUrls) < TARGET_INTERNAL_LINKS_PER_BODY_H2 &&
+      catalogCursor < allowedForLinking.length
+    ) {
+      const post = allowedForLinking[catalogCursor]!;
+      catalogCursor += 1;
+      if (!post.link?.trim()) continue;
+      tryInsert({ title: post.title, link: post.link });
+    }
+
+    headingSections[i] = section;
+    currentHtml = headingSections.join("");
+  }
+
+  return currentHtml;
 }
 
 export interface ApplyLinkTargetsPlanToHtmlOptions {

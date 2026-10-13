@@ -5,7 +5,7 @@ section: Google Business Profile
 method: POST
 path: /api/gmb/save-config
 auth: open
-order: 280
+order: 290
 ---
 
 POST `/api/gmb/save-config`.

@@ -1,5 +1,4 @@
-import { callOpenRouterChatCompletion } from "@/lib/competitor-research/competitor-report-openrouter";
-import { parseAssistantJsonObject } from "@/lib/competitor-research/competitor-report-json-parse";
+import { callOpenRouterJsonObject } from "@/lib/competitor-research/competitor-openrouter-json-object";
 import type {
   CompetitorComparisonResult,
   CompetitorSiteProfile,
@@ -64,18 +63,17 @@ export async function runCompareCompetitorAgent(args: {
     },
   };
 
-  const { content } = await callOpenRouterChatCompletion({
+  const parsedRaw = await callOpenRouterJsonObject({
     apiKey: args.apiKey,
     model: args.model,
     system: COMPARE_SYSTEM,
     user: JSON.stringify(payload),
     maxTokens: 4096,
     temperature: 0.25,
-    responseFormat: { type: "json_object" },
     signal: args.signal,
   });
 
-  const parsed = parseAssistantJsonObject(content) as {
+  const parsed = parsedRaw as {
     serviceComparison?: unknown;
     featureBenefitTable?: unknown;
     positioningNotes?: unknown;

@@ -1,19 +1,23 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { notify } from "@/lib/app-notifications";
 import { NOTIFY_ALL_BLOG_IDEAS_ARE_ALREADY_SELECTED_PLEA, NOTIFY_FAILED_TO_GENERATE_CHECKLIST_PLEASE_TRY_, NOTIFY_PLEASE_DESELECT_AT_LEAST_ONE_BLOG_IDEA_T, NOTIFY_PLEASE_ENSURE_API_KEYS_ARE_SET } from "@/lib/notify-messages";
 import { resolveOpenRouterApiKeyForHarness } from '@/lib/openrouter-api-key-resolve';
 import type { CSVRow } from '@/lib/bulk-auto-generate';
 import { parseTitleTemplate } from '@/lib/title-template-parser';
 import type { Message } from '@/lib/api';
-import { revokeBulkSitemapInventoryLinks } from '@/lib/bulk/bulk-sitemap-inventory-session';
-import type { PromptBulkSitemapInventoryLink } from '@/lib/bulk/prompt-bulk-sitemap-inventory';
+import type { PromptBulkIdeasContext } from '@/lib/bulk/prompt-bulk-ideas-context';
+import { buildPromptBulkIdeasContextForSite } from '@/lib/bulk/prompt-bulk-ideas-context';
 import { getStoredSites, type WordPressSite } from '@/components/IntegrationsTab';
+import { ensureEntitySiteWarmCache } from '@/lib/local-analysis/entity-site-warm-cache';
 import type { ConnectedSiteSummary } from '@/components/integrations/types';
 import { getResearchModel } from '@/lib/optimization-settings-storage';
+import { resolveModelForAgentCategory } from '@/lib/openrouter-agent-category-api';
 import type { KeywordAIAnalysis } from '@/lib/keyword-types';
-import { revokePromptBulkSiteKwHostedLink, type PromptBulkSiteKwHostedLink } from '@/lib/bulk/prompt-bulk-site-kw-scrape';
 import { mergePromptBulkIdeaSlots } from '@/lib/bulk/merge-prompt-bulk-idea-slots';
+import { seedPromptBlogSlots } from '@/lib/bulk/prompt-blog-slots';
+import { normalizeBulkSitemapScopeTags } from '@/lib/bulk/bulk-sitemap-mode';
 import { generateSimplePromptIdeas } from '@/lib/bulk/prompt-bulk-ideas-simple';
+import { refinePromptBulkIdeasWithResearch } from '@/lib/bulk/prompt-bulk-ideas-refine-agent';
 import { fillBlogRowKeywordFocusFromOpenRouter } from '@/lib/bulk/prompt-bulk-keyword-focus-agent';
 import { fillBlogRowMetaFromOpenRouter } from '@/lib/local-analysis/entity-sap-meta-agent';
 import { fillBlogRowSlugFromOpenRouter } from '@/lib/local-analysis/blog-slug-agent';
@@ -49,6 +53,9 @@ export interface UsePromptBulkGenerateProps {
   onProgress?: (step: string, progress: number) => void;
   // Keyword analysis results from Content Optimizer module
   keywordAnalysisResults?: Map<string, KeywordAIAnalysis>;
+  promptIdeasContext?: PromptBulkIdeasContext | null;
+  promptSiteContextReady?: boolean;
+  sitemapInventoryLoading?: boolean;
 }
 
 export function usePromptBulkGenerate({
@@ -77,27 +84,21 @@ export function usePromptBulkGenerate({
   gscExactKeywords = [],
   onProgress,
   keywordAnalysisResults,
+  promptIdeasContext = null,
+  promptSiteContextReady = true,
+  sitemapInventoryLoading = false,
 }: UsePromptBulkGenerateProps) {
   const [userInput, setUserInput] = useState('');
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [isGeneratingChecklist, setIsGeneratingChecklist] = useState(false);
   const [hasGeneratedChecklist, setHasGeneratedChecklist] = useState(false);
-  const [generatedRows, setGeneratedRows] = useState<CSVRow[]>([]);
+  const [generatedRows, setGeneratedRows] = useState<CSVRow[]>(() =>
+    seedPromptBlogSlots(numberOfBlogs),
+  );
   const [wordPressPostsMetadata, setWordPressPostsMetadata] = useState<Array<{ id: number; slug: string; title: string; link: string }>>([]);
-  const [sitemapInventoryLinks, setSitemapInventoryLinks] = useState<PromptBulkSitemapInventoryLink[]>([]);
-  const [siteKwHostedLink, setSiteKwHostedLink] = useState<PromptBulkSiteKwHostedLink | null>(null);
   /** Total URLs sent to AI across Posts + Pages + SAP buckets (null = not yet loaded). */
   const [lastInventorySentToAiCount, setLastInventorySentToAiCount] = useState<number | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const sitemapLinksRef = useRef<PromptBulkSitemapInventoryLink[]>([]);
-  const siteKwLinkRef = useRef<PromptBulkSiteKwHostedLink | null>(null);
-
-  useEffect(() => {
-    return () => {
-      revokeBulkSitemapInventoryLinks(sitemapLinksRef.current);
-      revokePromptBulkSiteKwHostedLink(siteKwLinkRef.current);
-    };
-  }, []);
 
   /**
    * Generate checklist from settings (no user prompt required)
@@ -148,8 +149,19 @@ export function usePromptBulkGenerate({
       : `Generate ${blogsToGenerate} blog post ideas`;
     setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
 
+    let rowsInFlight: CSVRow[] = [];
     try {
-      onProgress?.("Generating blog ideas…", 30);
+      const logPromptBulkProgress = (step: string, pct: number) => {
+        if (import.meta.env.DEV) {
+          console.info(
+            `[prompt-bulk] ${step} (${pct}%)`,
+            { blogsToGenerate, topicLine: topicLine || "(empty)" },
+          );
+        }
+        onProgress?.(step, pct);
+      };
+
+      logPromptBulkProgress("Starting ideas…", 0);
 
       let matchedWpSite: WordPressSite | null = null;
       if (connectedSite) {
@@ -160,20 +172,52 @@ export function usePromptBulkGenerate({
           sites.find((s) => normalize(s.siteUrl) === normalize(connectedSite.siteUrl)) ?? null;
       }
 
-      const ideaModel = getResearchModel(matchedWpSite?.id);
-      onProgress?.("Writing titles…", 60);
+      let ideasContext = promptIdeasContext;
+      if (connectedSite && matchedWpSite) {
+        if (!ideasContext?.isReady) {
+          logPromptBulkProgress("Loading site inventory and GSC…", 5);
+          const warm = await ensureEntitySiteWarmCache(matchedWpSite, { requireGsc: true });
+          ideasContext = await buildPromptBulkIdeasContextForSite(matchedWpSite, warm);
+        }
+        if (!ideasContext?.isReady) {
+          throw new Error(
+            "Site inventory and GSC keywords must load before generating ideas.",
+          );
+        }
+      }
+
+      const promptSiteId =
+        matchedWpSite?.id ?? Array.from(selectedWordPressSites ?? [])[0];
+      const scopeFromConfig = normalizeBulkSitemapScopeTags(
+        promptSiteId ? siteConfigs?.[promptSiteId]?.scopeTags : undefined,
+      );
+      const contentScope =
+        scopeFromConfig.length > 0 ? scopeFromConfig : (["posts"] as const);
+
+      const ideaModel = resolveModelForAgentCategory("research", matchedWpSite?.id);
+      logPromptBulkProgress("Generating blog ideas…", 25);
 
       let cappedParsedRows = await generateSimplePromptIdeas({
         apiKey: effectiveOpenRouterKey,
         model: ideaModel,
         count: blogsToGenerate,
-        topic: flowPurpose,
-        modifier: optionalPrompt,
+        topic: topicLine,
         slotKeywords: slotKeywordsForGeneration,
         slotModifiers: slotModifiersForGeneration,
-        temperature,
+        temperature: Math.min(temperature ?? 1, 0.35),
         maxTokens: Math.min(maxTokens || 4000, 8192),
+        connectedSite: ideasContext?.connectedSite ?? null,
+        siteInventoryJson: ideasContext?.siteInventoryJson,
+        gscKeywords: ideasContext?.gscKeywords,
+        contentScope: [...contentScope],
       });
+
+      if (ideasContext?.inventoryUrlCount != null) {
+        setLastInventorySentToAiCount(ideasContext.inventoryUrlCount);
+      }
+      rowsInFlight = cappedParsedRows.map((r) => ({ ...r }));
+
+      logPromptBulkProgress("Writing titles…", 55);
 
       if (featuredImagePerBlog) {
         cappedParsedRows = cappedParsedRows.map((row) => ({
@@ -181,8 +225,6 @@ export function usePromptBulkGenerate({
           featuredImage: row.featuredImage ?? "y",
         }));
       }
-
-      setLastInventorySentToAiCount(null);
 
       mergePromptBulkIdeaSlots({
         parsedRows: cappedParsedRows,
@@ -249,22 +291,37 @@ export function usePromptBulkGenerate({
         (_, i) => Boolean(slotKeywordsForGeneration[i]?.trim()),
       );
 
-      onProgress?.("Distilling focus keywords…", 78);
+      logPromptBulkProgress("Refining keywords for uniqueness…", 65);
+      cappedParsedRows = await refinePromptBulkIdeasWithResearch({
+        apiKey: effectiveOpenRouterKey,
+        siteId: matchedWpSite?.id,
+        rows: cappedParsedRows,
+        contentScope: [...contentScope],
+        connectedSite: ideasContext?.connectedSite ?? null,
+        topic: flowPurpose?.trim() || topicLine,
+        lockedSlotKeywords,
+      });
+      rowsInFlight = cappedParsedRows.map((r) => ({ ...r }));
+
+      logPromptBulkProgress("Distilling focus keywords…", 78);
       cappedParsedRows = await fillBlogRowKeywordFocusFromOpenRouter(cappedParsedRows, {
         apiKey: effectiveOpenRouterKey,
         siteId: matchedWpSite?.id,
         siteName: (connectedSite?.name ?? matchedWpSite?.name ?? "").trim(),
         topic: flowPurpose?.trim() || topicLine,
         lockedSlotKeywords,
-        strict: true,
+        strict: false,
+        singlePass: true,
+        modelCategory: "research",
         onProgress: (done, total) => {
           if (total > 0) {
-            onProgress?.(`Focus keywords ${done}/${total}…`, 78 + Math.round((done / total) * 5));
+            logPromptBulkProgress(`Focus keywords ${done}/${total}…`, 78 + Math.round((done / total) * 5));
           }
         },
       });
+      rowsInFlight = cappedParsedRows.map((r) => ({ ...r }));
 
-      onProgress?.("Writing meta descriptions…", 85);
+      logPromptBulkProgress("Writing meta descriptions…", 85);
       const rowsForMeta = cappedParsedRows.map((row) => {
         const { meta_description: _drop, ...rest } = row;
         return rest;
@@ -274,33 +331,27 @@ export function usePromptBulkGenerate({
         model: ideaModel,
         siteId: matchedWpSite?.id,
         siteName: (connectedSite?.name ?? matchedWpSite?.name ?? "").trim(),
-        strict: true,
+        strict: false,
         onProgress: (done, total) => {
           if (total > 0) {
-            onProgress?.(`Meta descriptions ${done}/${total}…`, 82 + Math.round((done / total) * 6));
+            logPromptBulkProgress(`Meta descriptions ${done}/${total}…`, 82 + Math.round((done / total) * 6));
           }
         },
       });
-      const missingMeta = cappedParsedRows.find((r) => !(r.meta_description ?? "").trim());
-      if (missingMeta) {
-        throw new Error("Meta description agent did not return a description for every idea row.");
-      }
+      rowsInFlight = cappedParsedRows.map((r) => ({ ...r }));
 
-      onProgress?.("Writing URL slugs…", 90);
+      logPromptBulkProgress("Writing URL slugs…", 90);
       cappedParsedRows = await fillBlogRowSlugFromOpenRouter(cappedParsedRows, {
         apiKey: effectiveOpenRouterKey,
         model: ideaModel,
         siteId: matchedWpSite?.id,
         onProgress: (done, total) => {
           if (total > 0) {
-            onProgress?.(`URL slugs ${done}/${total}…`, 90 + Math.round((done / total) * 8));
+            logPromptBulkProgress(`URL slugs ${done}/${total}…`, 90 + Math.round((done / total) * 8));
           }
         },
       });
-      const missingSlug = cappedParsedRows.find((r) => !(r.target_slug ?? "").trim());
-      if (missingSlug) {
-        throw new Error("URL slug agent did not return a slug for every idea row.");
-      }
+      rowsInFlight = cappedParsedRows.map((r) => ({ ...r }));
 
       // Determine final rows (merged or new)
       let finalRows: CSVRow[];
@@ -322,15 +373,26 @@ export function usePromptBulkGenerate({
         },
       ]);
 
-      onProgress?.("Done", 100);
+      logPromptBulkProgress("Done", 100);
       setHasGeneratedChecklist(true);
       return finalRows;
     } catch (error) {
-      console.error('Checklist generation error:', error);
-      onProgress?.('Generation failed', 0);
+      if (import.meta.env.DEV) {
+        console.error("[prompt-bulk] ideas generation failed", error);
+      }
+      if (rowsInFlight.length > 0) {
+        setGeneratedRows(rowsInFlight);
+        setHasGeneratedChecklist(true);
+        onProgress?.("Done (partial)", 100);
+        notify.error(
+          error instanceof Error ? error.message : NOTIFY_FAILED_TO_GENERATE_CHECKLIST_PLEASE_TRY_,
+        );
+        return rowsInFlight;
+      }
+      onProgress?.("Generation failed", 0);
       const msg = error instanceof Error ? error.message : NOTIFY_FAILED_TO_GENERATE_CHECKLIST_PLEASE_TRY_;
       notify.error(msg);
-      setChatMessages(prev => prev.slice(0, -1));
+      setChatMessages((prev) => prev.slice(0, -1));
       return undefined;
     } finally {
       setIsGeneratingChecklist(false);
@@ -358,6 +420,11 @@ export function usePromptBulkGenerate({
     generatedRows,
     onProgress,
     keywordAnalysisResults,
+    promptIdeasContext,
+    promptSiteContextReady,
+    sitemapInventoryLoading,
+    siteConfigs,
+    selectedWordPressSites,
   ]);
 
   /**
@@ -367,25 +434,19 @@ export function usePromptBulkGenerate({
     setUserInput('');
     setChatMessages([]);
     setHasGeneratedChecklist(false);
-    setGeneratedRows([]);
+    setGeneratedRows(seedPromptBlogSlots(numberOfBlogs));
     setWordPressPostsMetadata([]);
-    revokeBulkSitemapInventoryLinks(sitemapLinksRef.current);
-    sitemapLinksRef.current = [];
-    setSitemapInventoryLinks([]);
-    revokePromptBulkSiteKwHostedLink(siteKwLinkRef.current);
-    siteKwLinkRef.current = null;
-    setSiteKwHostedLink(null);
     setLastInventorySentToAiCount(null);
-  }, []);
+  }, [numberOfBlogs]);
 
   /**
    * Modify the checklist (regenerate with modifications)
    */
   const handleModifyChecklist = useCallback(() => {
     setHasGeneratedChecklist(false);
-    setGeneratedRows([]);
+    setGeneratedRows(seedPromptBlogSlots(numberOfBlogs));
     // Keep chat messages for context
-  }, []);
+  }, [numberOfBlogs]);
 
   /**
    * Regenerate unselected blog ideas, keeping selected ones
@@ -415,8 +476,6 @@ export function usePromptBulkGenerate({
     generatedRows,
     setGeneratedRows,
     wordPressPostsMetadata,
-    sitemapInventoryLinks,
-    siteKwHostedLink,
     lastInventorySentToAiCount,
     chatEndRef,
     

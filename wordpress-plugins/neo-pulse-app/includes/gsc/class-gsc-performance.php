@@ -22,25 +22,30 @@ class Neo_Pulse_App_Gsc_Performance {
 		if ( $site_url === '' ) {
 			return self::err( 400, 'Missing required field: siteUrl' );
 		}
-		foreach ( array( 'startDate', 'endDate', 'compareStartDate', 'compareEndDate' ) as $f ) {
-			if ( empty( $body[ $f ] ) ) {
-				return self::err( 400, 'Missing required date fields: startDate, endDate, compareStartDate, compareEndDate' );
-			}
+		if ( empty( $body['startDate'] ) || empty( $body['endDate'] ) ) {
+			return self::err( 400, 'Missing required date fields: startDate, endDate' );
 		}
-		$cur = Neo_Pulse_App_Gsc_Service_Account::validate_dates( $body['startDate'], $body['endDate'] );
-		$cmp = Neo_Pulse_App_Gsc_Service_Account::validate_dates( $body['compareStartDate'], $body['compareEndDate'] );
+		$include_compare = ! isset( $body['includeCompare'] ) || ! empty( $body['includeCompare'] );
+		$cur             = Neo_Pulse_App_Gsc_Service_Account::validate_dates( $body['startDate'], $body['endDate'] );
 		if ( empty( $cur['valid'] ) ) {
 			return self::err( 400, 'Current period: ' . ( $cur['error'] ?? 'Invalid date range' ) );
 		}
-		if ( empty( $cmp['valid'] ) ) {
-			return self::err( 400, 'Comparison period: ' . ( $cmp['error'] ?? 'Invalid date range' ) );
+		$cmp = null;
+		if ( $include_compare ) {
+			if ( empty( $body['compareStartDate'] ) || empty( $body['compareEndDate'] ) ) {
+				return self::err( 400, 'Missing required date fields: compareStartDate, compareEndDate' );
+			}
+			$cmp = Neo_Pulse_App_Gsc_Service_Account::validate_dates( $body['compareStartDate'], $body['compareEndDate'] );
+			if ( empty( $cmp['valid'] ) ) {
+				return self::err( 400, 'Comparison period: ' . ( $cmp['error'] ?? 'Invalid date range' ) );
+			}
 		}
 		Neo_Pulse_App_Gsc_Service_Account::write_report_date_range(
 			array(
 				'startDate'        => $cur['startDateStr'],
 				'endDate'          => $cur['endDateStr'],
-				'compareStartDate' => $cmp['startDateStr'],
-				'compareEndDate'   => $cmp['endDateStr'],
+				'compareStartDate' => $include_compare && is_array( $cmp ) ? $cmp['startDateStr'] : null,
+				'compareEndDate'   => $include_compare && is_array( $cmp ) ? $cmp['endDateStr'] : null,
 			)
 		);
 		$resolved = Neo_Pulse_App_Gsc_Service_Account::resolve_or_fallback( $site_url, $cur['startDateStr'], $cur['endDateStr'] );
@@ -49,8 +54,35 @@ class Neo_Pulse_App_Gsc_Performance {
 			return self::err( 200, "This site is not in the list of properties the service account can access.\n\nAdd {$email} as a user in GSC.", array( 'errorType' => 'site_not_in_list', 'originalSiteUrl' => $site_url, 'serviceAccountEmail' => $email ) );
 		}
 		$prop   = $resolved['property'];
-		$now    = self::stats_for_range( $prop, $cur['startDateStr'], $cur['endDateStr'] );
-		$before = self::stats_for_range( $prop, $cmp['startDateStr'], $cmp['endDateStr'] );
+		$include_pages     = ! isset( $body['includePagesCount'] ) || ! empty( $body['includePagesCount'] );
+		$include_timeseries = ! empty( $body['includeTimeseries'] );
+		if ( $include_timeseries ) {
+			return self::fetch_performance_stats_parallel_batch(
+				$prop,
+				$cur['startDateStr'],
+				$cur['endDateStr'],
+				$include_compare && is_array( $cmp ) ? $cmp['startDateStr'] : null,
+				$include_compare && is_array( $cmp ) ? $cmp['endDateStr'] : null,
+				$include_compare
+			);
+		}
+		$now           = self::stats_for_range( $prop, $cur['startDateStr'], $cur['endDateStr'], $include_pages );
+		if ( ! $include_compare ) {
+			return array(
+				'statusCode' => 200,
+				'body'       => array(
+					'success'  => true,
+					'property' => $prop,
+					'stats'    => array(
+						'currentPeriod'    => self::period_payload( $cur['startDateStr'], $cur['endDateStr'], $now ),
+						'comparisonPeriod' => self::period_payload( $cur['startDateStr'], $cur['endDateStr'], self::empty_stats() ),
+						'comparisons'      => self::compare_stats( $now, self::empty_stats() ),
+						'topKeywords'      => self::top_keywords( $now['queries'], array() ),
+					),
+				),
+			);
+		}
+		$before = self::stats_for_range( $prop, $cmp['startDateStr'], $cmp['endDateStr'], $include_pages );
 		return array(
 			'statusCode' => 200,
 			'body'       => array(
@@ -246,9 +278,165 @@ class Neo_Pulse_App_Gsc_Performance {
 		);
 	}
 
+	/**
+	 * Organic dashboard: parallel Search Analytics (stats + optional compare + daily timeseries).
+	 *
+	 * @return array{statusCode:int,body:array<string,mixed>}
+	 */
+	private static function fetch_performance_stats_parallel_batch(
+		string $prop,
+		string $cur_start,
+		string $cur_end,
+		?string $cmp_start,
+		?string $cmp_end,
+		bool $include_compare
+	): array {
+		$bodies = array(
+			'cur_totals'  => array(
+				'startDate' => $cur_start,
+				'endDate'   => $cur_end,
+			),
+			'cur_queries' => array(
+				'startDate'  => $cur_start,
+				'endDate'    => $cur_end,
+				'dimensions' => array( 'query' ),
+				'rowLimit'   => 25000,
+			),
+			'timeseries'  => array(
+				'startDate'  => $cur_start,
+				'endDate'    => $cur_end,
+				'dimensions' => array( 'date' ),
+				'rowLimit'   => 25000,
+			),
+		);
+		if ( $include_compare && $cmp_start !== null && $cmp_end !== null ) {
+			$bodies['cmp_totals']  = array(
+				'startDate' => $cmp_start,
+				'endDate'   => $cmp_end,
+			);
+			$bodies['cmp_queries'] = array(
+				'startDate'  => $cmp_start,
+				'endDate'    => $cmp_end,
+				'dimensions' => array( 'query' ),
+				'rowLimit'   => 25000,
+			);
+		}
+
+		$responses = Neo_Pulse_App_Gsc_Service_Account::search_analytics_query_parallel( $prop, $bodies );
+		foreach ( $responses as $response ) {
+			if ( is_wp_error( $response ) ) {
+				return self::err( 502, $response->get_error_message() );
+			}
+		}
+
+		$now    = self::stats_from_analytics_responses(
+			$responses['cur_totals'] ?? array(),
+			$responses['cur_queries'] ?? array()
+		);
+		$before = self::empty_stats();
+		if ( $include_compare && $cmp_start !== null && $cmp_end !== null ) {
+			$before = self::stats_from_analytics_responses(
+				$responses['cmp_totals'] ?? array(),
+				$responses['cmp_queries'] ?? array()
+			);
+		}
+		$timeseries = self::timeseries_from_analytics_response( $responses['timeseries'] ?? array() );
+
+		$stats_body = array(
+			'currentPeriod'    => self::period_payload( $cur_start, $cur_end, $now ),
+			'comparisonPeriod' => $include_compare && $cmp_start !== null && $cmp_end !== null
+				? self::period_payload( $cmp_start, $cmp_end, $before )
+				: self::period_payload( $cur_start, $cur_end, self::empty_stats() ),
+			'comparisons'      => self::compare_stats( $now, $before ),
+			'topKeywords'      => self::top_keywords( $now['queries'], $before['queries'] ),
+		);
+
+		return array(
+			'statusCode' => 200,
+			'body'       => array(
+				'success'    => true,
+				'property'   => $prop,
+				'stats'      => $stats_body,
+				'timeseries' => $timeseries,
+			),
+		);
+	}
+
+	/**
+	 * @param array<string,mixed> $totals_res
+	 * @param array<string,mixed> $queries_res
+	 * @return array<string,mixed>
+	 */
+	private static function stats_from_analytics_responses( array $totals_res, array $queries_res ): array {
+		$stats = self::empty_stats();
+		if ( ! empty( $totals_res['rows'][0] ) ) {
+			$r                   = $totals_res['rows'][0];
+			$stats['clicks']      = (int) ( $r['clicks'] ?? 0 );
+			$stats['impressions'] = (int) ( $r['impressions'] ?? 0 );
+			$stats['ctr']         = (float) ( $r['ctr'] ?? 0 );
+			$stats['avgPosition'] = (float) ( $r['position'] ?? 0 );
+		}
+		if ( ! empty( $queries_res['rows'] ) ) {
+			$stats['searchTermsCount'] = count( $queries_res['rows'] );
+			foreach ( $queries_res['rows'] as $row ) {
+				$stats['queries'][] = array(
+					'query'       => (string) ( $row['keys'][0] ?? '' ),
+					'clicks'      => (int) ( $row['clicks'] ?? 0 ),
+					'impressions' => (int) ( $row['impressions'] ?? 0 ),
+					'ctr'         => (float) ( $row['ctr'] ?? 0 ),
+					'position'    => (float) ( $row['position'] ?? 0 ),
+				);
+			}
+		}
+		return $stats;
+	}
+
+	/**
+	 * @param array<string,mixed> $res
+	 * @return array<int,array{date:string,clicks:int,impressions:int,avgPosition:float}>
+	 */
+	private static function timeseries_from_analytics_response( array $res ): array {
+		if ( empty( $res['rows'] ) ) {
+			return array();
+		}
+		$points = array();
+		foreach ( $res['rows'] as $row ) {
+			$date = (string) ( $row['keys'][0] ?? '' );
+			if ( $date === '' ) {
+				continue;
+			}
+			$points[] = array(
+				'date'        => $date,
+				'clicks'      => (int) ( $row['clicks'] ?? 0 ),
+				'impressions' => (int) ( $row['impressions'] ?? 0 ),
+				'avgPosition' => (float) ( $row['position'] ?? 0 ),
+			);
+		}
+		usort(
+			$points,
+			static function ( $a, $b ) {
+				return strcmp( $a['date'], $b['date'] );
+			}
+		);
+		return $points;
+	}
+
 	/** @return array<string,mixed> */
-	private static function stats_for_range( string $prop, string $start, string $end ): array {
-		$stats = array( 'clicks' => 0, 'impressions' => 0, 'ctr' => 0.0, 'avgPosition' => 0.0, 'pagesCount' => 0, 'searchTermsCount' => 0, 'queries' => array() );
+	private static function empty_stats(): array {
+		return array(
+			'clicks'            => 0,
+			'impressions'       => 0,
+			'ctr'               => 0.0,
+			'avgPosition'       => 0.0,
+			'pagesCount'        => 0,
+			'searchTermsCount'  => 0,
+			'queries'           => array(),
+		);
+	}
+
+	/** @return array<string,mixed> */
+	private static function stats_for_range( string $prop, string $start, string $end, bool $include_pages = true ): array {
+		$stats = self::empty_stats();
 		$totals = Neo_Pulse_App_Gsc_Service_Account::search_analytics_query( $prop, array( 'startDate' => $start, 'endDate' => $end ) );
 		if ( ! is_wp_error( $totals ) && ! empty( $totals['rows'][0] ) ) {
 			$r = $totals['rows'][0];
@@ -262,9 +450,11 @@ class Neo_Pulse_App_Gsc_Performance {
 				$stats['queries'][] = array( 'query' => (string) ( $row['keys'][0] ?? '' ), 'clicks' => (int) ( $row['clicks'] ?? 0 ), 'impressions' => (int) ( $row['impressions'] ?? 0 ), 'ctr' => (float) ( $row['ctr'] ?? 0 ), 'position' => (float) ( $row['position'] ?? 0 ) );
 			}
 		}
-		$p = Neo_Pulse_App_Gsc_Service_Account::search_analytics_query( $prop, array( 'startDate' => $start, 'endDate' => $end, 'dimensions' => array( 'page' ), 'rowLimit' => 25000 ) );
-		if ( ! is_wp_error( $p ) && ! empty( $p['rows'] ) ) {
-			$stats['pagesCount'] = count( $p['rows'] );
+		if ( $include_pages ) {
+			$p = Neo_Pulse_App_Gsc_Service_Account::search_analytics_query( $prop, array( 'startDate' => $start, 'endDate' => $end, 'dimensions' => array( 'page' ), 'rowLimit' => 25000 ) );
+			if ( ! is_wp_error( $p ) && ! empty( $p['rows'] ) ) {
+				$stats['pagesCount'] = count( $p['rows'] );
+			}
 		}
 		return $stats;
 	}
@@ -435,6 +625,46 @@ class Neo_Pulse_App_Gsc_Performance {
 			}
 		}
 		return $out;
+	}
+
+	/**
+	 * Daily clicks/impressions for a date range (Search Console date dimension).
+	 *
+	 * @return array<int,array{date:string,clicks:int,impressions:int,avgPosition:float}>
+	 */
+	public static function timeseries_for_range( string $property, string $start, string $end ): array {
+		$res = Neo_Pulse_App_Gsc_Service_Account::search_analytics_query(
+			$property,
+			array(
+				'startDate'  => $start,
+				'endDate'    => $end,
+				'dimensions' => array( 'date' ),
+				'rowLimit'   => 25000,
+			)
+		);
+		if ( is_wp_error( $res ) || empty( $res['rows'] ) ) {
+			return array();
+		}
+		$points = array();
+		foreach ( $res['rows'] as $row ) {
+			$date = (string) ( $row['keys'][0] ?? '' );
+			if ( $date === '' ) {
+				continue;
+			}
+			$points[] = array(
+				'date'        => $date,
+				'clicks'      => (int) ( $row['clicks'] ?? 0 ),
+				'impressions' => (int) ( $row['impressions'] ?? 0 ),
+				'avgPosition' => (float) ( $row['position'] ?? 0 ),
+			);
+		}
+		usort(
+			$points,
+			static function ( $a, $b ) {
+				return strcmp( $a['date'], $b['date'] );
+			}
+		);
+		return $points;
 	}
 
 	private static function gsc_page_matches_target( string $gsc_page, string $target ): bool {

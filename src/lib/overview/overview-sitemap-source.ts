@@ -7,6 +7,10 @@ import {
   activeChildSitemapUrls,
   isChildSitemapExcludedFromProperty,
 } from "@/lib/wordpress-property-sitemaps";
+import {
+  resolveChildUrlForRole,
+  siteHasEntityScope,
+} from "@/lib/sitemap-child-tags";
 
 export type OverviewSitemapSource = "pages" | "posts" | "sap";
 
@@ -47,8 +51,12 @@ function isPostChildSitemap(url: string): boolean {
 
 /** Post child sitemap URL from property config (ignores exclusions). */
 export function postChildSitemapUrlForProperty(
-  site: Pick<WordPressSite, "sitemaps"> | null | undefined,
+  site: Pick<WordPressSite, "sitemaps" | "entitySitemapUrl" | "competitorEntitySitemapUrl"> | null | undefined,
 ): string | null {
+  if (site?.sitemaps) {
+    const tagged = resolveChildUrlForRole(site, "posts");
+    if (tagged) return tagged;
+  }
   const children = site?.sitemaps?.childSitemaps ?? [];
   const hit = children.find(isPostChildSitemap);
   return hit?.trim() || null;
@@ -68,6 +76,8 @@ function isNonRestInventorySitemap(url: string): boolean {
 }
 
 export function pickPageSitemapUrlForSite(site: WordPressSite): string | null {
+  const tagged = resolveChildUrlForRole(site, "pages");
+  if (tagged) return tagged;
   const children = activeChildSitemapUrls(site);
   const pageChild = children.find(isPageChildSitemap);
   if (pageChild?.trim()) return pageChild.trim();
@@ -85,6 +95,8 @@ export function pageSitemapXmlUrlForPlay(site: WordPressSite): string | null {
 }
 
 function entitySitemapUrlForSite(site: WordPressSite): string | null {
+  const tagged = resolveChildUrlForRole(site, "entity");
+  if (tagged) return tagged;
   const url = site.entitySitemapUrl?.trim();
   return url || null;
 }
@@ -261,6 +273,7 @@ export function canLoadOverviewSitemapSource(
 
 export function isOverviewSapSourceAvailable(site: WordPressSite | null | undefined): boolean {
   if (!site?.username?.trim() || !site?.appPassword?.trim()) return false;
+  if (!siteHasEntityScope(site)) return false;
   return Boolean(overviewEntityRestCollectionForSite(site));
 }
 

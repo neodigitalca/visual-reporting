@@ -5,12 +5,12 @@ section: Manager WordPress Properties
 method: GET
 path: /api/manager-wordpress-properties/status
 auth: open
-order: 660
+order: 700
 ---
 
 GET `/api/manager-wordpress-properties/status`.
 
-File-backed manager settings (workspace JSON on the API server).
+Merge one API key into workspace manager settings (server-side Semrush, DataForSEO, etc.).
 
 ## Request
 

@@ -5,7 +5,7 @@ section: Knowledge Model
 method: POST
 path: /api/knowledge-model/generate-graph
 auth: open
-order: 580
+order: 620
 ---
 
 POST `/api/knowledge-model/generate-graph`.

@@ -16,6 +16,7 @@ import {
 } from "@/lib/content-optimization/first-party-authority-prompt";
 import { markdownToHtml } from "@/lib/markdown-to-html";
 import { flattenListItemBlockWrappers } from "@/lib/content-generation/content-sanitizer";
+import { MIN_INTERNAL_LINKS_PER_BODY_H2 } from "@/lib/content-generation/link-anchor-text-case";
 
 function isHarnessPlaceholderToken(token: string): boolean {
   return (
@@ -392,6 +393,26 @@ export function assertHarnessIllustrativeSectionHtml(html: string): void {
 }
 
 export const HARNESS_SECTION_MAX_ATTEMPTS = 1;
+
+const HARNESS_INTERNAL_LINK_PLACEHOLDER_RE = /\[\[LINK:[^|\]]+\|[^\]]+\]\]/g;
+
+/** Count [[LINK:query|anchor]] placeholders in harness section HTML (pre-resolve). */
+export function countHarnessInternalLinkPlaceholders(html: string): number {
+  return (html.match(HARNESS_INTERNAL_LINK_PLACEHOLDER_RE) ?? []).length;
+}
+
+/** Fail fast when a body H2 section ships fewer than the minimum internal link placeholders. */
+export function assertHarnessBodySectionInternalLinkMinimum(
+  sectionHtml: string,
+  sectionLabel: string,
+  minLinks: number = MIN_INTERNAL_LINKS_PER_BODY_H2,
+): void {
+  const count = countHarnessInternalLinkPlaceholders(sectionHtml);
+  if (count >= minLinks) return;
+  throw new Error(
+    `Harness: section "${sectionLabel}" has ${count} internal [[LINK]] placeholder(s); minimum is ${minLinks} per body H2 (single pass).`,
+  );
+}
 
 export function illustrativeHarnessSectionValid(html: string): boolean {
   const t = (html ?? "").trim();

@@ -20,6 +20,10 @@ vi.mock("@/lib/competitor-research/competitor-gsc-queries", () => ({
     startDate: "2026-04-01",
     endDate: "2026-07-01",
   }),
+  getGscNinetyDayCompetitorDateRange: () => ({
+    startDate: "2026-04-01",
+    endDate: "2026-07-01",
+  }),
 }));
 
 vi.mock("@/lib/master-instructions-storage", () => ({

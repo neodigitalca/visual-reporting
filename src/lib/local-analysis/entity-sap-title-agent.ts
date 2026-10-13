@@ -12,6 +12,7 @@ import { aiRejectBrandOrBlockedTexts } from "@/lib/content-brand-ai-gate";
 import { collapseRepeatedPlaceSegmentsInKeyword, serviceKeywordForSapTitle } from "@/lib/local-analysis/entity-sap-row-keyword-fill";
 import { buildSapSlugFromKeywordEntity } from "@/lib/sap-slug-from-keyword-entity";
 import { openRouterWebAppHeaders } from "@/lib/openrouter-attribution";
+import { extractFirstBalancedJsonValue } from "@/lib/competitor-research/competitor-report-json-parse";
 import { postOpenRouterAppChatFetch } from "@/lib/openrouter-app-api";
 import {
   collectBlockedForEntity,
@@ -150,13 +151,22 @@ export function resolveEntitySapPostTitle(
 export const DEFAULT_ENTITY_SAP_TITLE_TEMPLATE = DEFAULT_ENTITY_TITLE_TEMPLATE;
 
 function titlesFromOpenRouterContent(raw: string): string[] {
-  try {
-    const parsed = JSON.parse(raw) as TitleAgentResponse;
-    if (!Array.isArray(parsed.titles)) return [];
-    return parsed.titles.map((t) => String(t ?? "").trim());
-  } catch {
-    throw new Error(`Title agent returned invalid JSON: ${raw.slice(0, 160)}`);
+  const parseTitles = (text: string): string[] => {
+    try {
+      const parsed = JSON.parse(text) as TitleAgentResponse;
+      if (!Array.isArray(parsed.titles)) return [];
+      return parsed.titles.map((t) => String(t ?? "").trim());
+    } catch {
+      return [];
+    }
+  };
+  const trimmed = raw.trim();
+  let titles = parseTitles(trimmed);
+  if (titles.length === 0 && trimmed) {
+    const sub = extractFirstBalancedJsonValue(trimmed);
+    if (sub) titles = parseTitles(sub);
   }
+  return titles;
 }
 
 function sapRowPath(row: CSVRow): string {
@@ -233,7 +243,7 @@ async function fetchTitlesBatch(
         },
       ],
       temperature: 0.35,
-      max_tokens: Math.min(8192, Math.max(1024, rows.length * 80)),
+      max_tokens: Math.min(16384, Math.max(2048, rows.length * 160)),
       response_format: { type: "json_object" },
     }),
   });
@@ -249,18 +259,17 @@ async function fetchTitlesBatch(
     choices?: Array<{ message?: { content?: string } }>;
   };
   const raw = data.choices?.[0]?.message?.content ?? "";
-  if (!raw.trim()) {
-    throw new Error("Title agent returned empty content.");
+  const template = titleTemplate?.trim() || DEFAULT_ENTITY_TITLE_TEMPLATE;
+  let titles = titlesFromOpenRouterContent(raw).map((t) => collapseRepeatedPlaceSegmentsInKeyword(t));
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]!;
+    let title = titles[i]?.trim() ?? "";
+    if (!title) {
+      title = resolveEntitySapTitleFromTemplate(row.keyword ?? "", row.entity ?? "", template);
+    }
+    titles[i] = title;
   }
-
-  const titles = titlesFromOpenRouterContent(raw).map((t) => collapseRepeatedPlaceSegmentsInKeyword(t));
-  if (titles.length !== rows.length) {
-    throw new Error(`Title agent returned ${titles.length} title(s) for ${rows.length} row(s).`);
-  }
-  if (titles.some((t) => !t)) {
-    throw new Error("Title agent returned one or more empty titles.");
-  }
-  return titles;
+  return titles.slice(0, rows.length);
 }
 
 function applyTitlesAtIndices(out: CSVRow[], indices: number[], titles: string[]): void {

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { BlogGeneratorWorkspaceChrome } from "@/components/blog-generator/BlogGeneratorWorkspaceChrome";
 import type { BlogGeneratorSectionId } from "@/components/blog-generator/blog-generator-sections";
 import { CompetitorContentDetailsPanel } from "@/components/competitor-generator/CompetitorContentDetailsPanel";
@@ -29,6 +30,7 @@ export type CompetitorGeneratorWorkspaceHeaderProps = {
   onDownloadTargetsCsv: () => void;
   detailsProps: CompetitorContentDetailsPanelProps;
   onDetailsOpenChange?: (open: boolean) => void;
+  titleRowMenu?: ReactNode;
 };
 
 export function CompetitorGeneratorWorkspaceHeader({
@@ -54,6 +56,7 @@ export function CompetitorGeneratorWorkspaceHeader({
   onDownloadTargetsCsv,
   detailsProps,
   onDetailsOpenChange,
+  titleRowMenu,
 }: CompetitorGeneratorWorkspaceHeaderProps) {
   const showTempUrl =
     workspace.mode === "temp" || (!workspace.showConnectedToggle && workspace.mode !== "connected");
@@ -64,6 +67,7 @@ export function CompetitorGeneratorWorkspaceHeader({
       onSectionChange={onSectionChange}
       sectionSwitchDisabled={isProcessing}
       workspaceBusy={workspaceBusy}
+      titleRowMenu={titleRowMenu}
       progressSnapshot={progressSnapshot}
       hideIdleProgressTrack={hideIdleProgressTrack}
       canOpenDetails={canOpenDetails}

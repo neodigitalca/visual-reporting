@@ -5,7 +5,7 @@ section: Google Analytics
 method: GET
 path: /api/ga/credentials-status
 auth: open
-order: 150
+order: 160
 ---
 
 GET `/api/ga/credentials-status`.

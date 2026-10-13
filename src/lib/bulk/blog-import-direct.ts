@@ -22,7 +22,8 @@ import {
 } from "@/lib/bulk/blog-import-draft-links";
 import { markdownToHtml, generateExcerpt } from "@/lib/markdown-to-html";
 import { createWordPressPost } from "@/lib/wordpress-api";
-import { extractEndpointFromEntitySitemapUrl } from "@/lib/entity-endpoint-extractor";
+import { resolveEntityEndpointForRow } from "@/lib/competitor/competitor-entity-sitemap";
+import { acfCompetitorAppliesForRow } from "@/lib/acf-competitor-applies";
 import { loadApiKey } from "@/lib/api";
 import {
   formatWordPressDate,
@@ -66,7 +67,12 @@ export function buildDirectAcfFields(row: CSVRow, excerpt: string): Record<strin
     meta_description: (row.meta_description?.trim() || excerpt).slice(0, 500),
   };
   if (row.date_modifier?.trim()) fields.date_modifier = row.date_modifier.trim();
-  if (row.origin?.trim() && row.origin.trim() !== "N/A") fields.origin = row.origin.trim();
+  if (acfCompetitorAppliesForRow(row.keyword)) {
+    if (row.competitor?.trim()) fields.competitor = row.competitor.trim();
+    if (row.competitor_fields?.trim()) fields.competitor_fields = row.competitor_fields.trim();
+  } else if (row.origin?.trim() && row.origin.trim() !== "N/A") {
+    fields.origin = row.origin.trim();
+  }
   return fields;
 }
 
@@ -283,8 +289,8 @@ export async function processDirectBlogImportRow(args: {
     const { site, sitemapType } = sitesToPost[siteIndex]!;
     options.onProgress?.(rowIndex, 0, `Direct upload to ${site.name}...`);
     const entityEndpoint =
-      sitemapType === "entity" && site.entitySitemapUrl
-        ? extractEndpointFromEntitySitemapUrl(site.entitySitemapUrl)
+      sitemapType === "entity"
+        ? resolveEntityEndpointForRow(site, row, sitemapType)
         : "posts";
     const postTypeForAcf = sitemapType === "entity" ? entityEndpoint : "post";
     const featuredImageId = featuredImage

@@ -5,12 +5,12 @@ section: Manager Cloud Settings
 method: GET
 path: /api/manager-cloud-settings/status
 auth: open
-order: 630
+order: 670
 ---
 
 GET `/api/manager-cloud-settings/status`.
 
-File-backed manager settings (workspace JSON on the API server).
+Merge one API key into workspace manager settings (server-side Semrush, DataForSEO, etc.).
 
 ## Request
 

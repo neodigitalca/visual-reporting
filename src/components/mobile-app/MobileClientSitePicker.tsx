@@ -1,7 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import { useWordPressSites } from "@/hooks/use-wordpress-sites";
 import { useActiveWordPressSite } from "@/contexts/active-wordpress-site-context";
-import { wordpressSiteDisplayName } from "@/lib/wordpress-site-display-name";
+import { wordpressSiteMenuDisplayName } from "@/lib/wordpress-site-display-name";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +16,7 @@ export function MobileClientSitePicker() {
 
   const enabledSites = sites.filter((site) => site.enabled !== false);
   const activeSite = enabledSites.find((site) => site.id === activeWordPressSiteId) ?? enabledSites[0] ?? null;
-  const label = activeSite ? wordpressSiteDisplayName(activeSite) : "Select client";
+  const label = activeSite ? wordpressSiteMenuDisplayName(activeSite) : "Select client";
 
   if (enabledSites.length === 0) {
     return (
@@ -41,7 +41,7 @@ export function MobileClientSitePicker() {
       <DropdownMenuContent align="end" className="mobile-client-picker__menu">
         {enabledSites.map((site) => {
           const selected = site.id === activeSite?.id;
-          const siteLabel = wordpressSiteDisplayName(site);
+          const siteLabel = wordpressSiteMenuDisplayName(site);
           return (
             <DropdownMenuItem
               key={site.id}

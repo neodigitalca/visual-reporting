@@ -186,6 +186,7 @@ require_once NEO_PULSE_WP_PLUGIN_DIR . 'includes/class-neo-pulse-wp-admin.php';
 require_once NEO_PULSE_WP_PLUGIN_DIR . 'includes/class-neo-pulse-wp-dashboard-preferences.php';
 require_once NEO_PULSE_WP_PLUGIN_DIR . 'includes/class-neo-pulse-wp-content-tools.php';
 require_once NEO_PULSE_WP_PLUGIN_DIR . 'includes/class-neo-pulse-wp-activation.php';
+require_once NEO_PULSE_WP_PLUGIN_DIR . 'includes/class-neo-pulse-wp-competitor-post-type.php';
 
 register_activation_hook(
 	NEO_PULSE_WP_PLUGIN_FILE,
@@ -197,6 +198,7 @@ add_action(
 	static function () {
 		load_plugin_textdomain( 'neo-pulse-wp', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 		Neo_Pulse_Wp_Fields::init();
+		Neo_Pulse_Wp_Competitor_Post_Type::init();
 		Neo_Pulse_Wp_Content_Tools::init();
 	},
 	4

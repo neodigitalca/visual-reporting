@@ -1,5 +1,5 @@
 import { callOpenRouterChatCompletion } from "@/lib/competitor-research/competitor-report-openrouter";
-import { parseJsonWithRepair } from "@/lib/json-repair-utility";
+import { parseJsonStrict } from "@/lib/json-repair-utility";
 import { getProductionModel } from "@/lib/optimization-settings-storage";
 import type { ImportedBlogDraft, ImportedBlogSection } from "./blog-import-parser";
 import { parseImportedSectionsJson } from "./bulk-csv-parser";
@@ -104,9 +104,7 @@ export async function analyzeImportedBlogTone(args: {
       signal: args.signal,
     });
 
-    const { parsed } = parseJsonWithRepair<ImportedBlogToneProfile>(content, {
-      requiredKeys: ["register"],
-    });
+    const parsed = parseJsonStrict<ImportedBlogToneProfile>(content);
     if (!parsed?.register?.trim()) return null;
 
     const doNot = Array.isArray(parsed.do_not) ? parsed.do_not.map(String).filter(Boolean) : [];

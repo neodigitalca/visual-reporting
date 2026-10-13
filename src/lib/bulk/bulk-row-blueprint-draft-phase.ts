@@ -115,7 +115,12 @@ export async function runBulkRowBlueprintDraftPhase(input: {
     semrushScatterContext,
   } = input;
 
-  const flowPurposeStr = options.flowPurpose || buildFocusedArticlePurpose(keywordData.keyword);
+  const harnessKeywordData: KeywordData = {
+    ...keywordData,
+    keyword: resolveBulkPrimaryKeyword(row, enrichedRow, keywordData) || keywordData.keyword,
+  };
+  const flowPurposeStr =
+    options.flowPurpose || buildFocusedArticlePurpose(harnessKeywordData.keyword);
   const outlineTextForImage = `Blog checklist outline:\n${pipelineChecklist.join("\n")}`;
 
   const entityForImage =
@@ -150,13 +155,13 @@ export async function runBulkRowBlueprintDraftPhase(input: {
   const context: BlogTemplateContext = {
     flowTitle: enrichedRow.title,
     flowPurpose: flowPurposeStr,
-    keywordData,
+    keywordData: harnessKeywordData,
     userPrompt: baseUserPrompt?.trim() || undefined,
     prefilledRowContract: prefilledRowContract || undefined,
   };
 
-  const metaTitleForBulk = enrichedRow.title || keywordData.keyword;
-  const metaContextBulk = `Blog post title: "${metaTitleForBulk}". Primary keyword: "${keywordData.keyword}".`;
+  const metaTitleForBulk = enrichedRow.title || harnessKeywordData.keyword;
+  const metaContextBulk = `Blog post title: "${metaTitleForBulk}". Primary keyword: "${harnessKeywordData.keyword}".`;
   const csvMetaDescription = hasCsvFilledMeta(enrichedRow) ? enrichedRow.meta_description!.trim() : "";
 
   const blueprintTemplateArgs = {
@@ -178,7 +183,7 @@ export async function runBulkRowBlueprintDraftPhase(input: {
     ...(llmAuditAuthorityLinks.length ? { llmAuditAuthorityLinks } : {}),
   };
   const preBlogSeoSkeleton = buildPreBlogSeoResearchSkeleton({
-    keywordData,
+    keywordData: harnessKeywordData,
     enrichedRow,
     semrushKeywordsContext,
     semrushScatterContext,
@@ -203,7 +208,7 @@ export async function runBulkRowBlueprintDraftPhase(input: {
       ? csvMetaDescription
       : await generateMetaDescription(
           metaContextBulk,
-          keywordData.keyword,
+          harnessKeywordData.keyword,
           options.openRouterApiKey,
           pipelineSiteId,
           metaTitleForBulk,
@@ -225,7 +230,7 @@ export async function runBulkRowBlueprintDraftPhase(input: {
         ? Promise.resolve(csvMetaDescription)
         : generateMetaDescription(
             metaContextBulk,
-            keywordData.keyword,
+            harnessKeywordData.keyword,
             options.openRouterApiKey,
             pipelineSiteId,
             metaTitleForBulk,
@@ -303,7 +308,7 @@ export async function runBulkRowBlueprintDraftPhase(input: {
       title: blueprintResult.title || enrichedRow.title,
       purpose: blueprintResult.purpose,
       agents: blueprintResult.agents,
-      keyword: keywordData.keyword,
+      keyword: harnessKeywordData.keyword,
       entity: enrichedRow.entity,
       acfFields: {
         date_modifier: enrichedRow.date_modifier,

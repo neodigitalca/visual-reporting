@@ -6,10 +6,11 @@ import type { WordPressSite } from "@/components/integrations/types";
 import type { BlogGeneratorSectionId } from "@/components/blog-generator/blog-generator-sections";
 import { SapGeneratorWorkspaceHeader } from "@/components/sap-generator/SapGeneratorWorkspaceHeader";
 import {
-  SEO_WORKSPACE_BODY_SCROLL_CLASS,
-  SEO_WORKSPACE_HEADER_CLASS,
-  SEO_WORKSPACE_INNER_CLASS,
-} from "@/components/seo/seo-workspace-layout";
+  BLOG_GENERATOR_WORKSPACE_BODY_CLASS,
+  BLOG_GENERATOR_WORKSPACE_HEADER_CLASS,
+} from "@/components/keyword-research/blog-generator-tab-classes";
+import { EntitySubmodePills } from "@/components/sap-generator/EntitySubmodePills";
+import type { EntityGeneratorSubmode } from "@/components/sap-generator/entity-generator-submode";
 import {
   buildLocalGridSummary,
   defaultSeedEntityHintFromGrid,
@@ -77,6 +78,10 @@ import { repairSapPageAllocation, type SuggestedKeywordTarget } from "@/lib/loca
 import { fillKeywordsFromWpInventoryPosts } from "@/lib/local-analysis-fill-keywords-from-wp-inventory";
 import { ensureBulkGenerationWpInventory, getBulkGenerationWpInventoryIfReady } from "@/lib/bulk/bulk-generation-wp-inventory";
 import { downloadLocalAnalysisBulkCsv } from "@/lib/local-analysis-csv-export";
+import {
+  logClustersButtonPress,
+  logClustersPipeline,
+} from "@/lib/local-analysis/entity-clusters-console-log";
 import { allRowIndicesSet } from "@/lib/bulk-processing-order";
 import { fillSapRowMetaFromOpenRouter } from "@/lib/local-analysis/entity-sap-meta-agent";
 import { fillSapRowTitlesFromOpenRouter } from "@/lib/local-analysis/entity-sap-title-agent";
@@ -88,16 +93,25 @@ import {
   ensureEntitySiteWarmCache,
   gscAllQueriesFromWarmBundle,
 } from "@/lib/local-analysis/entity-site-warm-cache";
+import {
+  ensureClusterGscQueries,
+  mergeGscQueriesWithInventoryFallback,
+} from "@/lib/local-analysis/entity-gsc-inventory-fallback";
 import { runEntityGridLocationClusterAgent } from "@/lib/local-analysis/entity-grid-location-wiki-agent";
+import {
+  assertEntityRowsHaveKeywords,
+  countDistinctEntityLabels,
+  validateEntityClusterResult,
+} from "@/lib/local-analysis/entity-cluster-validate";
 import {
   hydratePreloadedEntitySapRows,
   keywordTargetsFromPreloadedSapRows,
 } from "@/lib/local-analysis/entity-preload-clusters-hydrate";
 import {
   clearEntityGridCsv,
-  loadEntityGridCsv,
   saveEntityGridCsv,
 } from "@/lib/local-analysis/entity-grid-csv-store";
+import { BULK_GENERATOR_EMPTY_ROW_COUNT } from "@/components/keyword-research/blog-generator-tab-classes";
 import {
   entityGeneratorKeywordInventoryCount,
   mapEntityGeneratorKeywordInventoryPayload,
@@ -157,6 +171,11 @@ import {
   buildLocalAnalysisMicroSnapshot,
   type LocalAnalysisHeaderProgress,
 } from "@/lib/local-analysis/header-progress";
+import {
+  entityClusterHeaderProgress,
+  entityClusterStageFromPhase,
+  type EntityClusterRunStage,
+} from "@/lib/local-analysis/entity-cluster-run-progress";
 import { BulkEntityWorkspaceBody } from "@/components/keyword-research/bulk/BulkEntityWorkspaceBody";
 import { WORKSPACE_DETAILS_DIM_OVERLAY_CLASS } from "@/components/overview/overview-tab/overview-tab-content-constants";
 import type { LocalAnalysisDetailsPanelProps } from "@/components/sap-generator/LocalAnalysisDetailsPanel";
@@ -224,41 +243,6 @@ const SAP_COUNT_MAX = LOCAL_ANALYSIS_SAP_MAX;
 
 const LA_SESSION_KEY = (siteId: string) => `neo-pulse.local-analysis.v1.${siteId}`;
 
-interface PersistedLocalAnalysisV1 {
-  v: 1;
-  /** Business / GBP-style name used with DataForSEO GMB info before suggest. */
-  businessName?: string;
-  gridSummaryMarkdown: string;
-  gridKeywordWeights: GridKeywordWeight[];
-  /** Per City, ST weakness from grid (optional for older sessions). */
-  gridPlaceWeaknessWeights?: PlaceWeaknessWeight[];
-  csvPlaceHints: string[];
-  keywordTargets: KeywordTargetRow[];
-  uploadLabel: string;
-  /** Grid location rationale from last successful Generate SAP rows. */
-  strategyMarkdown?: string;
-  questionsByKeyword?: Record<string, string[]>;
-  /** Last SAP rows (small runs only; restores generated list after refresh). */
-  sapRows?: CSVRow[];
-  /** True when sapRows were committed by a finished Generate (not mid-pipeline). */
-  sapListRevealed?: boolean;
-  /** Optional theme for AI suggest: most keyword targets center on this. */
-  suggestFocusKeyword?: string;
-  /** Optional geographic anchor for suggest + Generate SAP entity areas (city, region, country, etc.). */
-  suggestFocusLocation?: string;
-  /** Session-wide geographic scope for entity labels (SAP + suggest). */
-  entityGeographicLevel?: EntityGeographicLevel;
-  /** Optional subset of taxonomy lines to prioritize in prompts. */
-  entityTypeFocus?: string[];
-  entityTotalCountInput?: string;
-  /** @deprecated Legacy ad group × ads fields; restored as product total. */
-  entityAdGroupCountInput?: string;
-  entityAdsPerGroupInput?: string;
-  useBlindMagicKeywords?: boolean;
-  /** @deprecated Legacy single budget field; restored as ad groups with adsPerGroup=1. */
-  sapPageBudgetInput?: string;
-}
-
 function newTargetRowId(): string {
   return typeof crypto !== "undefined" && crypto.randomUUID
     ? crypto.randomUUID()
@@ -270,7 +254,8 @@ function sapRowsHaveDisplayContent(rows: readonly CSVRow[]): boolean {
   return rows.some(
     (r) =>
       Boolean(r.title?.trim()) ||
-      (Boolean(r.keyword?.trim()) && Boolean((r.entity ?? "").trim())),
+      Boolean(r.keyword?.trim()) ||
+      Boolean((r.entity ?? "").trim()),
   );
 }
 
@@ -511,6 +496,8 @@ export interface LocalAnalysisPanelProps {
   maxTokens: number;
   topP: number;
   flowPurpose?: string;
+  entitySubmode: EntityGeneratorSubmode;
+  onEntitySubmodeChange: (mode: EntityGeneratorSubmode) => void;
 }
 
 export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
@@ -525,6 +512,8 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
   maxTokens,
   topP,
   flowPurpose,
+  entitySubmode,
+  onEntitySubmodeChange,
 }) => {
   const [uploadLabel, setUploadLabel] = useState<string>("");
   const [detailsDrawerOpen, setDetailsDrawerOpen] = useState(false);
@@ -596,17 +585,9 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
   const openRouterKey = apiKey?.trim() || loadApiKey();
 
   const workspaceBusy = csvParsing || isAnalyzing || suggestLoading;
-  const clustersRunLoading = suggestLoading || isAnalyzing;
+  const clusterProgressPctRef = useRef(0);
 
   const handleApplyRemainingEntityCount = useCallback(() => {
-    const gridText = gridCsvFullText.trim();
-    if (!gridText && !suggestFocusLocation.trim()) {
-      const city = resolveEntityClusterLocationLabel(site, "");
-      if (city) {
-        setSuggestFocusLocation(city);
-      }
-    }
-
     const target = GENERATOR_PERIOD_ENTITY_TARGET;
     const stats = quarterEditorialBySiteId[site.id];
     const detected = quarterEditorialEntityTotal(stats);
@@ -630,7 +611,7 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
       }
       notify.info(`Set entities to ${remaining} (${det} of ${target} already this period).`);
     }
-  }, [gridCsvFullText, quarterEditorialBySiteId, site, suggestFocusLocation]);
+  }, [quarterEditorialBySiteId, site]);
 
   const maxSapBudget = useMemo(
     () => parseEntityTotalInput(entityTotalCountInput) ?? 0,
@@ -716,15 +697,16 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
         commitSitemapInventoryLinks(warm.inventory.links);
       }
       const allGsc = gscAllQueriesFromWarmBundle(warm);
-      if (siteUrl && allGsc.length > 0) {
-        commitGscKeywordsHostedLink(siteUrl, allGsc, warm.gsc.dateRange);
+      const mergedGsc = mergeGscQueriesWithInventoryFallback(allGsc, warm.inventory.buckets);
+      if (siteUrl && mergedGsc.length > 0) {
+        commitGscKeywordsHostedLink(siteUrl, mergedGsc, warm.gsc.dateRange);
       } else {
         clearGscKeywordsHostedLink();
       }
       entityKeywordSourcesRef.current = {
         links: warm.inventory.links,
         buckets: warm.inventory.buckets,
-        gscQueries: allGsc,
+        gscQueries: mergedGsc,
         gscDateRange: warm.gsc.dateRange,
       };
       return entityKeywordSourcesRef.current;
@@ -765,9 +747,6 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
         commitGscKeywordsHostedLink(peerUrl, peerGsc.queries, peerGsc.dateRange);
       }
       return sources;
-    }
-    if (!sources.gscQueries?.length) {
-      throw new Error("GSC keywords are unavailable. Connect GSC for this site.");
     }
     return sources;
   }, [
@@ -889,8 +868,7 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
     let cancelled = false;
     void getPrimaryLabelForWikipediaAugment(site).then((label) => {
       if (cancelled || !label?.trim()) return;
-      const trimmed = label.trim();
-      setPrimaryWikiAugmentLabel(trimmed);
+      setPrimaryWikiAugmentLabel(label.trim());
     });
     return () => {
       cancelled = true;
@@ -901,9 +879,10 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
     const fromProfile = getPrimaryCityStateLabel(site)?.trim() ?? "";
     setPrimaryWikiAugmentLabel(fromProfile || undefined);
     setGranularPoolTitles([]);
-    setSuggestFocusLocation("");
     setEntityTotalCountInput("");
-  }, [site.id]); // eslint-disable-line react-hooks/exhaustive-deps -- `site` keyed by id only; avoid clearing pool on unrelated `site` reference churn
+    setSuggestFocusLocation("");
+    setSuggestFocusKeyword("");
+  }, [site.id]); // eslint-disable-line react-hooks/exhaustive-deps -- keyed by site id; full `site` would churn
 
   useEffect(() => {
     setUseBlindMagicKeywords(canUseBlindMagicKeywordOption(portfolioSites, site));
@@ -986,139 +965,18 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
   }, [targetsWikiKey, site.id, mergedWikipediaSearchAugment, granularPoolTitlesKey, localAnalysisWikiLookupOptions]);
   /* eslint-enable react-hooks/exhaustive-deps */
 
+  /** Leaving Entity (Forge tab switch) must not restore clusters/grid on return — same as Prompt workspace state. */
   useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem(LA_SESSION_KEY(site.id));
-      if (!raw) return;
-      const p = JSON.parse(raw) as PersistedLocalAnalysisV1;
-      if (p.v !== 1) return;
-      if (typeof p.businessName === "string") setBusinessName(p.businessName);
-      if (typeof p.gridSummaryMarkdown === "string") setGridSummaryMarkdown(p.gridSummaryMarkdown);
-      setGridKeywordWeights(Array.isArray(p.gridKeywordWeights) ? p.gridKeywordWeights : []);
-      setGridPlaceWeaknessWeights(
-        Array.isArray(p.gridPlaceWeaknessWeights) ? p.gridPlaceWeaknessWeights : []
-      );
-      setCsvPlaceHints(Array.isArray(p.csvPlaceHints) ? p.csvPlaceHints : []);
-      // Keyword targets are not restored — user must run Clusters explicitly.
-      // Grid CSV lives in IndexedDB (restored separately); never keep a stale ready label alone.
-      if (typeof p.uploadLabel === "string" && p.uploadLabel.trim()) {
-        setUploadLabel("");
-      }
-      if (typeof p.strategyMarkdown === "string") setStrategyMarkdown(p.strategyMarkdown);
-      if (p.questionsByKeyword && typeof p.questionsByKeyword === "object") {
-        setQuestionsByKeyword(p.questionsByKeyword);
-      }
-      if (p.sapListRevealed && Array.isArray(p.sapRows) && p.sapRows.length > 0) {
-        const restored = finalizeEntitySapRowsForAdGroups(
-          applySapOriginFromTitleToRows(p.sapRows as CSVRow[]),
-        );
-        if (sapRowsHaveDisplayContent(restored)) {
-          setSapRows(restored);
-          setEntitySelectedRowIndices(allRowIndicesSet(restored.length));
-        }
-      }
-      if (typeof p.suggestFocusKeyword === "string") setSuggestFocusKeyword(p.suggestFocusKeyword);
-      if (p.entityGeographicLevel === "national" || p.entityGeographicLevel === "provincial" || p.entityGeographicLevel === "city") {
-        setEntityGeographicLevel(resolveEntityGeographicLevel(p.entityGeographicLevel));
-      }
-      if (Array.isArray(p.entityTypeFocus) && p.entityTypeFocus.length > 0) {
-        const allowed = new Set(entityTypesForLevel(resolveEntityGeographicLevel(p.entityGeographicLevel)));
-        const restored = p.entityTypeFocus.filter((t) => allowed.has(t));
-        if (restored.length > 0) setEntityTypeFocus(restored);
-      }
-      if (typeof p.useBlindMagicKeywords === "boolean") {
-        setUseBlindMagicKeywords(
-          p.useBlindMagicKeywords && canUseBlindMagicKeywordOption(portfolioSites, site),
-        );
-      }
-    } catch {
-      /* ignore */
-    }
-  }, [site.id]);
-
-  /** Restore Local Dominator CSV from IndexedDB (metadata only; no auto-run). */
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const saved = await loadEntityGridCsv(site.id);
-      if (cancelled || !saved?.csvText?.trim()) return;
-      const csvText = saved.csvText;
-      setGridCsvFullText(csvText);
-      if (saved.uploadLabel) setUploadLabel(saved.uploadLabel);
-      const result = await processLocalDominatorCsvText(csvText, false);
-      if (cancelled || result.ok === false) return;
-      setGridSummaryMarkdown(result.gridSummaryMarkdown);
-      setGridKeywordWeights(result.gridKeywordWeights);
-      setGridPlaceWeaknessWeights(result.placeWeaknessWeights);
-      setCsvPlaceHints(result.placeHints);
-    })();
     return () => {
-      cancelled = true;
+      try {
+        sessionStorage.removeItem(LA_SESSION_KEY(site.id));
+        sessionStorage.removeItem(localAnalysisInventoryStorageKey(site.id));
+      } catch {
+        /* ignore */
+      }
+      void clearEntityGridCsv(site.id);
     };
   }, [site.id]);
-
-  useEffect(() => {
-    const hasPersistable =
-      businessName.trim().length > 0 ||
-      gridSummaryMarkdown.trim().length > 0 ||
-      keywordTargets.some((r) => r.keyword.trim().length > 0) ||
-      sapRows.length > 0 ||
-      strategyMarkdown.trim().length > 0 ||
-      suggestFocusKeyword.trim().length > 0 ||
-      entityGeographicLevel !== DEFAULT_ENTITY_GEOGRAPHIC_LEVEL ||
-      entityTypeFocus.length > 0;
-    if (!hasPersistable) return;
-    const t = window.setTimeout(() => {
-      try {
-        const snap: PersistedLocalAnalysisV1 = {
-          v: 1,
-          businessName: businessName.trim() || undefined,
-          gridSummaryMarkdown,
-          gridKeywordWeights,
-          gridPlaceWeaknessWeights:
-            gridPlaceWeaknessWeights.length > 0 ? gridPlaceWeaknessWeights : undefined,
-          csvPlaceHints,
-          keywordTargets,
-          uploadLabel,
-          strategyMarkdown: strategyMarkdown.trim() || undefined,
-          questionsByKeyword:
-            Object.keys(questionsByKeyword).length > 0 ? questionsByKeyword : undefined,
-          sapRows: sapRowsHaveDisplayContent(sapRows) ? sapRows : undefined,
-          sapListRevealed: sapRowsHaveDisplayContent(sapRows) ? true : undefined,
-          suggestFocusKeyword: suggestFocusKeyword.trim() || undefined,
-          entityGeographicLevel:
-            entityGeographicLevel !== DEFAULT_ENTITY_GEOGRAPHIC_LEVEL ? entityGeographicLevel : undefined,
-          entityTypeFocus: (() => {
-            const allowed = entityTypesForLevel(entityGeographicLevel);
-            const next = entityTypeFocus.filter((t) => allowed.includes(t));
-            return next.length > 0 ? next : undefined;
-          })(),
-          useBlindMagicKeywords: useBlindMagicKeywords || undefined,
-        };
-        sessionStorage.setItem(LA_SESSION_KEY(site.id), JSON.stringify(snap));
-      } catch {
-        /* quota */
-      }
-    }, 400);
-    return () => window.clearTimeout(t);
-  }, [
-    site.id,
-    businessName,
-    gridSummaryMarkdown,
-    gridKeywordWeights,
-    gridPlaceWeaknessWeights,
-    csvPlaceHints,
-    keywordTargets,
-    uploadLabel,
-    strategyMarkdown,
-    questionsByKeyword,
-    sapRows,
-    suggestFocusKeyword,
-    suggestFocusLocation,
-    entityGeographicLevel,
-    entityTypeFocus,
-    useBlindMagicKeywords,
-  ]);
 
   const resetAnalysisOutput = useCallback(() => {
     neighbourhoodPlanGenerationRef.current += 1;
@@ -1158,6 +1016,7 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
     setPipelineErrorMessage(null);
     try {
       sessionStorage.removeItem(LA_SESSION_KEY(site.id));
+      sessionStorage.removeItem(localAnalysisInventoryStorageKey(site.id));
     } catch {
       /* ignore */
     }
@@ -1191,6 +1050,13 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
         setGridKeywordWeights(result.gridKeywordWeights);
         setGridPlaceWeaknessWeights(result.placeWeaknessWeights);
         setCsvPlaceHints(result.placeHints);
+        const gridLocationHint = result.placeHints.find((h) => h.trim())?.trim();
+        if (gridLocationHint) {
+          setSuggestFocusLocation(gridLocationHint);
+        }
+        if (result.dominantKeyword.trim()) {
+          setSuggestFocusKeyword(result.dominantKeyword.trim());
+        }
         void saveEntityGridCsv({
           siteId: site.id,
           uploadLabel: fileLabel,
@@ -1665,6 +1531,9 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
       if (suspicious.length > 0) {
         notify.message(notifyCheckXEntityRowSVsCsv(suspicious.length), { duration: 10_000 });
       }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      notify.error(msg || "SAP generation failed");
     } finally {
       notify.dismiss("local-analysis-generate");
       setIsAnalyzing(false);
@@ -1693,100 +1562,175 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
     assignUniqueEntitySapKeywords,
   ]);
 
+  const bumpClusterProgress = useCallback(
+    (
+      phase: string,
+      stage: EntityClusterRunStage,
+      stepCompleted = 0,
+      stepTotal = 1,
+    ) => {
+      const block = entityClusterHeaderProgress({
+        phase,
+        stage,
+        stepCompleted,
+        stepTotal,
+        minPct: clusterProgressPctRef.current,
+      });
+      clusterProgressPctRef.current = block.progressPct ?? clusterProgressPctRef.current;
+      setHeaderProgress({ kind: "suggest", ...block });
+    },
+    [],
+  );
+
   const reportClustersBlocker = useCallback((message: string) => {
     notify.error(message);
-    setPipelineErrorMessage(message);
-    setHeaderProgress({ kind: "suggest", phase: message, completed: 0, total: 0 });
+    clusterProgressPctRef.current = 0;
+    setHeaderProgress({ kind: "suggest", phase: "Clusters stopped", completed: 0, total: 100, progressPct: 0 });
   }, []);
 
   const runClusters = useCallback(async () => {
+    const gridTextSnapshot = gridCsvFullText.trim();
+    logClustersButtonPress("locations", {
+      site: {
+        id: site.id,
+        name: site.name,
+        siteUrl: site.siteUrl,
+        enabled: site.enabled,
+      },
+      isTempWorkspace,
+      tempSeedUrl: isTempWorkspace ? workspace.tempSeedUrl : undefined,
+      entityTotalCountInput,
+      parsedEntityTotalInput: parseEntityTotalInput(entityTotalCountInput),
+      suggestFocusKeyword: suggestFocusKeyword.trim(),
+      suggestFocusLocation: suggestFocusLocation.trim(),
+      businessName: businessName.trim(),
+      hasGridCsv: Boolean(gridTextSnapshot),
+      gridCsvCharLength: gridTextSnapshot.length,
+      gridCsvLineCount: gridTextSnapshot ? gridTextSnapshot.split(/\r?\n/).length : 0,
+      entityTypeFocus,
+      entityGeographicLevel,
+      openRouterConfigured: Boolean(openRouterKey),
+      researchModel,
+      sapRowsBeforeRun: sapRows.length,
+      keywordTargetCount: keywordTargets.length,
+      sitemapInventoryLinkCount: sitemapInventoryLinks.length,
+      gscKeywordsHostedLink: gscKeywordsHostedLink
+        ? {
+            filename: gscKeywordsHostedLink.filename,
+            rowCount: gscKeywordsHostedLink.rowCount,
+            label: gscKeywordsHostedLink.label,
+          }
+        : null,
+      sitePrepLoading,
+      suggestLoading,
+    });
+
     setPipelineErrorMessage(null);
-    const totalRaw = entityTotalCountInput.trim().replace(/[^\d]/g, "");
-    if (!/^\d+$/.test(totalRaw)) {
-      reportClustersBlocker(NOTIFY_ENTER_A_WHOLE_NUMBER_FOR_TOTAL_SAP_PAGES);
-      return;
-    }
-    const total = parseEntityTotalInput(entityTotalCountInput);
+    clusterProgressPctRef.current = 0;
+    setSuggestLoading(true);
+    bumpClusterProgress("Starting clusters", "start");
+
+    let total = parseEntityTotalInput(entityTotalCountInput);
     if (total === null) {
-      reportClustersBlocker(NOTIFY_ENTER_A_WHOLE_NUMBER_FOR_TOTAL_SAP_PAGES);
-      return;
+      const stats = quarterEditorialBySiteId[site.id];
+      const detected = quarterEditorialEntityTotal(stats);
+      const { remaining } = computeRemainingGenerateCount(
+        GENERATOR_PERIOD_ENTITY_TARGET,
+        detected,
+      );
+      total =
+        remaining > 0
+          ? Math.min(remaining, LOCAL_ANALYSIS_SAP_MAX)
+          : GENERATOR_PERIOD_ENTITY_TARGET;
+      total = Math.max(LOCAL_ANALYSIS_SAP_MIN, total);
+      setEntityTotalCountInput(normalizeEntityCountInputChange(String(total)));
     }
+
     const { adGroupCount, adsPerGroup } = splitEntityTotalIntoAdGroupsAndAds(total);
-    if (!Number.isFinite(total) || total < LOCAL_ANALYSIS_SAP_MIN) {
-      reportClustersBlocker(notifyEnterAValidTotalSapPagesValueAtL(LOCAL_ANALYSIS_SAP_MIN));
-      return;
-    }
+
     if (!openRouterKey) {
+      logClustersPipeline("locations", "blocked", { reason: "openrouter_not_configured" });
+      setSuggestLoading(false);
       reportClustersBlocker(NOTIFY_OPENROUTER_IN_SETTINGS);
       return;
     }
+
+    logClustersPipeline("locations", "budget_resolved", {
+      total,
+      adGroupCount,
+      adsPerGroup,
+    });
+
     const seedUrl = site.siteUrl?.trim() ?? "";
-    const hasWpCreds =
-      !isTempWorkspace &&
-      Boolean(site.username?.trim() && site.appPassword?.trim() && seedUrl);
-    if (!hasWpCreds) {
-      reportClustersBlocker("Connect WordPress (username + app password) before Clusters.");
-      return;
-    }
-
-    const name = businessName.trim() || site.name?.trim() || "";
-    if (!name) {
-      reportClustersBlocker(NOTIFY_CONNECT_A_SITE_WITH_A_BUSINESS_NAME_IN_I);
-      return;
-    }
-
+    const name = businessName.trim() || site.name?.trim() || "Site";
+    const siteUrlForFill = isTempWorkspace ? workspace.tempSeedUrl.trim() : seedUrl;
     const gridText = gridCsvFullText.trim();
-    let clusterLocation = resolveEntityClusterLocationLabel(site, suggestFocusLocation);
 
-    if (!gridText && !clusterLocation && !sapRows.some((r) => r.entity?.trim())) {
-      setSuggestLoading(true);
-      setHeaderProgress({
-        kind: "suggest",
-        phase: "Reading profile location",
-        completed: 0,
-        total: parseEntityTotalInput(entityTotalCountInput) ?? 0,
-      });
+    setEntitySelectedRowIndices(new Set());
+    setSapRows([]);
+    bumpClusterProgress("Preparing site data", "prep");
+
+    let clusterLocation = resolveEntityClusterLocationLabel(site, suggestFocusLocation);
+    if (!gridText && !clusterLocation) {
+      bumpClusterProgress("Reading profile location", "prep");
       clusterLocation = await resolveEntityClusterLocationLabelAsync(
         site,
         suggestFocusLocation,
         primaryWikiAugmentLabel,
       );
-      if (clusterLocation && !suggestFocusLocation.trim()) {
-        setSuggestFocusLocation(clusterLocation);
-      }
+    }
+    if (!clusterLocation && !gridText) {
+      clusterLocation =
+        getPrimaryCityStateLabel(site)?.trim() ||
+        primaryWikiAugmentLabel?.trim() ||
+        suggestFocusLocation.trim() ||
+        name;
     }
 
-    if (!gridText && !clusterLocation && !sapRows.some((r) => r.entity?.trim())) {
-      setSuggestLoading(false);
-      setHeaderProgress(null);
-      reportClustersBlocker(
-        "Type a Location, upload a Grid CSV, or add a city in Integrations for this site.",
-      );
-      return;
-    }
-
-    const siteUrlForFill = isTempWorkspace ? workspace.tempSeedUrl.trim() : seedUrl;
-    setSuggestLoading(true);
-    setHeaderProgress({
-      kind: "suggest",
-      phase: gridText
+    bumpClusterProgress(
+      gridText
         ? "Clustering grid locations"
         : clusterLocation
           ? `Clustering ${clusterLocation}`
-          : "Assigning unique keywords from GSC",
-      completed: 0,
+          : "Clustering locations",
+      "cluster",
+      0,
       total,
-    });
+    );
 
-    let failed = false;
     try {
+      logClustersPipeline("locations", "prep_started", {
+        clusterLocationPreview: clusterLocation,
+        mode: gridText ? "grid-csv" : clusterLocation ? "profile-location" : "none",
+      });
       await loadSitePrepAndGsc();
       await yieldFrameForDetailsPaint();
+      logClustersPipeline("locations", "site_prep_complete", {
+        gscQueryCount: entityKeywordSourcesRef.current?.gscQueries?.length ?? 0,
+        sitemapLinkCount: entityKeywordSourcesRef.current?.links?.length ?? 0,
+      });
 
-      const keywordSources = entityKeywordSourcesRef.current;
-      if (!keywordSources?.gscQueries?.length) {
-        throw new Error("GSC keywords are unavailable. Connect GSC for this site.");
-      }
+      const refSources = entityKeywordSourcesRef.current;
+      const buckets =
+        refSources?.buckets ??
+        ({
+          pages: { json: "", rowCount: 0 },
+          posts: { json: "", rowCount: 0 },
+          sap: { json: "", rowCount: 0 },
+        } as EntitySapKeywordSources["buckets"]);
+      const gscQueries = ensureClusterGscQueries(refSources?.gscQueries ?? [], buckets, {
+        focusKeyword: suggestFocusKeyword,
+        businessName: name,
+        locationLabel: clusterLocation,
+        siteName: site.name?.trim() || name,
+      });
+      const keywordSources: EntitySapKeywordSources = {
+        links: refSources?.links ?? [],
+        buckets,
+        gscQueries,
+        gscDateRange: refSources?.gscDateRange,
+      };
+      entityKeywordSourcesRef.current = keywordSources;
 
       let rows: ReturnType<typeof finalizeEntitySapRowsForAdGroups>;
       let clusterWikipedia: Awaited<
@@ -1822,21 +1766,19 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
             ? { clientAudienceContextMarkdown }
             : {}),
           onClusterProgress: (_done, _clusterTotal, placeLabel, cumulativeSapRows) => {
-            setHeaderProgress({
-              kind: "suggest",
-              phase: `Clustering ${placeLabel}`,
-              completed: cumulativeSapRows,
-              total,
-            });
+            bumpClusterProgress(`Clustering ${placeLabel}`, "cluster", cumulativeSapRows, total);
           },
         });
         clusterWikipedia = clusterResult.clusterWikipedia;
         rows = finalizeEntitySapRowsForAdGroups(
           clusterResult.sapRows.slice(0, total).map((row) => ({ ...row })),
         );
-        if (!rows.some((r) => r.entity?.trim())) {
-          throw new Error("Location clustering produced no neighbourhood rows.");
-        }
+        validateEntityClusterResult({
+          rows,
+          total,
+          parentCityLabel: clusterLocation,
+          entityTypeFocus,
+        });
         setSapRows(rows);
         setEntitySelectedRowIndices(allRowIndicesSet(rows.length));
       } else if (clusterLocation) {
@@ -1863,41 +1805,34 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
             ? { clientAudienceContextMarkdown }
             : {}),
           onClusterProgress: (_done, _clusterTotal, placeLabel, cumulativeSapRows) => {
-            setHeaderProgress({
-              kind: "suggest",
-              phase: `Clustering ${placeLabel}`,
-              completed: cumulativeSapRows,
-              total,
-            });
+            bumpClusterProgress(`Clustering ${placeLabel}`, "cluster", cumulativeSapRows, total);
           },
         });
         clusterWikipedia = clusterResult.clusterWikipedia;
         rows = finalizeEntitySapRowsForAdGroups(
           clusterResult.sapRows.slice(0, total).map((row) => ({ ...row })),
         );
-        if (!rows.some((r) => r.entity?.trim())) {
-          throw new Error("Location clustering produced no neighbourhood rows.");
-        }
+        validateEntityClusterResult({
+          rows,
+          total,
+          parentCityLabel: clusterLocation,
+          entityTypeFocus,
+        });
         setSapRows(rows);
         setEntitySelectedRowIndices(allRowIndicesSet(rows.length));
       } else {
-        rows = finalizeEntitySapRowsForAdGroups(sapRows.slice(0, total).map((row) => ({ ...row })));
-        setEntitySelectedRowIndices(allRowIndicesSet(rows.length));
+        throw new Error("Set Location or upload a grid CSV before running Clusters.");
       }
 
-      setHeaderProgress({
-        kind: "suggest",
-        phase: "Assigning unique keywords from GSC",
-        completed: 0,
-        total,
-      });
+      bumpClusterProgress("Assigning unique keywords from GSC", "keywords", 0, total);
 
       const preloadTargets = keywordTargetsFromPreloadedSapRows(rows, newTargetRowId);
+      const canFillFromSite = !isTempWorkspace && Boolean(site.username?.trim() && site.appPassword?.trim());
       const result = await hydratePreloadedEntitySapRows({
         apiKey: openRouterKey,
         model: researchModel,
         siteId: isTempWorkspace ? undefined : site.id,
-        site: isTempWorkspace ? undefined : site,
+        site: canFillFromSite ? site : undefined,
         siteName: name,
         siteUrl: siteUrlForFill,
         rows,
@@ -1907,18 +1842,30 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
           gscQueries: keywordSources.gscQueries,
         },
         gridLocations: gridLocations.length > 0 ? gridLocations : clusterLocation ? [clusterLocation] : [],
-        skipKeywordFill: false,
+        skipKeywordFill: !canFillFromSite,
         ...(clusterWikipedia && clusterWikipedia.length > 0 ? { clusterWikipedia } : {}),
         ...(entityTypeFocus.length > 0 ? { entityTypeFocus } : {}),
         ...(clientAudienceContextMarkdown.length > 0 ? { clientAudienceContextMarkdown } : {}),
-        onPhase: (phase, completed = 0) => {
-          setHeaderProgress({ kind: "suggest", phase, completed, total });
+        onPhase: (phase, completed = 0, stepTotal) => {
+          bumpClusterProgress(
+            phase,
+            entityClusterStageFromPhase(phase),
+            completed,
+            stepTotal ?? total,
+          );
         },
         onRowsUpdate: (partial) => {
           setSapRows(finalizeEntitySapRowsForAdGroups(partial.map((row) => ({ ...row }))));
         },
       });
-      const finalized = finalizeEntitySapRowsForAdGroups(result.rows.map((row) => ({ ...row })));
+      let finalized = finalizeEntitySapRowsForAdGroups(result.rows.map((row) => ({ ...row })));
+      assertEntityRowsHaveKeywords(finalized);
+      validateEntityClusterResult({
+        rows: finalized,
+        total,
+        parentCityLabel: clusterLocation,
+        entityTypeFocus,
+      });
       setSapRows(finalized);
       const nextTargets = keywordTargetsFromPreloadedSapRows(finalized, newTargetRowId);
       setKeywordTargets(
@@ -1932,16 +1879,36 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
         })),
       );
       setEntitySelectedRowIndices(allRowIndicesSet(finalized.length));
-      notify.success(`Finished ${finalized.filter((r) => r.title?.trim()).length} SAP titles.`);
+      const distinctEntities = countDistinctEntityLabels(finalized);
+      const keywordCount = finalized.filter((r) => r.keyword?.trim()).length;
+      setPipelineErrorMessage(null);
+      clusterProgressPctRef.current = 100;
+      setHeaderProgress({
+        kind: "suggest",
+        phase: `Clusters ready: ${distinctEntities} neighbourhoods, ${keywordCount} keywords`,
+        completed: 100,
+        total: 100,
+        progressPct: 100,
+      });
+      if (clusterLocation?.trim()) {
+        setSuggestFocusLocation(clusterLocation.trim());
+      }
+      logClustersPipeline("locations", "run_finished", {
+        sapRowCount: finalized.length,
+        distinctEntities,
+        keywordCount,
+      });
     } catch (e) {
-      failed = true;
       const msg = e instanceof Error ? e.message : "Clusters failed";
+      logClustersPipeline("locations", "run_failed", {
+        message: msg,
+        stack: e instanceof Error ? e.stack : undefined,
+      });
       notify.error(msg);
-      setPipelineErrorMessage(msg);
-      setHeaderProgress({ kind: "suggest", phase: msg, completed: 0, total });
+      clusterProgressPctRef.current = 0;
+      setHeaderProgress({ kind: "suggest", phase: "Clusters stopped", completed: 0, total: 100, progressPct: 0 });
     } finally {
       setSuggestLoading(false);
-      if (!failed) setHeaderProgress(null);
     }
   }, [
     entityTotalCountInput,
@@ -1949,10 +1916,17 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
     site,
     businessName,
     workspace.tempSeedUrl,
+    workspace,
     openRouterKey,
     researchModel,
     isTempWorkspace,
     entityTypeFocus,
+    entityGeographicLevel,
+    keywordTargets.length,
+    sitemapInventoryLinks.length,
+    gscKeywordsHostedLink,
+    sitePrepLoading,
+    suggestLoading,
     gridLocations,
     gridCsvFullText,
     gridKeywordWeights,
@@ -1963,6 +1937,8 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
     loadSitePrepAndGsc,
     useBlindMagicKeywords,
     reportClustersBlocker,
+    bumpClusterProgress,
+    quarterEditorialBySiteId,
   ]);
 
   const hasSapRowsForCsv = sapRows.length > 0;
@@ -1987,9 +1963,10 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
     [sapRows, maxSapBudget],
   );
   const hasTitledSapRows = entityListRows.some((r) => r.title?.trim());
-  const hasGeneratedSapRows = hasTitledSapRows;
-  const entityPreloadMode = !hasTitledSapRows;
-  const entityHasEmptyKeywordRow = entityListRows.some((r) => !r.keyword?.trim());
+  const hasGeneratedSapRows = entityListRows.some(
+    (r) => r.entity?.trim() || r.keyword?.trim() || r.title?.trim(),
+  );
+  const entityPreloadMode = hasGeneratedSapRows && !hasTitledSapRows;
   const entityHarnessByRow = useMemo(() => {
     const map = new Map<number, BulkHarnessSectionUi[]>();
     entityListRows.forEach((row, index) => {
@@ -2065,11 +2042,9 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
       ),
     [headerProgress, workspaceBusy, entityListRows.length],
   );
-  /** Idle track off when placeholders/empty keywords remain; keep visible for blockers and active runs. */
-  const hideIdleProgressTrack =
-    !headerProgress &&
-    !pipelineErrorMessage?.trim() &&
-    (!hasGeneratedSapRows || entityHasEmptyKeywordRow);
+  /** Same as Prompt / PR: pad with placeholder stripes; no outer scroll until the list is full. */
+  const entityPlaceholderOnlyBody =
+    !hasGeneratedSapRows || entityListRows.length < BULK_GENERATOR_EMPTY_ROW_COUNT;
 
   const downloadLocalMarkdownFile = useCallback((content: string, baseName: string) => {
     const safe = baseName.replace(/[^\w-]+/g, "-").slice(0, 80) || "export";
@@ -2085,15 +2060,21 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
   }, []);
 
   return (
-    <div className={cn(SEO_WORKSPACE_INNER_CLASS, "local-analysis-panel")}>
-      <div className={SEO_WORKSPACE_HEADER_CLASS}>
+    <>
+      <div className={BLOG_GENERATOR_WORKSPACE_HEADER_CLASS}>
       <SapGeneratorWorkspaceHeader
         activeSection={activeSection}
         onSectionChange={onSectionChange}
+        titleRowMenu={
+          <EntitySubmodePills
+            submode={entitySubmode}
+            onSubmodeChange={onEntitySubmodeChange}
+            disabled={workspaceBusy}
+          />
+        }
         workspace={workspace}
         workspaceBusy={workspaceBusy}
         progressSnapshot={progressSnapshot}
-        hideIdleProgressTrack={hideIdleProgressTrack}
         canOpenDetails={canOpenDetails}
         isProcessing={workspaceBusy}
         csvParsing={csvParsing}
@@ -2104,7 +2085,7 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
         onSuggestFocusKeywordChange={setSuggestFocusKeyword}
         suggestFocusLocation={suggestFocusLocation}
         onSuggestFocusLocationChange={setSuggestFocusLocation}
-        runLoading={clustersRunLoading}
+        runLoading={suggestLoading}
         onPickFile={onPickFile}
         onRunClusters={() => void runClusters()}
         onClear={clearLocalAnalysis}
@@ -2152,12 +2133,12 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
 
       <div
         className={cn(
-          SEO_WORKSPACE_BODY_SCROLL_CLASS,
-          "relative flex w-full min-w-0 flex-col",
-          entityListRows.length === 0 && "overflow-y-hidden",
+          BLOG_GENERATOR_WORKSPACE_BODY_CLASS,
+          "relative flex flex-col",
+          entityPlaceholderOnlyBody && "overflow-y-hidden",
         )}
       >
-        {detailsDrawerOpen ? (
+        {detailsDrawerOpen && !suggestLoading ? (
           <div className={WORKSPACE_DETAILS_DIM_OVERLAY_CLASS} aria-hidden />
         ) : null}
         <BulkEntityWorkspaceBody
@@ -2168,10 +2149,11 @@ export const LocalAnalysisPanel: React.FC<LocalAnalysisPanelProps> = ({
           setSelectedRowIndices={setEntitySelectedRowIndices}
           isGenerating={isAnalyzing}
           isProcessing={workspaceBusy}
+          showBusySpinner={isAnalyzing}
           onRowChange={updateSapRowAt}
           directionsSiteName={businessName.trim() || site.name?.trim() || ""}
         />
       </div>
-    </div>
+    </>
   );
 };

@@ -9,10 +9,10 @@ describe("competitor-rows", () => {
     const rows = buildCompetitorBulkRows(
       [
         {
-          keyword: "blinds near me",
+          keyword: "competitor - Ambiance Shades & Blinds",
           entity: "Ambiance Shades & Blinds",
           title: "Ambiance Shades & Blinds and blinds near me: what to compare",
-          modifier: '{"serviceComparison":[]}',
+          modifier: "Competitor comparison for blinds near me.",
           featuredImage: "google-maps",
         },
       ],

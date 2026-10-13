@@ -10,6 +10,18 @@ export function isGscSiteNotInListFailure(res: FetchCompetitorGscQueriesResult):
   return res.ok === false && res.errorType === "site_not_in_list";
 }
 
+/** Last 90 days ending ≈ today − 3 days (GSC data lag). Used for site warm cache and Details GSC export. */
+export function getGscNinetyDayCompetitorDateRange(): GscCompetitorDateRange {
+  const today = new Date();
+  const endDate = new Date(today);
+  endDate.setDate(today.getDate() - 3);
+  const startDate = new Date(endDate);
+  startDate.setDate(endDate.getDate() - 90);
+  const startDateStr = startDate.toISOString().split("T")[0]!;
+  const endDateStr = endDate.toISOString().split("T")[0]!;
+  return { startDate: startDateStr, endDate: endDateStr };
+}
+
 /** Last 3 calendar months (from end date), end ≈ today − 3 days (GSC data lag). */
 export function getDefaultGscCompetitorDateRange(): GscCompetitorDateRange {
   const today = new Date();
@@ -17,6 +29,18 @@ export function getDefaultGscCompetitorDateRange(): GscCompetitorDateRange {
   endDate.setDate(today.getDate() - 3);
   const startDate = new Date(endDate);
   startDate.setMonth(endDate.getMonth() - 3);
+  const startDateStr = startDate.toISOString().split("T")[0]!;
+  const endDateStr = endDate.toISOString().split("T")[0]!;
+  return { startDate: startDateStr, endDate: endDateStr };
+}
+
+/** Last 6 calendar months (from end date), end ≈ today − 3 days (GSC data lag). */
+export function getGscSixMonthCompetitorDateRange(): GscCompetitorDateRange {
+  const today = new Date();
+  const endDate = new Date(today);
+  endDate.setDate(today.getDate() - 3);
+  const startDate = new Date(endDate);
+  startDate.setMonth(endDate.getMonth() - 6);
   const startDateStr = startDate.toISOString().split("T")[0]!;
   const endDateStr = endDate.toISOString().split("T")[0]!;
   return { startDate: startDateStr, endDate: endDateStr };

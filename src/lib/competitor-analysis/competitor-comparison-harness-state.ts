@@ -111,10 +111,13 @@ export function buildCompetitorMicroSnapshot(args: {
   const phase = args.phase.trim();
   if (!phase) return null;
   const { done, total } = countCompetitorHarnessSteps(args.harnessGroups);
+  const stepTotal = Math.max(total, 1);
+  const progressPct = Math.min(100, Math.round((done / stepTotal) * 100));
   return {
     label: "Competitor generation",
     completed: done,
-    total: Math.max(total, 1),
+    total: stepTotal,
+    progressPct,
     statusMessage: phase,
   };
 }

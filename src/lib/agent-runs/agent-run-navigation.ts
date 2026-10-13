@@ -55,7 +55,7 @@ export function resolveAgentRunRecipeKey(
 }
 
 export function agentRunGeneratorSection(recipeKey: string): BlogGeneratorSectionId {
-  if (recipeKey === "gsc_reporting" || recipeKey === "ads_reporting") return "report";
+  if (recipeKey === "gsc_reporting" || recipeKey === "ads_reporting") return "opt";
   if (recipeKey === "post_creator") return "bulk-csv";
   return "opt";
 }

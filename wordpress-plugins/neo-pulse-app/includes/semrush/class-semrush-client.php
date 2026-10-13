@@ -102,6 +102,100 @@ class Neo_Pulse_App_Semrush_Client {
 		return (string) $raw;
 	}
 
+	/**
+	 * Run multiple Semrush report GETs concurrently (curl_multi).
+	 *
+	 * @param array<string,array<string,string|int>> $keyed_params
+	 * @return array<string,string|WP_Error>
+	 */
+	public static function request_reports_parallel( array $keyed_params ): array {
+		if ( count( $keyed_params ) === 0 ) {
+			return array();
+		}
+
+		$key = self::api_key();
+		if ( $key === '' ) {
+			$missing = new WP_Error( 'neo-pulse_semrush_missing', 'SEMRUSH_API_KEY is not set' );
+			$out     = array();
+			foreach ( array_keys( $keyed_params ) as $id ) {
+				$out[ $id ] = $missing;
+			}
+			return $out;
+		}
+
+		if ( count( $keyed_params ) === 1 || ! function_exists( 'curl_multi_init' ) ) {
+			$out = array();
+			foreach ( $keyed_params as $id => $params ) {
+				$out[ $id ] = self::request_report( $params );
+			}
+			return $out;
+		}
+
+		$mh      = curl_multi_init();
+		$handles = array();
+		$results = array();
+
+		foreach ( $keyed_params as $id => $params ) {
+			$auth = self::auth_for_get( $key, $params );
+			$url  = add_query_arg( $auth['params'], self::API_BASE );
+			$ch   = curl_init( $url );
+			curl_setopt_array(
+				$ch,
+				array(
+					CURLOPT_HTTPGET        => true,
+					CURLOPT_HTTPHEADER     => self::curl_headers_from_assoc( $auth['headers'] ),
+					CURLOPT_RETURNTRANSFER => true,
+					CURLOPT_TIMEOUT        => 60,
+				)
+			);
+			curl_multi_add_handle( $mh, $ch );
+			$handles[ $id ] = $ch;
+		}
+
+		$running = null;
+		do {
+			$status = curl_multi_exec( $mh, $running );
+			if ( $running ) {
+				curl_multi_select( $mh, 0.5 );
+			}
+		} while ( $running && $status === CURLM_OK );
+
+		foreach ( $handles as $id => $ch ) {
+			$raw  = curl_multi_getcontent( $ch );
+			$code = (int) curl_getinfo( $ch, CURLINFO_HTTP_CODE );
+			curl_multi_remove_handle( $mh, $ch );
+			curl_close( $ch );
+
+			if ( $code < 200 || $code >= 300 ) {
+				$results[ $id ] = new WP_Error(
+					'neo-pulse_semrush_http',
+					$raw !== '' ? (string) $raw : sprintf( 'HTTP %d', $code )
+				);
+				continue;
+			}
+			if ( stripos( (string) $raw, 'ERROR' ) === 0 ) {
+				$results[ $id ] = new WP_Error( 'neo-pulse_semrush_api', trim( (string) $raw ) );
+				continue;
+			}
+			$results[ $id ] = (string) $raw;
+		}
+
+		curl_multi_close( $mh );
+		return $results;
+	}
+
+	/**
+	 * @param array<string,string> $headers
+	 * @return array<int,string>
+	 */
+	private static function curl_headers_from_assoc( array $headers ): array {
+		$out = array();
+		foreach ( $headers as $name => $value ) {
+			$out[] = $name . ': ' . $value;
+		}
+		return $out;
+	}
+
 	public static function normalize_url( string $page_url ): string {
 		$s = trim( $page_url );
 		if ( $s === '' ) {

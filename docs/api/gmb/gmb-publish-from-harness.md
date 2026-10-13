@@ -5,7 +5,7 @@ section: Google Business Profile
 method: POST
 path: /api/gmb/publish-from-harness
 auth: open
-order: 270
+order: 280
 ---
 
 POST `/api/gmb/publish-from-harness`.

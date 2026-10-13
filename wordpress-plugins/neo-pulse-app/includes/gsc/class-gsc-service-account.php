@@ -509,6 +509,92 @@ class Neo_Pulse_App_Gsc_Service_Account {
 	}
 
 	/**
+	 * Run multiple Search Analytics queries concurrently (curl_multi).
+	 *
+	 * @param array<string,array<string,mixed>> $keyed_bodies Request bodies keyed by caller id.
+	 * @return array<string,array<string,mixed>|WP_Error>
+	 */
+	public static function search_analytics_query_parallel( string $property, array $keyed_bodies ): array {
+		if ( count( $keyed_bodies ) === 0 ) {
+			return array();
+		}
+
+		$token = self::get_access_token( false );
+		if ( is_wp_error( $token ) ) {
+			$out = array();
+			foreach ( array_keys( $keyed_bodies ) as $key ) {
+				$out[ $key ] = $token;
+			}
+			return $out;
+		}
+
+		$url = self::WEBMASTERS . '/sites/' . rawurlencode( $property ) . '/searchAnalytics/query';
+		$headers = array(
+			'Authorization: Bearer ' . $token,
+			'Content-Type: application/json',
+			'Accept: application/json',
+		);
+
+		if ( ! function_exists( 'curl_multi_init' ) ) {
+			$out = array();
+			foreach ( $keyed_bodies as $key => $body ) {
+				$out[ $key ] = self::search_analytics_query( $property, $body );
+			}
+			return $out;
+		}
+
+		$mh           = curl_multi_init();
+		$handles      = array();
+		$handle_index = array();
+		$results      = array();
+
+		foreach ( $keyed_bodies as $key => $body ) {
+			$ch = curl_init( $url );
+			curl_setopt_array(
+				$ch,
+				array(
+					CURLOPT_POST           => true,
+					CURLOPT_POSTFIELDS     => wp_json_encode( $body ),
+					CURLOPT_HTTPHEADER     => $headers,
+					CURLOPT_RETURNTRANSFER => true,
+					CURLOPT_TIMEOUT        => 90,
+				)
+			);
+			curl_multi_add_handle( $mh, $ch );
+			$handles[ $key ]                      = $ch;
+			$handle_index[ spl_object_id( $ch ) ] = $key;
+		}
+
+		$running = null;
+		do {
+			$status = curl_multi_exec( $mh, $running );
+			if ( $running ) {
+				curl_multi_select( $mh, 0.5 );
+			}
+		} while ( $running && $status === CURLM_OK );
+
+		foreach ( $handles as $key => $ch ) {
+			$raw  = curl_multi_getcontent( $ch );
+			$code = (int) curl_getinfo( $ch, CURLINFO_HTTP_CODE );
+			curl_multi_remove_handle( $mh, $ch );
+			curl_close( $ch );
+
+			$data = json_decode( (string) $raw, true );
+			if ( $code < 200 || $code >= 300 ) {
+				$msg = is_array( $data ) && ! empty( $data['error']['message'] )
+					? (string) $data['error']['message']
+					: ( $raw !== '' ? (string) $raw : 'HTTP ' . $code );
+				$results[ $key ] = new WP_Error( 'neo-pulse_gsc_query', $msg, array( 'status' => $code ) );
+				continue;
+			}
+			$results[ $key ] = is_array( $data ) ? $data : array();
+		}
+
+		curl_multi_close( $mh );
+		return $results;
+	}
+
+	/**
 	 * @return array<string,mixed>|WP_Error
 	 */
 	public static function list_sitemaps( string $property ) {

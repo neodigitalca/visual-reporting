@@ -7,7 +7,7 @@ import {
 } from '@/lib/bulk/blog-import-draft-links';
 import { callOpenRouterChatCompletion } from '@/lib/competitor-research/competitor-report-openrouter';
 import { isBlockedContentTopicPhrase } from '@/lib/content-topic-blocklist';
-import { parseJsonWithRepair } from '@/lib/json-repair-utility';
+import { parseJsonStrict } from '@/lib/json-repair-utility';
 import { getResearchModel } from '@/lib/optimization-settings-storage';
 import { parseTitleTemplate } from '../title-template-parser';
 
@@ -35,7 +35,9 @@ export interface CSVRow {
   prompt_modifier?: string;
   keyword_focus?: string;
   service_area_fields?: string;
+  competitor_fields?: string;
   origin?: string;
+  competitor?: string;
   faq?: string;
   /** JSON array of verbatim question strings (Local Analysis → research model); drives bulk H2 outline when set. */
   keyword_questions_json?: string;
@@ -659,7 +661,7 @@ export async function parseCSV(
     responseFormat: { type: 'json_object' },
   });
 
-  const { parsed } = parseJsonWithRepair<{ rows?: CSVRow[] }>(content);
+  const parsed = parseJsonStrict<{ rows?: CSVRow[] }>(content);
   const rows = Array.isArray(parsed?.rows)
     ? parsed.rows.filter((r) => r?.keyword?.trim() && r?.title?.trim())
     : [];

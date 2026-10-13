@@ -5,7 +5,7 @@ section: Manager WordPress Properties
 method: POST
 path: /api/manager-wordpress-properties/sync-openrouter
 auth: open
-order: 670
+order: 710
 ---
 
 POST `/api/manager-wordpress-properties/sync-openrouter`.

@@ -5,7 +5,7 @@ section: DataForSEO MCP
 method: POST
 path: /api/mcp/DataForSEO_kw_data_dfs_trends_explore
 auth: open
-order: 750
+order: 800
 ---
 
 POST `/api/mcp/DataForSEO_kw_data_dfs_trends_explore`.

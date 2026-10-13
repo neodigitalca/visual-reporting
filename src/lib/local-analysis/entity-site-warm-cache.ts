@@ -18,8 +18,10 @@ import {
   type EntityGscKeywordBundle,
 } from "@/lib/bulk/bulk-gsc-site-queries";
 import {
+  COMPETITOR_GSC_QUERY_ROW_LIMIT,
   fetchCompetitorGscQueries,
   getDefaultGscCompetitorDateRange,
+  getGscNinetyDayCompetitorDateRange,
   type FetchCompetitorGscQueriesResult,
 } from "@/lib/competitor-research/competitor-gsc-queries";
 import type { GscSiteQueryRow } from "@/lib/competitor-research/types";
@@ -303,7 +305,7 @@ function buildBundleFromLegs(
 
 async function runWarmFetch(site: WordPressSite): Promise<EntitySiteWarmBundle> {
   const credKey = siteWarmCredentialsKey(site);
-  const dateRange = getDefaultGscCompetitorDateRange();
+  const dateRange = getGscNinetyDayCompetitorDateRange();
   const siteUrl = site.siteUrl!.trim();
   const hasWpCreds = canWarmEntitySite(site);
 
@@ -502,9 +504,12 @@ export function gscQueriesFromWarmBundleForSapBudget(
   return sortGscQueriesByStats(warm.gsc.queries).slice(0, entityGscRowLimitForSapBudget(sapRowBudget));
 }
 
-/** Full GSC query export for Details prep hosted link (not capped to SAP row budget). */
+/** GSC query export for Details prep hosted link (top rows by stats, max 500). */
 export function gscAllQueriesFromWarmBundle(warm: EntitySiteWarmBundle): GscSiteQueryRow[] {
-  return sortGscQueriesByStats(warm.gsc.queries.filter((q) => q.query?.trim()));
+  return sortGscQueriesByStats(warm.gsc.queries.filter((q) => q.query?.trim())).slice(
+    0,
+    COMPETITOR_GSC_QUERY_ROW_LIMIT,
+  );
 }
 
 async function hydrateSitePrefetchFromPersist(site: WordPressSite): Promise<EntitySiteWarmBundle | null> {

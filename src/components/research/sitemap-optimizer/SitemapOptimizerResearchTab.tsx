@@ -143,12 +143,10 @@ export function SitemapOptimizerResearchTab() {
   }, [selectedInventoryKey, setResult, cancel, rankMathImport]);
 
   const selectCollection = useCallback((key: SitemapOptimizerCollectionKey) => {
-    setSelected((prev) => {
-      const current = [...prev][0];
-      if (current === key && prev.size === 1) return prev;
-      return new Set<SitemapOptimizerCollectionKey>([key]);
-    });
-  }, []);
+    const opt = collectionOptions.find((o) => o.key === key);
+    if (opt && !opt.enabled) return;
+    setSelected(new Set<SitemapOptimizerCollectionKey>([key]));
+  }, [collectionOptions]);
 
   useEffect(() => {
     if (!site) {

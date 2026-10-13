@@ -8,8 +8,36 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+const SCRIPTS_DIR = path.join(root, "scripts");
 const SCAN_ROOTS = ["scripts", "src/lib", "src/components"];
 const EXT = new Set([".ts", ".tsx", ".mjs", ".cjs", ".js", ".py"]);
+
+/** Any file under scripts/ with >=500 lines (all extensions). See audit-scripts-tree.mjs */
+function scriptsTree500Plus() {
+  /** @type {Array<{ path: string, lines: number, ext: string }>} */
+  const over = [];
+  function walkScripts(dir) {
+    if (!fs.existsSync(dir)) return;
+    for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, ent.name);
+      if (ent.isDirectory()) {
+        if (ent.name === "node_modules") continue;
+        walkScripts(full);
+        continue;
+      }
+      const lines = lineCount(full);
+      if (lines < 500) continue;
+      over.push({
+        path: path.relative(root, full).split(path.sep).join("/"),
+        lines,
+        ext: path.extname(ent.name) || "(none)",
+      });
+    }
+  }
+  walkScripts(SCRIPTS_DIR);
+  over.sort((a, b) => b.lines - a.lines);
+  return over;
+}
 
 function lineCount(filePath) {
   const buf = fs.readFileSync(filePath, "utf8");
@@ -81,13 +109,19 @@ const summary = {
   ),
 };
 
+const scriptsTree500 = scriptsTree500Plus();
+
 const payload = {
   generatedAt: new Date().toISOString(),
   repoRoot: root.replace(/\\/g, "/"),
   scope: "desktop-app",
   excludes: ["wordpress-plugins"],
   thresholds: { monolith: 500, watch: 300 },
-  summary,
+  scriptsTree500Plus: scriptsTree500,
+  summary: {
+    ...summary,
+    scriptsTree500Count: scriptsTree500.length,
+  },
   files,
 };
 

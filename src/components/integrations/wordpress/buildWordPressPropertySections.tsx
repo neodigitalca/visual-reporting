@@ -31,8 +31,15 @@ export type BuildWordPressPropertySectionsParams = {
   onScrapeChildSitemap: (childSitemapUrl: string) => void;
   onEntityGeneration?: (sitemapUrl: string) => void;
   onSetEntitySitemap?: (sitemapUrl: string) => void;
+  onSetCompetitorEntitySitemap?: (sitemapUrl: string) => void;
   onToggleChildSitemapDisabled?: (childSitemapUrl: string) => void;
   onAppendManualChildSitemap?: (url: string) => void;
+  onAddCustomSitemapTagLabel?: (label: string) => void;
+  onToggleChildSystemRole?: (
+    childSitemapUrl: string,
+    role: import("@/lib/sitemap-child-tags").SitemapSystemRole,
+  ) => void;
+  onToggleChildCustomTag?: (childSitemapUrl: string, label: string) => void;
   onIndexSitemap?: (sitemapUrl: string) => void;
   onLoadCalendarPosts?: (sitemapUrl: string) => void;
   onExtractNAPAndGraph?: () => void;
@@ -61,8 +68,12 @@ export function buildWordPressPropertySections(
     onScrapeChildSitemap,
     onEntityGeneration,
     onSetEntitySitemap,
+    onSetCompetitorEntitySitemap,
     onToggleChildSitemapDisabled,
     onAppendManualChildSitemap,
+    onAddCustomSitemapTagLabel,
+    onToggleChildSystemRole,
+    onToggleChildCustomTag,
     onIndexSitemap,
     onLoadCalendarPosts,
     onExtractNAPAndGraph,
@@ -189,12 +200,16 @@ export function buildWordPressPropertySections(
           onScrapeChildSitemap={onScrapeChildSitemap}
           onEntityGeneration={onEntityGeneration}
           onSetEntitySitemap={onSetEntitySitemap}
+          onSetCompetitorEntitySitemap={onSetCompetitorEntitySitemap}
           onToggleChildSitemapDisabled={onToggleChildSitemapDisabled}
           onIndexSitemap={onIndexSitemap}
           onLoadCalendarPosts={onLoadCalendarPosts}
           onRefreshSitemaps={onDetect}
           isRefreshingSitemaps={isDetecting}
           onAppendManualChildSitemap={onAppendManualChildSitemap}
+          onAddCustomSitemapTagLabel={onAddCustomSitemapTagLabel}
+          onToggleChildSystemRole={onToggleChildSystemRole}
+          onToggleChildCustomTag={onToggleChildCustomTag}
         />
       ),
     },

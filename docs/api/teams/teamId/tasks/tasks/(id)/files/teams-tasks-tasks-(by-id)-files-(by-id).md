@@ -1,22 +1,22 @@
 ---
-title: "GET teams/{teamId}/tasks/tasks/({id})/files/({id})"
+title: "POST teams/{teamId}/tasks/tasks/({id})/files/({id})"
 slug: teams/teamId/tasks/tasks/(id)/files/(id)
 section: Teams
-method: GET
+method: POST
 path: /api/teams/{teamId}/tasks/tasks/({id})/files/({id})
 auth: session-team
-order: 1980
+order: 2230
 ---
 
-GET `/api/teams/{teamId}/tasks/tasks/({id})/files/({id})`.
+POST `/api/teams/{teamId}/tasks/tasks/({id})/files/({id})`.
 
-Fetches a single files item from the Teams API. Requires a signed-in user who belongs to the team id in the path.
+Runs the files item action in the Teams API from a JSON request body. Requires a signed-in user who belongs to the team id in the path.
 
 ## Request
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| _(none)_ | — | — | No JSON body for GET requests. |
+| _(optional)_ | object | no | JSON body shape depends on the action. |
 
 ## Response
 
@@ -34,15 +34,17 @@ Fetches a single files item from the Teams API. Requires a signed-in user who be
 ## Example
 
 ```bash
-curl -X GET "https://neodigital.ca/api/teams/{teamId}/tasks/tasks/({id})/files/({id})" \
+curl -X POST "https://neodigital.ca/api/teams/{teamId}/tasks/tasks/({id})/files/({id})" \
   -H "Content-Type: application/json" \
+  -d '{}'
 ```
 
 ```javascript
 const res = await fetch(`/api/teams/{teamId}/tasks/tasks/({id})/files/({id})`, {
-  method: "GET",
+  method: "POST",
   credentials: "include",
   headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({}),
 });
 const data = await res.json();
 ```

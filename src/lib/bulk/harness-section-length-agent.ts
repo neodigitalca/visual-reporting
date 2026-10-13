@@ -1,5 +1,5 @@
 import { callOpenRouterChatCompletion } from "@/lib/competitor-research/competitor-report-openrouter";
-import { parseJsonWithRepair } from "@/lib/json-repair-utility";
+import { parseJsonStrict } from "@/lib/json-repair-utility";
 import { getProductionModel } from "@/lib/optimization-settings-storage";
 
 /** When false, harness uses one OpenRouter pass per section only — no length rewrite pass. */
@@ -103,9 +103,7 @@ Return JSON: {"compliant":boolean,"section_html":"..."}`;
       signal: args.signal,
     });
 
-    const { parsed } = parseJsonWithRepair<HarnessSectionLengthResult>(content, {
-      targetKeys: ["compliant", "section_html"],
-    });
+    const parsed = parseJsonStrict<HarnessSectionLengthResult>(content);
 
     const html =
       typeof parsed.section_html === "string" && parsed.section_html.trim()

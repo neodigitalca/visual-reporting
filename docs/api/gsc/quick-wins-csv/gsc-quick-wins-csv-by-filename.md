@@ -5,7 +5,7 @@ section: Google Search Console
 method: GET
 path: /api/gsc/quick-wins-csv/{filename}
 auth: open
-order: 440
+order: 460
 ---
 
 GET `/api/gsc/quick-wins-csv/{filename}`.

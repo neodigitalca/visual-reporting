@@ -2,6 +2,54 @@
 
 :root {
   --neo-pulse-shortcut-rail-width: 5rem;
+  /* Sticky manager nav band (pt + row py + h-9 chips + pb) — rail starts below this */
+  --neo-pulse-manager-sticky-nav-height: 4.25rem;
+  /* Embedded manager footer row (py + h-9 controls) */
+  --neo-pulse-manager-footer-height: 3.75rem;
+}
+
+/* Full-viewport black header band above docked rail (no green in header zone) */
+.neo-pulse-embedded-sticky-chrome {
+  isolation: isolate;
+}
+
+.neo-pulse-embedded-sticky-chrome::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--neo-pulse-manager-sticky-nav-height);
+  background: #000;
+  z-index: 0;
+  pointer-events: none;
+}
+
+[data-neo-pulse-manager-sticky-nav] {
+  position: relative;
+  z-index: 1;
+}
+
+/* Full-viewport black footer band above docked rail (no green in footer zone) */
+.neo-pulse-embedded-footer-chrome {
+  isolation: isolate;
+}
+
+.neo-pulse-embedded-footer-chrome::before {
+  content: "";
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--neo-pulse-manager-footer-height);
+  background: #000;
+  z-index: 0;
+  pointer-events: none;
+}
+
+[data-neo-pulse-manager-footer] {
+  position: relative;
+  z-index: 1;
 }
 
 .pulse-assist-scroll-lock {
@@ -29,16 +77,29 @@
   pointer-events: none;
 }
 
+.neo-pulse-docked-rail-slot {
+  margin: 0;
+  padding: 0;
+}
+
+.neo-pulse-docked-rail-slot > .pulse-assist-root {
+  pointer-events: auto;
+}
+
 .pulse-assist-root.fai-sidebar-root.pulse-assist-root--docked {
-  position: relative;
-  top: auto;
-  bottom: auto;
-  right: auto;
-  z-index: auto;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: auto;
+  z-index: 1;
   flex-shrink: 0;
   width: var(--neo-pulse-shortcut-rail-width);
   height: 100%;
   min-height: 0;
+  margin: 0;
+  padding: 0;
+  background-color: hsl(var(--primary));
   pointer-events: auto;
 }
 
@@ -57,6 +118,10 @@
   min-height: 0;
   background-color: #000;
   pointer-events: auto;
+}
+
+.pulse-assist-root--docked .pulse-assist-shortcut-rail {
+  background-color: hsl(var(--primary));
 }
 
 .pulse-assist-root button.pulse-assist-launcher {
@@ -95,7 +160,7 @@
   font-size: inherit;
 }
 
-.pulse-assist-root--docked button.pulse-assist-launcher--docked {
+.pulse-assist-root.fai-sidebar-root.pulse-assist-root--docked button.pulse-assist-launcher.pulse-assist-launcher--docked {
   position: static;
   top: auto;
   right: auto;
@@ -105,11 +170,37 @@
   max-width: var(--neo-pulse-shortcut-rail-width);
   min-height: 72px;
   padding: 12px 8px 14px;
+  background-color: hsl(var(--primary));
+  color: #000;
+  box-shadow: none;
+  border-left-color: transparent;
 }
 
-.pulse-assist-root--docked button.pulse-assist-launcher--docked:hover,
-.pulse-assist-root--docked button.pulse-assist-launcher--docked:focus-visible {
-  transform: translateX(-4px);
+.pulse-assist-root.fai-sidebar-root.pulse-assist-root--docked button.pulse-assist-launcher.pulse-assist-launcher--docked:hover,
+.pulse-assist-root.fai-sidebar-root.pulse-assist-root--docked button.pulse-assist-launcher.pulse-assist-launcher--docked:focus-visible {
+  transform: none;
+  background-color: hsl(var(--primary) / 0.88);
+  color: #000;
+  box-shadow: none;
+  border-left-color: transparent;
+}
+
+.pulse-assist-root.fai-sidebar-root.pulse-assist-root--docked .pulse-assist-launcher-brand__spark,
+.pulse-assist-root.fai-sidebar-root.pulse-assist-root--docked .pulse-assist-launcher-brand__label,
+.pulse-assist-root.fai-sidebar-root.pulse-assist-root--docked .agent-runs-launcher-brand__icon,
+.pulse-assist-root.fai-sidebar-root.pulse-assist-root--docked .agent-runs-launcher-brand__label,
+.pulse-assist-root.fai-sidebar-root.pulse-assist-root--docked button.pulse-assist-launcher.pulse-assist-launcher--docked:hover .pulse-assist-launcher-brand__spark,
+.pulse-assist-root.fai-sidebar-root.pulse-assist-root--docked button.pulse-assist-launcher.pulse-assist-launcher--docked:hover .pulse-assist-launcher-brand__label,
+.pulse-assist-root.fai-sidebar-root.pulse-assist-root--docked button.pulse-assist-launcher.pulse-assist-launcher--docked:hover .agent-runs-launcher-brand__icon,
+.pulse-assist-root.fai-sidebar-root.pulse-assist-root--docked button.pulse-assist-launcher.pulse-assist-launcher--docked:hover .agent-runs-launcher-brand__label,
+.pulse-assist-root.fai-sidebar-root.pulse-assist-root--docked button.pulse-assist-launcher.pulse-assist-launcher--docked:focus-visible .pulse-assist-launcher-brand__spark,
+.pulse-assist-root.fai-sidebar-root.pulse-assist-root--docked button.pulse-assist-launcher.pulse-assist-launcher--docked:focus-visible .pulse-assist-launcher-brand__label,
+.pulse-assist-root.fai-sidebar-root.pulse-assist-root--docked button.pulse-assist-launcher.pulse-assist-launcher--docked:focus-visible .agent-runs-launcher-brand__icon,
+.pulse-assist-root.fai-sidebar-root.pulse-assist-root--docked button.pulse-assist-launcher.pulse-assist-launcher--docked:focus-visible .agent-runs-launcher-brand__label {
+  color: #000;
+  fill: none;
+  stroke: currentColor;
+  filter: none;
 }
 
 .pulse-assist-root button.pulse-assist-launcher:not(.pulse-assist-launcher--docked):hover,
@@ -195,6 +286,15 @@
 }
 
 .pulse-assist-root--docked .pulse-assist-panel.fai-sidebar-panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: auto;
+  height: auto;
+  max-height: 100%;
+  overflow: hidden;
+  contain: layout paint;
   z-index: var(--fai-sidebar-z-index);
 }
 
@@ -370,12 +470,6 @@
 .pulse-assist-panel-tablist {
   container-type: inline-size;
   min-width: 0;
-}
-
-@container (max-width: 26rem) {
-  .pulse-assist-panel-tablist .pulse-assist-clock__city {
-    display: none;
-  }
 }
 
 .pulse-assist-panel-header__row {

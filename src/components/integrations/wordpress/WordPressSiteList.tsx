@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { FileText, MapPin, Sparkles } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { CompactWordPressTile } from "./CompactWordPressTile";
+import { SiteDisplayNameDialog } from "@/components/manager/SiteDisplayNameDialog";
 import type { WordPressSite } from "../types";
 import {
   formatDashboardEditorialMonthShort,
@@ -29,7 +31,8 @@ import {
 } from "./wordpress-properties-surfaces";
 import { isEntitySitemapDisabled } from "@/lib/entity-endpoint-extractor";
 import { useActiveWordPressSite } from "@/contexts/active-wordpress-site-context";
-import { requestManagerGeneratorNavigation } from "@/contexts/agent-run-optimizer-scope-context";
+import { openOrganicReporting } from "@/lib/organic-dashboard/organic-reporting-nav";
+import { PropertyOrganicDashboardShortcutPill } from "./PropertyOrganicDashboardShortcutPill";
 import { PropertyReportingShortcutPill } from "./PropertyReportingShortcutPill";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getPropertyListRowBlackMetricFrameClass } from "./cyberpunk-theme";
@@ -433,6 +436,7 @@ interface WordPressSiteListProps {
   onIndexSitemap: (site: WordPressSite, url: string) => void;
   onEntityGeneration?: (site: WordPressSite, sitemapUrl: string) => void;
   onSetEntitySitemap: (site: WordPressSite, sitemapUrl: string) => void;
+  onSetCompetitorEntitySitemap: (site: WordPressSite, sitemapUrl: string) => void;
   onToggleChildSitemapDisabled: (site: WordPressSite, childSitemapUrl: string) => void;
   onAppendManualChildSitemap: (site: WordPressSite, url: string) => void;
   onLoadCalendarPosts: (site: WordPressSite, sitemapUrl: string) => void;
@@ -476,6 +480,7 @@ export const WordPressSiteList: React.FC<WordPressSiteListProps> = ({
   onIndexSitemap,
   onEntityGeneration,
   onSetEntitySitemap,
+  onSetCompetitorEntitySitemap,
   onToggleChildSitemapDisabled,
   onAppendManualChildSitemap,
   onLoadCalendarPosts,
@@ -494,11 +499,14 @@ export const WordPressSiteList: React.FC<WordPressSiteListProps> = ({
   propertyRowDisplay = "compact",
 }) => {
   const { setActiveWordPressSiteId } = useActiveWordPressSite();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [canonicalRenameSite, setCanonicalRenameSite] = useState<WordPressSite | null>(null);
 
   const openGscReportingForSite = (site: WordPressSite) => {
     onConnectSite(site);
     setActiveWordPressSiteId(site.id);
-    requestManagerGeneratorNavigation("report");
+    openOrganicReporting(navigate, location.pathname, site.id);
   };
 
   const renderPropertyRowTrailingControls = (site: WordPressSite) => {
@@ -508,6 +516,16 @@ export const WordPressSiteList: React.FC<WordPressSiteListProps> = ({
     const stop = (e: React.SyntheticEvent) => e.stopPropagation();
     return (
     <div className="flex min-w-0 shrink-0 items-stretch">
+      {siteHasWpCredentials(site) ? (
+        <PropertyOrganicDashboardShortcutPill
+          site={site}
+          rowDisplay={propertyRowDisplay}
+          onBeforeNavigate={(s) => {
+            onConnectSite(s);
+            setActiveWordPressSiteId(s.id);
+          }}
+        />
+      ) : null}
       <div
         className={cn(PROPERTY_METRICS_CLUSTER_CLASS, "min-w-0")}
         onClick={stop}
@@ -555,6 +573,19 @@ export const WordPressSiteList: React.FC<WordPressSiteListProps> = ({
 
   return (
     <div className="mt-0 flex min-h-0 flex-1 flex-col">
+      <SiteDisplayNameDialog
+        variant="canonical"
+        open={Boolean(canonicalRenameSite)}
+        site={canonicalRenameSite}
+        onOpenChange={(open) => {
+          if (!open) setCanonicalRenameSite(null);
+        }}
+        onSave={(siteId, name) => {
+          const trimmed = name.trim();
+          if (!trimmed || !onPatchSite) return;
+          onPatchSite(siteId, { name: trimmed });
+        }}
+      />
       {filteredSites.length === 0 ? (
         <div className={cn(PROPERTIES_EMPTY, "shrink-0 py-8 sm:py-10")}>
           <p className="text-base text-zinc-200">
@@ -602,6 +633,9 @@ export const WordPressSiteList: React.FC<WordPressSiteListProps> = ({
                       onDelete={() => onDelete(site.id)}
                       onApplyDisplayNameFromGmb={
                         onPatchSite ? (name) => onPatchSite(site.id, { name }) : undefined
+                      }
+                      onEditCanonicalName={
+                        onPatchSite ? () => setCanonicalRenameSite(site) : undefined
                       }
                     />
                   </div>

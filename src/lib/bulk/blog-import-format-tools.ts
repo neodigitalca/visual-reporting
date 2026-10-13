@@ -1,5 +1,5 @@
 import { catalogFromBlocks, setBlockTag, wrapBlocksAsList, type FormatBlock } from "@/lib/bulk/blog-import-format-blocks";
-import { parseJsonWithRepair } from "@/lib/json-repair-utility";
+import { parseJsonStrict } from "@/lib/json-repair-utility";
 
 export type DirectFormatToolName = "set_block_tag" | "wrap_list";
 
@@ -85,7 +85,7 @@ export function executeDirectFormatTool(
 }
 
 export function parseDirectFormatOperations(content: string): DirectFormatOperation[] {
-  const { parsed } = parseJsonWithRepair<{ operations?: unknown }>(content);
+  const parsed = parseJsonStrict<{ operations?: unknown }>(content);
   const raw = Array.isArray(parsed?.operations) ? parsed.operations : null;
   if (!raw) {
     throw new Error("OpenRouter format agent did not return operations");

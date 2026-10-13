@@ -279,10 +279,9 @@ export async function postOpenRouterAppChat(args: {
     }
   }
   let content = typeof data.content === "string" ? data.content : "";
-  if (!content.trim() && parsed) {
+  if (parsed) {
     content = JSON.stringify(parsed);
-  }
-  if (!content.trim() && data.raw) {
+  } else if (!content.trim() && data.raw) {
     const raw = data.raw as Record<string, unknown>;
     const choices = Array.isArray(raw.choices) ? raw.choices : null;
     const message =

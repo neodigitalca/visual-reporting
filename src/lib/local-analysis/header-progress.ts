@@ -19,7 +19,7 @@ export type LocalAnalysisHeaderProgress = {
 
 const RUN_KIND_LABELS: Record<LocalAnalysisRunKind, string> = {
   csv: "Loading grid CSV",
-  suggest: "Suggest keywords",
+  suggest: "Clusters",
   generate: "Generate SAP rows",
 };
 
@@ -35,13 +35,15 @@ export function buildLocalAnalysisMicroSnapshot(
   const completed = harnessCounts
     ? harnessCounts.done
     : Math.max(0, Math.floor(progress.completed));
-  const total = harnessCounts
+  const rawTotal = harnessCounts
     ? Math.max(
         harnessCounts.total,
         progress.harnessPlannedSectionCount ?? 0,
         Math.floor(progress.total),
       )
     : Math.max(0, Math.floor(progress.total));
+  /** Keep neon bar animating when step text is set but counts are not wired yet. */
+  const total = rawTotal > 0 ? rawTotal : 1;
   const phase = progress.phase.trim();
   const statusMessage = phase.toLowerCase() !== label.toLowerCase() ? phase : undefined;
   const progressPct =

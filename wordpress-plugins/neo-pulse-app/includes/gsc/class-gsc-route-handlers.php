@@ -36,6 +36,7 @@ class Neo_Pulse_App_Gsc_Route_Handlers {
 			array( 'POST', '/check-url-indexing', 'check_url_indexing' ),
 			array( 'POST', '/request-url-indexing', 'request_url_indexing' ),
 			array( 'POST', '/index-sitemap-urls', 'index_sitemap_urls' ),
+			array( 'POST', '/page-indexing-report', 'page_indexing_report' ),
 		);
 
 		foreach ( $routes as $route ) {
@@ -276,6 +277,10 @@ class Neo_Pulse_App_Gsc_Route_Handlers {
 		return self::from_result( Neo_Pulse_App_Gsc_Indexing::index_sitemap_urls( (array) $request->get_json_params() ) );
 	}
 
+	public static function page_indexing_report( WP_REST_Request $request ) {
+		return self::from_result( Neo_Pulse_App_Gsc_Indexing::page_indexing_report( (array) $request->get_json_params() ) );
+	}
+
 	/** @param array{statusCode:int,body:array<string,mixed>} $result */
 	private static function from_result( array $result ): WP_REST_Response {
 		return new WP_REST_Response( $result['body'], $result['statusCode'] );
@@ -401,6 +406,11 @@ class Neo_Pulse_App_Gsc_Route_Handlers {
 		}
 		if ( $subpath === 'index-sitemap-urls' && $method === 'POST' ) {
 			$r = Neo_Pulse_App_Gsc_Indexing::index_sitemap_urls( $body );
+			Neo_Pulse_App_Api_Dispatcher::send_json( $r['body'], $r['statusCode'] );
+			return;
+		}
+		if ( $subpath === 'page-indexing-report' && $method === 'POST' ) {
+			$r = Neo_Pulse_App_Gsc_Indexing::page_indexing_report( $body );
 			Neo_Pulse_App_Api_Dispatcher::send_json( $r['body'], $r['statusCode'] );
 			return;
 		}

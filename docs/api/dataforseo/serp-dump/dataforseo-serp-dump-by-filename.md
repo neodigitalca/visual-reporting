@@ -5,7 +5,7 @@ section: DataForSEO
 method: GET
 path: /api/dataforseo/serp-dump/{filename}
 auth: open
-order: 130
+order: 140
 ---
 
 GET `/api/dataforseo/serp-dump/{filename}`.

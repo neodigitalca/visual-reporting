@@ -5,7 +5,7 @@ section: Google Business Profile
 method: POST
 path: /api/gmb/generate-social-copy
 auth: open
-order: 220
+order: 230
 ---
 
 POST `/api/gmb/generate-social-copy`.

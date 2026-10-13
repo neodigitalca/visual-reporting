@@ -43,8 +43,8 @@ export function PropertyReportingShortcutPill({
             getPropertyListRowIconButtonHoverGlowClass("powerOn"),
             "[&_svg]:!text-green-400",
           )}
-          title="Connect property and open GSC Reporting"
-          aria-label={`Connect ${site.name} and open GSC Reporting`}
+          title="Connect property and open Reporting"
+          aria-label={`Connect ${site.name} and open Reporting`}
           onClick={(e) => {
             e.stopPropagation();
             onOpenReporting(site);

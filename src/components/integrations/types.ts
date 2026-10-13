@@ -12,6 +12,8 @@ export interface WordPressSiteCapabilities {
 export interface WordPressSite {
   id: string;
   name: string;
+  /** Header site menu label only (top-bar pencil). Does not change Properties list names. */
+  menuDisplayName?: string;
   siteUrl: string;
   /**
    * Live / production site URL when it differs from `siteUrl` (e.g. REST connects to staging,
@@ -47,7 +49,17 @@ export interface WordPressSite {
     }>;
     /** Child sitemap URLs excluded for this property (Sitemaps tab → Sitemap menu). */
     disabledChildSitemapUrls?: string[];
+    /** Per child sitemap URL: system roles and custom tag labels. */
+    childTagsByUrl?: Record<
+      string,
+      {
+        roles: Array<"pages" | "posts" | "entity" | "competitor">;
+        custom: string[];
+      }
+    >;
   };
+  /** Property-wide custom sitemap tag labels (Integrations → Sitemaps). */
+  customSitemapTagLabels?: string[];
   scheduledPosts?: {
     count: number;
     month: number;
@@ -55,6 +67,8 @@ export interface WordPressSite {
     fetchedAt: number;
   };
   entitySitemapUrl?: string;
+  /** Rank Math child sitemap for competitor comparison CPT (e.g. competitor-sitemap.xml). */
+  competitorEntitySitemapUrl?: string;
   manualEndpoint?: string; // Manually declared endpoint (authoritative, no mutation)
   locations?: Location[];
   napInfo?: NAPInfo;
@@ -165,6 +179,11 @@ export interface GA4ReportData {
   trafficByChannel?: {
     channels: GA4TrafficChannelRow[];
   };
+  /** firstUserMedium = organic, current vs compare period totals (User acquisition report). */
+  organicUsers?: {
+    current: GA4OrganicUsersPeriodTotals;
+    previous: GA4OrganicUsersPeriodTotals;
+  };
   /** firstUserMedium = organic, monthly rows + period totals (User acquisition). */
   organicUsersMonthly?: GA4OrganicUsersMonthlyBlock;
   /** sessionDefaultChannelGroup = Organic Search, monthly traffic acquisition rows. */
@@ -185,17 +204,19 @@ export type GA4OrganicTrafficAcquisitionMonthlyBlock = {
   >;
 };
 
+export type GA4OrganicUsersPeriodTotals = {
+  totalUsers: number;
+  newUsers: number;
+  userKeyEventRate: number;
+  keyEvents: number;
+};
+
 export type GA4OrganicUsersMonthlyBlock = {
   medium: "organic";
   dimension: "firstUserMedium";
   periodStart: string;
   periodEnd: string;
-  totals: {
-    totalUsers: number;
-    newUsers: number;
-    userKeyEventRate: number;
-    keyEvents: number;
-  };
+  totals: GA4OrganicUsersPeriodTotals;
   months: Array<{
     yearMonth: string;
     label: string;

@@ -24,6 +24,7 @@ import { BulkGeneratorRunActions } from "@/components/keyword-research/bulk/Bulk
 import { BulkGeneratorDetailsDrawer } from "@/components/keyword-research/bulk/BulkGeneratorDetailsDrawer";
 import type { BulkGeneratorDetailsPanelProps } from "@/components/keyword-research/bulk/BulkGeneratorDetailsPanel";
 import { BULK_HEADER_RUN_BTN } from "@/components/keyword-research/bulk/bulk-workspace-header-styles";
+import { cn } from "@/lib/utils";
 import type { MetaBulkMicroSnapshot } from "@/components/overview/OverviewBulkMicroProgress";
 import type { WordPressPostDestination } from "@/lib/bulk-auto-generate";
 import { WORDPRESS_POST_DESTINATION_SHORT } from "@/lib/bulk-auto-generate";
@@ -58,7 +59,9 @@ export type BulkPromptWorkspaceHeaderProps = {
   onCancel: () => void;
   onClear: () => void;
   scheduleMenu?: ReactNode;
-  sitemapMenu?: ReactNode;
+  sitemapScopeSlot?: ReactNode;
+  /** Connected site selected but warm inventory/GSC not ready yet. */
+  promptSiteContextBlocked?: boolean;
   detailsProps: BulkGeneratorDetailsPanelProps;
   onDetailsOpenChange?: (open: boolean) => void;
 };
@@ -90,7 +93,8 @@ export function BulkPromptWorkspaceHeader({
   onCancel,
   onClear,
   scheduleMenu,
-  sitemapMenu,
+  sitemapScopeSlot,
+  promptSiteContextBlocked = false,
   detailsProps,
   onDetailsOpenChange,
 }: BulkPromptWorkspaceHeaderProps) {
@@ -111,9 +115,9 @@ export function BulkPromptWorkspaceHeader({
       onSectionChange={onSectionChange}
       sectionSwitchDisabled={isProcessing}
       titleRowMenu={
-        sitemapMenu || scheduleMenu ? (
-          <div className="flex shrink-0 items-center gap-0.5">
-            {sitemapMenu}
+        sitemapScopeSlot !== undefined || scheduleMenu ? (
+          <div className="flex shrink-0 items-center gap-2">
+            {sitemapScopeSlot !== undefined ? sitemapScopeSlot : null}
             {scheduleMenu}
           </div>
         ) : null
@@ -237,7 +241,10 @@ export function BulkPromptWorkspaceHeader({
                   size="sm"
                   className={BULK_HEADER_RUN_BTN}
                   disabled={
-                    workspaceBusy || isGeneratingChecklist || (hasGeneratedChecklist && isProcessing)
+                    workspaceBusy ||
+                    promptSiteContextBlocked ||
+                    isGeneratingChecklist ||
+                    (hasGeneratedChecklist && isProcessing)
                   }
                   aria-label={hasGeneratedChecklist ? "Approve" : "Ideas"}
                   title={hasGeneratedChecklist ? "Approve" : "Ideas"}

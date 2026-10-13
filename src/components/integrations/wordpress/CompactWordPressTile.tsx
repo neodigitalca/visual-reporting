@@ -1,11 +1,11 @@
 import React, { useCallback, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { XCircle, Loader2, Copy, Power, Wand2, UserCircle, Trash2 } from "lucide-react";
+import { XCircle, Loader2, Copy, Power, Wand2, UserCircle, Trash2, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { notify, notifyHeaderError } from "@/lib/app-notifications";
 import { loadApiKey } from "@/lib/api";
 import { applyGbpPropertyWand } from "@/lib/wordpress-site-display-name-from-dfs-gmb";
-import { wordpressSiteDisplayName } from "@/lib/wordpress-site-display-name";
+import { wordpressSiteCanonicalName } from "@/lib/wordpress-site-display-name";
 import { type WordPressSite } from "../types";
 import type { WordPressPropertyRowDisplay } from "@/lib/wordpress-properties-row-display";
 import { getCyberpunkCardClasses, getCyberpunkTextClasses, getPropertyListRowBlackIconButtonClass, getPropertyListRowIconButtonHoverGlowClass } from "./cyberpunk-theme";
@@ -42,6 +42,8 @@ interface CompactWordPressTileProps {
   onOpenProfile?: () => void;
   /** List row: delete property (trash icon beside profile). */
   onDelete?: () => void;
+  /** Properties list: edit stored property name (canonical, not header menu label). */
+  onEditCanonicalName?: () => void;
 }
 
 function copySiteUrlButton(
@@ -159,12 +161,13 @@ function menuInnerSummary(
     linkTitleToSite?: boolean;
     onOpenProfile?: () => void;
     onDelete?: () => void;
+    onEditCanonicalName?: () => void;
     onToggleEnabled?: () => void;
     isTesting?: boolean;
   },
 ) {
   const compact = rowDisplay === "compact";
-  const displayName = wordpressSiteDisplayName(site);
+  const displayName = wordpressSiteCanonicalName(site);
   const titleClass = cn(
     "shrink-0 whitespace-nowrap text-base font-bold leading-none",
     getCyberpunkTextClasses("primary"),
@@ -205,6 +208,23 @@ function menuInnerSummary(
       {options?.onToggleEnabled
         ? listRowPowerButton(site, Boolean(options.isTesting), options.onToggleEnabled)
         : null}
+      {options?.onEditCanonicalName ? (
+        <button
+          type="button"
+          aria-label={`Edit property name for ${displayName}`}
+          title="Edit property name"
+          onClick={(e) => {
+            e.stopPropagation();
+            options.onEditCanonicalName?.();
+          }}
+          className={cn(
+            getPropertyListRowBlackIconButtonClass(true),
+            getPropertyListRowIconButtonHoverGlowClass("powerOff"),
+          )}
+        >
+          <Pencil className="h-4 w-4 shrink-0" aria-hidden />
+        </button>
+      ) : null}
       {options?.linkTitleToSite && siteHref ? (
         <a
           href={siteHref}
@@ -241,6 +261,7 @@ export const CompactWordPressTile: React.FC<CompactWordPressTileProps> = ({
   linkTitleToSite = false,
   onOpenProfile,
   onDelete,
+  onEditCanonicalName,
 }) => {
   const [isResolvingGmbDisplayName, setIsResolvingGmbDisplayName] = useState(false);
 
@@ -367,6 +388,7 @@ export const CompactWordPressTile: React.FC<CompactWordPressTileProps> = ({
     linkTitleToSite,
     onOpenProfile,
     onDelete: variant === "listRow" ? onDelete : undefined,
+    onEditCanonicalName: variant === "listRow" ? onEditCanonicalName : undefined,
     onToggleEnabled: variant === "listRow" ? onToggleEnabled : undefined,
     isTesting: variant === "listRow" ? isTesting : undefined,
   };

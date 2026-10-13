@@ -5,10 +5,10 @@ import {
 } from "@/components/blog-generator/blog-generator-sections";
 
 describe("blog-generator-sections", () => {
-  it("registers Entity before Competitor (no standalone Pages generator)", () => {
+  it("registers Entities without a separate Competitor pill", () => {
     const ids = BLOG_GENERATOR_SECTION_DEFS.map((def) => def.id);
     expect(ids).not.toContain("pages");
-    expect(ids.indexOf("competitor")).toBe(ids.indexOf("entity") + 1);
-    expect(getBlogGeneratorSectionMeta("entity").label).toBe("Entity");
+    expect(ids).not.toContain("competitor");
+    expect(getBlogGeneratorSectionMeta("entity").label).toBe("Entities");
   });
 });

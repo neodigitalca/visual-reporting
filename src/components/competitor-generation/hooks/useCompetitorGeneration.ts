@@ -2,7 +2,6 @@ import { useCallback, useState } from "react";
 import { notify, notifyHeaderError } from "@/lib/app-notifications";
 import { NOTIFY_OPENROUTER_IN_SETTINGS } from "@/lib/notify-messages";
 import { loadApiKey } from "@/lib/api";
-import { getResearchModel } from "@/lib/optimization-settings-storage";
 import type { CompetitorGridPlaceRow } from "@/lib/competitor-research/local-dominator-grid-parse";
 import type { WordPressSite } from "@/components/integrations/types";
 import { generateCompetitors } from "@/lib/competitor";
@@ -15,6 +14,7 @@ import type {
   GeneratedCompetitorRow,
   UseCompetitorGenerationOptions,
 } from "../types";
+import { logClustersPipeline } from "@/lib/local-analysis/entity-clusters-console-log";
 
 function competitorsToGeneratedRows(comps: CompetitorWithRow[]): GeneratedCompetitorRow[] {
   const domainByEntity = new Map(comps.map((c) => [c.row.entity?.trim() ?? "", c.domain]));
@@ -59,11 +59,23 @@ export function useCompetitorGeneration(options?: UseCompetitorGenerationOptions
 
       const capped = selectCompetitorPlacesForRun(places, site, count);
       if (capped.length === 0) {
-        notify.error("Upload a grid CSV with competitor businesses first.");
+        logClustersPipeline("competitors", "blocked", { reason: "no_places_after_filter" });
+        notify.error("No competitor businesses found for this city and keyword.");
         return;
       }
 
       const modifier = promptModifierOverride?.trim() ?? promptModifier.trim();
+      logClustersPipeline("competitors", "generation_started", {
+        keyword: kw,
+        requestedCount: count,
+        placeCount: capped.length,
+        placesPreview: capped.slice(0, 25).map((p) => ({
+          businessName: p.businessName,
+          dfsKeyword: p.dfsKeyword,
+          rank: p.rank,
+        })),
+        hasPromptModifier: Boolean(modifier),
+      });
       setIsGenerating(true);
       setGeneratedRows([]);
       setProgress({
@@ -73,7 +85,6 @@ export function useCompetitorGeneration(options?: UseCompetitorGenerationOptions
       });
 
       try {
-        const model = getResearchModel(site.id);
         const result = await generateCompetitors(
           {
             site,
@@ -81,7 +92,6 @@ export function useCompetitorGeneration(options?: UseCompetitorGenerationOptions
             keyword: kw,
             promptModifier: modifier || undefined,
             apiKey,
-            model,
             siteId: site.id,
             onRowsUpdate: (comps) => {
               const rows = competitorsToGeneratedRows(comps);

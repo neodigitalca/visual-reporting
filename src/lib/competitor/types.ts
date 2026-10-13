@@ -68,7 +68,6 @@ export type CompetitorGenerationOptions = {
   keyword: string;
   promptModifier?: string;
   apiKey: string;
-  model: string;
   siteId?: string;
   onRowsUpdate?: (competitors: CompetitorWithRow[]) => void;
 };

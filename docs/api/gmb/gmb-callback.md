@@ -5,7 +5,7 @@ section: Google Business Profile
 method: GET
 path: /api/gmb/callback
 auth: open
-order: 200
+order: 210
 ---
 
 GET `/api/gmb/callback`.

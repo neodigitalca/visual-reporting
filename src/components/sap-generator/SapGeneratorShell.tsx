@@ -1,4 +1,9 @@
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
+import {
+  readStoredEntitySubmode,
+  writeStoredEntitySubmode,
+  type EntityGeneratorSubmode,
+} from "@/components/sap-generator/entity-generator-submode";
 import { SapGeneratorContent } from "@/components/sap-generator/SapGeneratorContent";
 import type { BlogGeneratorSectionId } from "@/components/blog-generator/blog-generator-sections";
 import { buildTempLocalAnalysisSite } from "@/lib/temp-local-analysis-site";
@@ -63,8 +68,19 @@ export const SapGeneratorShell: React.FC<SapGeneratorShellProps> = ({
     return `connected:${s.id}|${getPublicSiteUrl(s)}`;
   }, [enabledSites, workspaceMode, debouncedTempSeed, connectedSite]);
 
+  const [entitySubmode, setEntitySubmodeState] = useState<EntityGeneratorSubmode>(() =>
+    readStoredEntitySubmode(),
+  );
+
+  const setEntitySubmode = useCallback((mode: EntityGeneratorSubmode) => {
+    setEntitySubmodeState(mode);
+    writeStoredEntitySubmode(mode);
+  }, []);
+
   return (
     <SapGeneratorContent
+      entitySubmode={entitySubmode}
+      onEntitySubmodeChange={setEntitySubmode}
       localAnalysisSite={localAnalysisSite}
       localAnalysisWorkspaceKey={localAnalysisWorkspaceKey}
       localAnalysisWorkspace={{

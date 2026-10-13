@@ -1,12 +1,15 @@
-import { WorkspacePill } from "@/components/shared/WorkspacePill";
+import { useMemo } from "react";
 import { getStoredSites, type WordPressSite } from "@/components/IntegrationsTab";
 import type { ConnectedSiteSummary } from "@/components/integrations/types";
 import type { WordPressPostDestination } from "@/lib/bulk-auto-generate";
 import {
   defaultBulkSitemapMode,
   normalizeBulkSitemapScopeTags,
+  type BulkSitemapMode,
   type BulkSitemapScopeTag,
 } from "@/lib/bulk/bulk-sitemap-mode";
+import { SitemapScopeDropdown } from "@/components/shared/SitemapScopeDropdown";
+import { listSitemapScopeOptions } from "@/lib/sitemap-child-tags";
 
 export type BulkSiteSitemapConfig = {
   sitemapType: BulkSitemapMode;
@@ -26,7 +29,6 @@ export type BulkGeneratorSitemapMenuProps = {
         ) => Record<string, BulkSiteSitemapConfig>),
   ) => void;
   isDisabled?: boolean;
-  /** Keep pills visible when export destination is local (blog import). */
   showWhenLocal?: boolean;
 };
 
@@ -39,12 +41,6 @@ function resolveTargetSite(connectedSite?: ConnectedSiteSummary | null): WordPre
   return sites.find((s) => normalize(s.siteUrl) === normalize(connectedSite.siteUrl)) ?? null;
 }
 
-const SCOPE_PILLS: Array<{ tag: BulkSitemapScopeTag; label: string }> = [
-  { tag: "pages", label: "Pages" },
-  { tag: "posts", label: "Posts" },
-  { tag: "entities", label: "Entities" },
-];
-
 export function BulkGeneratorSitemapMenu({
   postDestination,
   connectedSite,
@@ -54,53 +50,46 @@ export function BulkGeneratorSitemapMenu({
   isDisabled = false,
   showWhenLocal = false,
 }: BulkGeneratorSitemapMenuProps) {
-  if (postDestination === "local" && !showWhenLocal) {
-    return null;
-  }
-
   const targetSite = resolveTargetSite(connectedSite);
-  if (!targetSite) {
+  if ((postDestination === "local" && !showWhenLocal) || !targetSite) {
     return null;
   }
 
   const selectedId = Array.from(selectedWordPressSites)[0] ?? targetSite.id;
-  const entityAvailable = Boolean(targetSite.entitySitemapUrl?.trim());
   const scopeTags = normalizeBulkSitemapScopeTags(siteConfigs[selectedId]?.scopeTags);
+  const options = useMemo(
+    () =>
+      listSitemapScopeOptions(targetSite).map((o) => ({
+        id: o.id,
+        label: o.label,
+        disabled: !o.enabled,
+      })),
+    [targetSite],
+  );
 
-  const toggleScopeTag = (tag: BulkSitemapScopeTag) => {
+  const activeScope = scopeTags[0] ?? "pages";
+
+  const setScope = (tag: string) => {
     if (isDisabled) return;
-    if (tag === "entities" && !entityAvailable) return;
-    setSiteConfigs((prev) => {
-      const current = normalizeBulkSitemapScopeTags(prev[selectedId]?.scopeTags);
-      const next = current.includes(tag)
-        ? current.filter((t) => t !== tag)
-        : [...current, tag];
-      return {
-        ...prev,
-        [selectedId]: {
-          ...prev[selectedId],
-          sitemapType: prev[selectedId]?.sitemapType ?? defaultBulkSitemapMode(),
-          scopeTags: next,
-        },
-      };
-    });
+    const opt = options.find((o) => o.id === tag);
+    if (opt?.disabled) return;
+    setSiteConfigs((prev) => ({
+      ...prev,
+      [selectedId]: {
+        ...prev[selectedId],
+        sitemapType: prev[selectedId]?.sitemapType ?? defaultBulkSitemapMode(),
+        scopeTags: [tag as BulkSitemapScopeTag],
+      },
+    }));
   };
 
   return (
-    <div
-      className="flex min-w-0 shrink-0 flex-nowrap items-center gap-1"
-      role="group"
-      aria-label="Sitemap scope"
-    >
-      {SCOPE_PILLS.map(({ tag, label }) => (
-        <WorkspacePill
-          key={tag}
-          label={label}
-          active={scopeTags.includes(tag)}
-          disabled={isDisabled || (tag === "entities" && !entityAvailable)}
-          onClick={() => toggleScopeTag(tag)}
-        />
-      ))}
-    </div>
+    <SitemapScopeDropdown
+      options={options}
+      value={activeScope}
+      onChange={setScope}
+      ariaLabel="Sitemap bucket"
+      disabled={isDisabled}
+    />
   );
 }

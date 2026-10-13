@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyCompetitorHarnessStep,
   buildCompetitorHarnessGroups,
+  buildCompetitorMicroSnapshot,
   countCompetitorHarnessSteps,
   setCompetitorHarnessDomain,
   setCompetitorHarnessTitle,
@@ -35,5 +36,16 @@ describe("competitor-comparison-harness-state", () => {
     const { done, total } = countCompetitorHarnessSteps(groups);
     expect(total).toBe(4);
     expect(done).toBe(2);
+  });
+
+  it("buildCompetitorMicroSnapshot exposes progressPct from 0 at start", () => {
+    const groups = buildCompetitorHarnessGroups(["Alpha Blinds"]);
+    const snap = buildCompetitorMicroSnapshot({
+      phase: "Google SERP query for Alpha Blinds…",
+      harnessGroups: groups,
+    });
+    expect(snap?.progressPct).toBe(0);
+    expect(snap?.completed).toBe(0);
+    expect(snap?.total).toBe(4);
   });
 });

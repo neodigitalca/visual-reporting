@@ -5,23 +5,37 @@ function isLikelyTruncatedStoredName(name: string): boolean {
   return / \.\.\.$/.test(name.trim());
 }
 
-/**
- * Best label for property rows. Prefers full NAP / GBP name when stored `site.name`
- * was saved with an artificial trailing ellipsis.
- */
-export function wordpressSiteDisplayName(site: WordPressSite): string {
+function resolveStoredSiteLabel(site: WordPressSite): string {
   const stored = site.name.trim();
   const nap = site.napInfo?.name?.trim() ?? "";
 
-  if (nap) {
-    if (isLikelyTruncatedStoredName(stored)) return nap;
-    const storedCore = stored.replace(/ \.\.\.$/, "").trim();
-    if (nap.length > storedCore.length) return nap;
-  }
-
   if (isLikelyTruncatedStoredName(stored)) {
-    return stored.replace(/ \.\.\.$/, "").trim();
+    return nap || stored.replace(/ \.\.\.$/, "").trim();
   }
 
-  return stored;
+  if (stored) return stored;
+  return nap;
+}
+
+/**
+ * Integrations / Properties canonical label. Uses stored `site.name` (and NAP only for legacy truncation).
+ * Ignores `menuDisplayName`.
+ */
+export function wordpressSiteCanonicalName(site: WordPressSite): string {
+  return resolveStoredSiteLabel(site);
+}
+
+/** Manager header site menu and chip. User override via pencil in the top bar. */
+export function wordpressSiteMenuDisplayName(site: WordPressSite): string {
+  const menuOverride = site.menuDisplayName?.trim();
+  if (menuOverride) return menuOverride;
+  return resolveStoredSiteLabel(site);
+}
+
+/**
+ * Canonical property name (Properties dashboard, Drive folders, workflows).
+ * @deprecated Prefer `wordpressSiteCanonicalName` or `wordpressSiteMenuDisplayName`.
+ */
+export function wordpressSiteDisplayName(site: WordPressSite): string {
+  return wordpressSiteCanonicalName(site);
 }

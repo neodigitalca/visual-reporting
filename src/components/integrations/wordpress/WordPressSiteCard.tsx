@@ -28,6 +28,7 @@ interface WordPressSiteCardProps {
   onScrapeChildSitemap: (childSitemapUrl: string) => void;
   onEntityGeneration?: (sitemapUrl: string) => void;
   onSetEntitySitemap?: (sitemapUrl: string) => void;
+  onSetCompetitorEntitySitemap?: (sitemapUrl: string) => void;
   onToggleChildSitemapDisabled?: (childSitemapUrl: string) => void;
   onAppendManualChildSitemap?: (url: string) => void;
   onIndexSitemap?: (sitemapUrl: string) => void;
@@ -61,6 +62,7 @@ export const WordPressSiteCard: React.FC<WordPressSiteCardProps> = ({
   onScrapeChildSitemap,
   onEntityGeneration,
   onSetEntitySitemap,
+  onSetCompetitorEntitySitemap,
   onToggleChildSitemapDisabled,
   onAppendManualChildSitemap,
   onIndexSitemap,
@@ -104,6 +106,7 @@ export const WordPressSiteCard: React.FC<WordPressSiteCardProps> = ({
     onScrapeChildSitemap,
     onEntityGeneration,
     onSetEntitySitemap,
+    onSetCompetitorEntitySitemap,
     onToggleChildSitemapDisabled,
     onAppendManualChildSitemap,
     onIndexSitemap,

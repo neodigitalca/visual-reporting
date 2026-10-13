@@ -334,6 +334,23 @@ export function repairJson(
   return { repaired: working, repairSteps: steps, success: false };
 }
 
+/** Strip optional ```json fences only; does not slice or mutate JSON body. */
+export function unwrapJsonMarkdownFence(text: string): string {
+  let cleaned = text.trim();
+  if (cleaned.startsWith("```json")) {
+    cleaned = cleaned.replace(/^```json\s*/i, "").replace(/\s*```\s*$/i, "");
+  } else if (cleaned.startsWith("```")) {
+    cleaned = cleaned.replace(/^```\s*/i, "").replace(/\s*```\s*$/i, "");
+  }
+  return cleaned.trim();
+}
+
+/** One JSON.parse after fence strip. Bulk/CSV: no repair, truncation, or bracket closing. */
+export function parseJsonStrict<T = unknown>(text: string): T {
+  const cleaned = unwrapJsonMarkdownFence(text);
+  return JSON.parse(cleaned) as T;
+}
+
 /**
  * Parse JSON with automatic repair
  * Returns parsed object and repair information

@@ -1,4 +1,3 @@
-import { WorkspacePill } from "@/components/shared/WorkspacePill";
 import type { SitemapOptimizerCollectionOption } from "@/lib/sitemap-optimizer/collection-options";
 import {
   SITEMAP_OPTIMIZER_PAGES_LABEL,
@@ -6,8 +5,10 @@ import {
   SITEMAP_OPTIMIZER_SAP_LABEL,
 } from "@/lib/sitemap-optimizer/sitemap-optimizer-toolbar-copy";
 import type { SitemapOptimizerCollectionKey } from "@/lib/sitemap-optimizer/types";
+import { isCustomSitemapOptimizerCollectionKey } from "@/lib/sitemap-optimizer/types";
+import { SitemapScopeDropdown } from "@/components/shared/SitemapScopeDropdown";
 
-const INVENTORY_PILL_LABELS: Record<SitemapOptimizerCollectionKey, string> = {
+const INVENTORY_PILL_LABELS: Partial<Record<SitemapOptimizerCollectionKey, string>> = {
   posts: SITEMAP_OPTIMIZER_POSTS_LABEL,
   pages: SITEMAP_OPTIMIZER_PAGES_LABEL,
   entity: SITEMAP_OPTIMIZER_SAP_LABEL,
@@ -26,17 +27,22 @@ export function SitemapPlanCollectionPills({
   selectCollection,
   disabled = false,
 }: SitemapPlanCollectionPillsProps) {
+  const activeKey = [...selected][0] ?? "posts";
+  const dropdownOptions = collectionOptions.map((opt) => ({
+    id: opt.key,
+    label: isCustomSitemapOptimizerCollectionKey(opt.key)
+      ? opt.label
+      : (INVENTORY_PILL_LABELS[opt.key] ?? opt.label),
+    disabled: !opt.enabled,
+  }));
+
   return (
-    <div className="flex min-w-0 flex-nowrap items-center gap-1" aria-label="Sitemap inventory">
-      {collectionOptions.map((opt) => (
-        <WorkspacePill
-          key={opt.key}
-          label={INVENTORY_PILL_LABELS[opt.key]}
-          active={selected.has(opt.key)}
-          disabled={!opt.enabled || disabled}
-          onClick={() => selectCollection(opt.key)}
-        />
-      ))}
-    </div>
+    <SitemapScopeDropdown
+      options={dropdownOptions}
+      value={activeKey}
+      onChange={(id) => selectCollection(id as SitemapOptimizerCollectionKey)}
+      ariaLabel="Sitemap inventory"
+      disabled={disabled}
+    />
   );
 }

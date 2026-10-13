@@ -80,7 +80,7 @@ const ASSIST_APP_MODULES = [
     description: "Google Search Console, Analytics 4, and Business Profile connection settings.",
     aliases: ["google", "gsc", "ga4", "analytics", "search console", "gbp settings"],
     features: ["GSC", "GA4", "GBP credentials"],
-    relatedModules: ["generator/report", "gbp-post"],
+    relatedModules: ["reporting/performance", "gbp-post"],
   },
   // Teams
   {
@@ -271,17 +271,16 @@ const ASSIST_APP_MODULES = [
     relatedModules: ["sitemap-optimizer", "generator/competitor"],
   },
   {
-    id: "generator/report",
-    label: "Report",
-    menuPath: "SEO → Generator → Report",
-    section: "seo",
-    hash: "#generator",
-    pulseNav: "pulse:nav/generator/report",
-    managerTab: "generator",
-    generatorSection: "report",
-    description: "GSC reporting and performance analytics.",
-    aliases: ["gsc report", "reporting", "gsc reporting"],
-    relatedModules: ["dashboard/google", "generator/opt"],
+    id: "reporting/performance",
+    label: "Performance",
+    menuPath: "Reporting → Performance",
+    section: "reporting",
+    hash: "#reporting",
+    pulseNav: "pulse:nav/reporting/performance",
+    managerTab: "reporting-performance",
+    description: "Organic reporting dashboard: GA4, Search Console, client PDF deck, and share links.",
+    aliases: ["gsc report", "reporting", "gsc reporting", "organic dashboard", "client report"],
+    relatedModules: ["dashboard/google", "dashboard/properties"],
   },
   {
     id: "sitemap-optimizer",
@@ -306,7 +305,7 @@ const ASSIST_APP_MODULES = [
     managerTab: "vertical-benchmarks",
     description: "GSC top 10 benchmarks per property, bulk CSV packages.",
     aliases: ["vertical benchmarks", "industry verticals", "benchmarks"],
-    relatedModules: ["generator/report"],
+    relatedModules: ["reporting/performance"],
   },
   // Social
   {

@@ -24,13 +24,26 @@ import {
 } from "@/lib/wordpress-api";
 import { readSiteServiceCity, readSiteServiceState, readSiteServiceCountry, buildSiteLocationsPatch } from "@/lib/wordpress-api/site-service-area";
 import { persistGbpLocationIdInput } from "@/lib/gbp-post/normalize-gbp-location-id";
-import { getStoredSites, mergeServerGbpLocationIdsIntoLocalSites, restoreSitesFromServerMirrorIfEmpty, saveSites } from "@/components/integrations/storage";
+import {
+  getStoredSites,
+  mergeServerGbpLocationIdsIntoLocalSites,
+  restoreOriginalPropertyNamesOnce,
+  restoreSitesFromServerMirrorIfEmpty,
+  saveSites,
+} from "@/components/integrations/storage";
 import { type WordPressSite } from "@/components/integrations/types";
+import { wordpressSiteMenuDisplayName } from "@/lib/wordpress-site-display-name";
 import { isOptimizationPackageTier } from "@/lib/wordpress-optimization-package";
 import { normalizeProfileTags } from "@/lib/wordpress-property-profile-tags";
 import { scrapeChildSitemap } from "@/lib/wordpress-sitemap-scraper";
 import { extractNAPAndSaveToSiteSilent, triggerKnowledgeGraphWorkflow } from "@/lib/knowledge-graph-auto-trigger";
-import { detectEntitySitemap } from "@/lib/entity-sitemap-detector";
+import { detectCompetitorEntitySitemap, detectEntitySitemap } from "@/lib/entity-sitemap-detector";
+import {
+  addCustomSitemapTagLabel,
+  mergeAutoChildTagsOnDetect,
+  toggleChildCustomTag,
+  toggleChildSystemRole,
+} from "@/lib/sitemap-child-tags";
 import {
   canWarmEntitySite,
   clearEntitySiteWarmCache,
@@ -40,7 +53,7 @@ import {
 
 /** Default list order: site name A-Z (case-insensitive), then URL, then id. */
 function compareWordPressSitesByDisplayName(a: WordPressSite, b: WordPressSite): number {
-  const nameCmp = (a.name ?? "").trim().localeCompare((b.name ?? "").trim(), undefined, {
+  const nameCmp = wordpressSiteMenuDisplayName(a).localeCompare(wordpressSiteMenuDisplayName(b), undefined, {
     sensitivity: "base",
   });
   if (nameCmp !== 0) return nameCmp;
@@ -71,6 +84,9 @@ function useWordPressSitesState() {
   );
 
   useEffect(() => {
+    void restoreOriginalPropertyNamesOnce().then((restored) => {
+      if (restored) setSites(getStoredSites());
+    });
     void restoreSitesFromServerMirrorIfEmpty().then((restored) => {
       if (restored.length > 0) setSites(restored);
     });
@@ -297,17 +313,24 @@ function useWordPressSitesState() {
             const prevDisabled = prevSite?.sitemaps?.disabledChildSitemapUrls ?? [];
             const nextChildren = parseResult.childSitemaps ?? [];
             const keptDisabled = prevDisabled.filter((u) => nextChildren.includes(u));
-            mergedSitemapData = {
+            const baseMerged: NonNullable<WordPressSite["sitemaps"]> = {
               mainSitemapUrl: sitemapUrl,
               detectedAt: Date.now(),
               type: result.type || parseResult.type,
               childSitemaps: parseResult.childSitemaps,
               urls: parseResult.urls,
               endpoints: sitemapEndpoints,
+              ...(prevSite?.sitemaps?.childTagsByUrl
+                ? { childTagsByUrl: prevSite.sitemaps.childTagsByUrl }
+                : {}),
               ...(keptDisabled.length > 0
                 ? { disabledChildSitemapUrls: keptDisabled }
                 : {}),
             };
+            mergedSitemapData = mergeAutoChildTagsOnDetect(
+              { ...site, sitemaps: baseMerged },
+              baseMerged,
+            );
             const updated = prevSites.map((s) =>
               s.id === site.id ? { ...s, sitemaps: mergedSitemapData } : s,
             );
@@ -327,15 +350,24 @@ function useWordPressSitesState() {
           // Auto-detect entity sitemap after sitemap detection
           const updatedSite: WordPressSite = { ...site, sitemaps: mergedSitemapData };
           let detectedEntitySitemapUrl: string | undefined;
+          let detectedCompetitorEntitySitemapUrl: string | undefined;
           try {
             console.log('[WordPress] Auto-detecting entity sitemap...');
             const detectedEntitySitemap = await detectEntitySitemap(updatedSite);
             if (detectedEntitySitemap) {
               detectedEntitySitemapUrl = detectedEntitySitemap;
               setSites(prevSites => {
-                const sitesWithEntity = prevSites.map(s =>
-                  s.id === site.id ? { ...s, entitySitemapUrl: detectedEntitySitemap } : s
-                );
+                const sitesWithEntity = prevSites.map(s => {
+                  if (s.id !== site.id || !s.sitemaps) return s;
+                  const mergedTags = mergeAutoChildTagsOnDetect(s, s.sitemaps, {
+                    detectedEntityUrl: detectedEntitySitemap,
+                  });
+                  return {
+                    ...s,
+                    entitySitemapUrl: detectedEntitySitemap,
+                    sitemaps: mergedTags,
+                  };
+                });
                 saveSites(sitesWithEntity);
                 return sitesWithEntity;
               });
@@ -347,10 +379,45 @@ function useWordPressSitesState() {
             // Don't fail the whole process if entity detection fails
           }
 
+          try {
+            const detectedCompetitor = await detectCompetitorEntitySitemap({
+              ...site,
+              sitemaps: mergedSitemapData,
+              entitySitemapUrl: detectedEntitySitemapUrl ?? site.entitySitemapUrl,
+            });
+            if (detectedCompetitor) {
+              detectedCompetitorEntitySitemapUrl = detectedCompetitor;
+              setSites((prevSites) => {
+                const next = prevSites.map((s) => {
+                  if (s.id !== site.id || !s.sitemaps) {
+                    return s.id === site.id
+                      ? { ...s, competitorEntitySitemapUrl: detectedCompetitor }
+                      : s;
+                  }
+                  const mergedTags = mergeAutoChildTagsOnDetect(s, s.sitemaps, {
+                    detectedCompetitorUrl: detectedCompetitor,
+                  });
+                  return {
+                    ...s,
+                    competitorEntitySitemapUrl: detectedCompetitor,
+                    sitemaps: mergedTags,
+                  };
+                });
+                saveSites(next);
+                return next;
+              });
+              console.log(`[WordPress] Auto-detected competitor sitemap: ${detectedCompetitor}`);
+            }
+          } catch (error) {
+            console.warn('[WordPress] Error auto-detecting competitor sitemap:', error);
+          }
+
           const siteForSilentNap: WordPressSite = {
             ...site,
             sitemaps: mergedSitemapData,
             entitySitemapUrl: detectedEntitySitemapUrl ?? site.entitySitemapUrl,
+            competitorEntitySitemapUrl:
+              detectedCompetitorEntitySitemapUrl ?? site.competitorEntitySitemapUrl,
           };
           console.log('[NAP] Running silent NAP after sitemap detection', {
             siteId: site.id,
@@ -938,13 +1005,17 @@ function useWordPressSitesState() {
     const updated = sites.map((s) => {
       if (s.id !== site.id) return s;
       if (clearing) {
+        const url = site.entitySitemapUrl?.trim();
+        if (url && s.sitemaps) {
+          return toggleChildSystemRole(s, url, "entity");
+        }
         return { ...s, entitySitemapUrl: undefined };
       }
+      const next = toggleChildSystemRole(s, trimmed, "entity");
       return {
-        ...s,
-        entitySitemapUrl: trimmed,
-        ...(s.sitemaps
-          ? { sitemaps: { ...s.sitemaps, detectedAt: Date.now() } }
+        ...next,
+        ...(next.sitemaps
+          ? { sitemaps: { ...next.sitemaps, detectedAt: Date.now() } }
           : {}),
       };
     });
@@ -958,6 +1029,67 @@ function useWordPressSitesState() {
     }
   }, [sites]);
 
+  const handleSetCompetitorEntitySitemap = useCallback((site: WordPressSite, sitemapUrl: string) => {
+    const trimmed = sitemapUrl.trim();
+    const clearing =
+      !trimmed || site.competitorEntitySitemapUrl?.trim() === trimmed;
+    const updated = sites.map((s) => {
+      if (s.id !== site.id) return s;
+      if (clearing) {
+        const url = site.competitorEntitySitemapUrl?.trim();
+        if (url && s.sitemaps) {
+          return toggleChildSystemRole(s, url, "competitor");
+        }
+        return { ...s, competitorEntitySitemapUrl: undefined };
+      }
+      const next = toggleChildSystemRole(s, trimmed, "competitor");
+      return {
+        ...next,
+        ...(next.sitemaps
+          ? { sitemaps: { ...next.sitemaps, detectedAt: Date.now() } }
+          : {}),
+      };
+    });
+    setSites(updated);
+    saveSites(updated);
+    if (clearing) {
+      notify.info('Competitor sitemap cleared for this property.');
+    } else {
+      const tail = trimmed.split('/').pop() ?? trimmed;
+      notify.success(`Competitor sitemap set to ${tail}`);
+    }
+  }, [sites]);
+
+  const handleAddCustomSitemapTagLabel = useCallback((site: WordPressSite, label: string) => {
+    const updated = sites.map((s) =>
+      s.id === site.id ? addCustomSitemapTagLabel(s, label) : s,
+    );
+    setSites(updated);
+    saveSites(updated);
+  }, [sites]);
+
+  const handleToggleChildSystemRole = useCallback(
+    (site: WordPressSite, childUrl: string, role: Parameters<typeof toggleChildSystemRole>[2]) => {
+      const updated = sites.map((s) =>
+        s.id === site.id ? toggleChildSystemRole(s, childUrl, role) : s,
+      );
+      setSites(updated);
+      saveSites(updated);
+    },
+    [sites],
+  );
+
+  const handleToggleChildCustomTag = useCallback(
+    (site: WordPressSite, childUrl: string, label: string) => {
+      const updated = sites.map((s) =>
+        s.id === site.id ? toggleChildCustomTag(s, childUrl, label) : s,
+      );
+      setSites(updated);
+      saveSites(updated);
+    },
+    [sites],
+  );
+
   const handleToggleChildSitemapDisabled = useCallback(
     (site: WordPressSite, childUrl: string) => {
       const prevSite = sites.find((s) => s.id === site.id);
@@ -967,6 +1099,11 @@ function useWordPressSitesState() {
       const entityUrl = prevSite?.entitySitemapUrl?.trim();
       if (entityUrl && entityUrl === childUrl.trim()) {
         notify.error(NOTIFY_CLEAR_ENTITY_SITEMAP_IN_THE_SITEMAP_MENU);
+        return;
+      }
+      const competitorUrl = prevSite?.competitorEntitySitemapUrl?.trim();
+      if (competitorUrl && competitorUrl === childUrl.trim()) {
+        notify.error('Clear the competitor sitemap in the Sitemap menu before excluding this child sitemap.');
         return;
       }
 
@@ -1085,6 +1222,10 @@ function useWordPressSitesState() {
     handleCheckFuturePosts,
     handleLoadCalendarPosts,
     handleSetEntitySitemap,
+    handleSetCompetitorEntitySitemap,
+    handleAddCustomSitemapTagLabel,
+    handleToggleChildSystemRole,
+    handleToggleChildCustomTag,
     handleToggleChildSitemapDisabled,
     handlePatchSite,
     reloadSitesFromStorage,

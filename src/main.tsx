@@ -4,6 +4,8 @@ import { loadDataForSEOApiKey } from "@/lib/api";
 import { setRuntimeDataForSeoApiKey } from "@/lib/integration-api-keys-runtime";
 import "./index.css";
 import "@/components/pulse-assist/pulse-assist-theme.css";
+import "@/components/organic-dashboard/organic-reporting-print.css";
+import "@/components/organic-dashboard/organic-reporting-client-deck.css";
 
 setRuntimeDataForSeoApiKey(loadDataForSEOApiKey().trim());
 

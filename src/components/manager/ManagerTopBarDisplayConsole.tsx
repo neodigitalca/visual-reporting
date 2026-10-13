@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { BookOpen, Download, Pencil, Power, RefreshCw, RotateCcw } from "lucide-react";
 import { ManagerErrorLogBell } from "@/components/manager/ManagerErrorLogBell";
 import { useWordPressSites } from "@/hooks/use-wordpress-sites";
@@ -28,7 +29,8 @@ import {
 } from "@/components/manager/manager-top-bar-nav-styles";
 import { cn } from "@/lib/utils";
 import type { WordPressSite } from "@/components/integrations/types";
-import { wordpressSiteDisplayName } from "@/lib/wordpress-site-display-name";
+import { wordpressSiteMenuDisplayName } from "@/lib/wordpress-site-display-name";
+import { navigateToOrganicReporting } from "@/lib/organic-dashboard/organic-reporting-nav";
 import { useSitePrefetchState } from "@/hooks/use-site-prefetch-state";
 import {
   getEntitySiteWarmCacheIfReady,
@@ -82,7 +84,7 @@ function csvCell(value: unknown): string {
 function downloadSitePrefetchBundle(site: WordPressSite): boolean {
   const bundle = getEntitySiteWarmCacheIfReady(site.id);
   if (!bundle) return false;
-  const safeSite = wordpressSiteDisplayName(site)
+  const safeSite = wordpressSiteMenuDisplayName(site)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
@@ -170,6 +172,9 @@ export function ManagerTopBarDisplayConsole({
   onResetWorkspace?: () => void;
   showReset: boolean;
 }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isOrganicDashboardRoute = /^\/sites\/[^/]+\/organic\/?$/.test(location.pathname);
   const { sites, handleConnectSite, handlePatchSite } = useWordPressSites();
   const { activeWordPressSiteId, setActiveWordPressSiteId } = useActiveWordPressSite();
   const measureRef = useRef<HTMLDivElement>(null);
@@ -178,11 +183,9 @@ export function ManagerTopBarDisplayConsole({
   const [renameSite, setRenameSite] = useState<WordPressSite | null>(null);
   const [siteMenuWidthPx, setSiteMenuWidthPx] = useState(0);
 
-  const displayLabels = useMemo(() => sites.map((s) => wordpressSiteDisplayName(s)), [sites]);
+  const displayLabels = useMemo(() => sites.map((s) => wordpressSiteMenuDisplayName(s)), [sites]);
   const activeSite = sites.find((s) => s.id === activeWordPressSiteId);
-  const { loading: isSiteWarmLoading, fetchedAt, isStale, refreshing } = useSitePrefetchState(
-    activeSite?.id,
-  );
+  const { loading: isSiteWarmLoading, refreshing } = useSitePrefetchState(activeSite?.id);
   const activeSitePrefetch = activeSite ? getEntitySiteWarmCacheIfReady(activeSite.id) : null;
   const utilityRowCount = 1 + (activeSitePrefetch ? 1 : 0);
 
@@ -223,7 +226,7 @@ export function ManagerTopBarDisplayConsole({
       >
         {sites.map((site) => (
           <span key={`site-label-${site.id}`} data-measure="site-label" className={MANAGER_DISPLAY_NAME_LABEL}>
-            {wordpressSiteDisplayName(site)}
+            {wordpressSiteMenuDisplayName(site)}
           </span>
         ))}
         {sites.map((site) => (
@@ -235,7 +238,7 @@ export function ManagerTopBarDisplayConsole({
             <Power className="h-4 w-4 shrink-0" aria-hidden />
             <Pencil className="h-4 w-4 shrink-0" aria-hidden />
             <span className="whitespace-nowrap text-base font-normal leading-tight">
-              {wordpressSiteDisplayName(site)}
+              {wordpressSiteMenuDisplayName(site)}
             </span>
           </div>
         ))}
@@ -269,12 +272,12 @@ export function ManagerTopBarDisplayConsole({
                   triggerHoverClass,
                   isSiteWarmLoading && MANAGER_DISPLAY_SITE_WARMING,
                 )}
-                aria-label={`Connected site: ${wordpressSiteDisplayName(activeSite)}${isSiteWarmLoading ? " (loading site data)" : ""}`}
+                aria-label={`Connected site: ${wordpressSiteMenuDisplayName(activeSite)}${isSiteWarmLoading ? " (loading site data)" : ""}`}
                 aria-haspopup="menu"
               >
                 <ManagerDisplayChipFace
                   icon={Power}
-                  label={wordpressSiteDisplayName(activeSite)}
+                  label={wordpressSiteMenuDisplayName(activeSite)}
                   isWarming={isSiteWarmLoading}
                 />
               </button>
@@ -286,6 +289,7 @@ export function ManagerTopBarDisplayConsole({
             >
               <DropdownMenuItem
                 className={cn(dropdownItemClass(0), "shrink-0")}
+                aria-label="Refresh site data"
                 onSelect={() => {
                   if (activeSite) void refreshSitePrefetch(activeSite);
                 }}
@@ -298,37 +302,26 @@ export function ManagerTopBarDisplayConsole({
                     )}
                     aria-hidden
                   />
-                  <span className="whitespace-nowrap text-base font-normal leading-tight">
-                    Refresh site data
-                    {fetchedAt
-                      ? ` · ${new Date(fetchedAt).toLocaleString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                        })}${isStale ? " (stale)" : ""}`
-                      : ""}
-                  </span>
+                  <span className="whitespace-nowrap text-base font-normal leading-tight">Site data</span>
                 </div>
               </DropdownMenuItem>
               {activeSitePrefetch ? (
                 <DropdownMenuItem
                   className={cn(dropdownItemClass(1), "shrink-0")}
+                  aria-label="Download cache"
                   onSelect={() => {
                     if (activeSite) downloadSitePrefetchBundle(activeSite);
                   }}
                 >
                   <div className="flex w-full shrink-0 items-center gap-2.5">
                     <Download className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-                    <span className="whitespace-nowrap text-base font-normal leading-tight">
-                      Download site cache CSV · {activeSitePrefetch.counts.inventoryTotal.toLocaleString()} URLs
-                    </span>
+                    <span className="whitespace-nowrap text-base font-normal leading-tight">Cache</span>
                   </div>
                 </DropdownMenuItem>
               ) : null}
               {sites.map((site, index) => {
                 const selected = site.id === activeSite.id;
-                const label = wordpressSiteDisplayName(site);
+                const label = wordpressSiteMenuDisplayName(site);
                 const iconClass = selected ? "text-black" : "text-muted-foreground";
                 return (
                   <DropdownMenuItem
@@ -341,6 +334,9 @@ export function ManagerTopBarDisplayConsole({
                       }
                       handleConnectSite(site);
                       setActiveWordPressSiteId(site.id);
+                      if (isOrganicDashboardRoute) {
+                        navigateToOrganicReporting(navigate, site.id);
+                      }
                     }}
                   >
                     <div className="flex w-full shrink-0 items-center gap-2.5">
@@ -406,9 +402,9 @@ export function ManagerTopBarDisplayConsole({
         }}
         onSave={(siteId, name) => {
           const site = sites.find((s) => s.id === siteId);
-          if (site && name !== wordpressSiteDisplayName(site)) {
-            handlePatchSite(siteId, { name });
-          }
+          const trimmed = name.trim();
+          if (!site || !trimmed || trimmed === wordpressSiteMenuDisplayName(site)) return;
+          handlePatchSite(siteId, { menuDisplayName: trimmed });
         }}
       />
     </>

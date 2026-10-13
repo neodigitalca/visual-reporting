@@ -1,4 +1,4 @@
-import React, { useEffect, useState, type ReactNode } from "react";
+import React, { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { ChevronDown } from "lucide-react";
 import { BULK_TOOLBAR_GROUP_DIVIDER } from "@/components/keyword-research/bulk/bulk-workspace-header-styles";
@@ -23,6 +23,13 @@ type UnifiedWorkspaceChromeBaseProps = {
   /** Optional override for title-band icon color (default: white). */
   iconClassName?: string;
   title: string;
+  /** Fixed-width wrapper for icon + title (e.g. generator section label reserve). */
+  titleLeadingSlot?: {
+    className?: string;
+    style?: CSSProperties;
+    /** Invisible longest label in a grid sizes the slot to real text width. */
+    reserveLabel?: string;
+  };
   /** Mode menu immediately right of the title (e.g. Content | Multi-site). */
   titleRowMenu?: ReactNode;
   titleRowEnd?: ReactNode;
@@ -70,6 +77,7 @@ export function UnifiedWorkspaceChrome(props: UnifiedWorkspaceChromeProps) {
     icon: Icon,
     iconClassName,
     title,
+    titleLeadingSlot,
     titleRowMenu,
     titleRowEnd,
     toolbar,
@@ -82,24 +90,22 @@ export function UnifiedWorkspaceChrome(props: UnifiedWorkspaceChromeProps) {
 
   const progressBand = props.progressBand ?? "full";
   const isEmptyProgressBand = progressBand === "empty";
+  const isProcessing =
+    !isEmptyProgressBand && "isProcessing" in props ? props.isProcessing : false;
+  /** Blue neon frame (Content Optimizer parity) while run is active. */
+  const chromeBusyGlow = workspaceBusy || isProcessing;
 
   const [detailsOpen, setDetailsOpen] = useState(false);
 
-  const canOpenDetails = !isEmptyProgressBand && props.canOpenDetails;
+  const showDetailsDrawer = !isEmptyProgressBand;
   const detailsOpenSignal =
     !isEmptyProgressBand && "detailsOpenSignal" in props ? props.detailsOpenSignal : null;
 
   useEffect(() => {
-    if (!canOpenDetails) {
-      setDetailsOpen(false);
-    }
-  }, [canOpenDetails]);
-
-  useEffect(() => {
-    if (detailsOpenSignal != null && detailsOpenSignal !== "" && canOpenDetails) {
+    if (detailsOpenSignal != null && detailsOpenSignal !== "" && showDetailsDrawer) {
       setDetailsOpen(true);
     }
-  }, [detailsOpenSignal, canOpenDetails]);
+  }, [detailsOpenSignal, showDetailsDrawer]);
 
   const onDetailsOpenChange =
     !isEmptyProgressBand && "onDetailsOpenChange" in props ? props.onDetailsOpenChange : undefined;
@@ -115,24 +121,54 @@ export function UnifiedWorkspaceChrome(props: UnifiedWorkspaceChromeProps) {
         className={cn(
           "relative flex w-full max-w-full flex-col overflow-visible border [&_button]:text-base [&_button]:font-normal [&_h2]:font-normal",
           squareFrame ? "rounded-none [&_button]:rounded-none [&_input]:rounded-none" : "rounded-lg",
-          workspaceBusy ? "z-20 animate-meta-opt-breathe border-semantic-data/40" : "border-white/[0.08]",
+          chromeBusyGlow
+            ? "z-20 animate-meta-opt-breathe border-semantic-data/40"
+            : "border-white/[0.08]",
         )}
       >
-        <div
-          className={cn(
-            UNIFIED_TITLE_BAND_CLASS,
-            workspaceBusy ? "animate-meta-opt-breathe" : "",
-          )}
-        >
+        <div className={UNIFIED_TITLE_BAND_CLASS}>
           <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
-            <div className="flex min-w-0 shrink-0 items-center gap-2">
-              <span
-                className={cn("inline-flex shrink-0 [&_svg]:h-5 [&_svg]:w-5", titleIconClassName)}
-                aria-hidden
+            <div
+              className={cn(
+                "flex min-w-0 shrink-0 items-center",
+                titleLeadingSlot?.reserveLabel ? "gap-[10px]" : "gap-2",
+              )}
+            >
+              <div
+                className={cn(
+                  titleLeadingSlot?.reserveLabel
+                    ? "inline-grid shrink-0"
+                    : "flex items-center gap-2",
+                  titleLeadingSlot?.className,
+                )}
+                style={titleLeadingSlot?.reserveLabel ? undefined : titleLeadingSlot?.style}
               >
-                <Icon className="h-5 w-5 shrink-0" />
-              </span>
-              <h2 className="truncate text-base font-normal text-white">{title}</h2>
+                {titleLeadingSlot?.reserveLabel ? (
+                  <div
+                    className="col-start-1 row-start-1 flex items-center gap-2 invisible pointer-events-none"
+                    aria-hidden
+                  >
+                    <span className="inline-flex h-5 w-5 shrink-0" />
+                    <span className="whitespace-nowrap text-base font-normal">
+                      {titleLeadingSlot.reserveLabel}
+                    </span>
+                  </div>
+                ) : null}
+                <div
+                  className={cn(
+                    "flex min-w-0 items-center gap-2",
+                    titleLeadingSlot?.reserveLabel && "col-start-1 row-start-1",
+                  )}
+                >
+                  <span
+                    className={cn("inline-flex shrink-0 [&_svg]:h-5 [&_svg]:w-5", titleIconClassName)}
+                    aria-hidden
+                  >
+                    <Icon className="h-5 w-5 shrink-0" />
+                  </span>
+                  <h2 className="min-w-0 flex-1 truncate text-base font-normal text-white">{title}</h2>
+                </div>
+              </div>
               {titleRowMenu ? (
                 <>
                   <div className={BULK_TOOLBAR_GROUP_DIVIDER} aria-hidden />
@@ -141,7 +177,7 @@ export function UnifiedWorkspaceChrome(props: UnifiedWorkspaceChromeProps) {
               ) : null}
             </div>
             {titleRowEnd ? (
-              <div className="flex min-w-0 flex-1 items-center justify-end gap-2 overflow-hidden">
+              <div className="ml-auto flex shrink-0 items-center justify-end gap-2 overflow-hidden">
                 {titleRowEnd}
               </div>
             ) : null}
@@ -176,12 +212,10 @@ export function UnifiedWorkspaceChrome(props: UnifiedWorkspaceChromeProps) {
                     squareFrame ? "rounded-none" : "rounded-md",
                     "text-white hover:text-white/90",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    !canOpenDetails && "pointer-events-none opacity-40",
                   )}
                   onClick={() => setDetailsOpen((open) => !open)}
                   aria-expanded={detailsOpen}
                   aria-controls={props.detailsPanelId}
-                  disabled={!canOpenDetails}
                 >
                   Details
                   <ChevronDown
@@ -191,7 +225,7 @@ export function UnifiedWorkspaceChrome(props: UnifiedWorkspaceChromeProps) {
                 </button>
               </div>
 
-              {detailsOpen && canOpenDetails ? (
+              {detailsOpen && showDetailsDrawer ? (
                 <div
                   id={props.detailsPanelId}
                   className={cn(

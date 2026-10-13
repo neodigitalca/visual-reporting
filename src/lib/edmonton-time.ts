@@ -79,6 +79,20 @@ export function formatEdmontonClock(now: Date = new Date()): string {
   return time;
 }
 
+/** Edmonton calendar + clock line for tooltips (sidebar clock icon). */
+export function formatEdmontonCalendarTooltip(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: EDMONTON_TZ,
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(now);
+}
+
 /** WP stores agent run datetimes as UTC MySQL strings without a timezone suffix. */
 export function parseAgentRunUtc(iso: string | null | undefined): Date | null {
   if (!iso?.trim()) return null;

@@ -30,7 +30,7 @@ import { useActiveWordPressSite } from "@/contexts/active-wordpress-site-context
 const SCOPE_STORAGE_KEY = "neo-pulse-agent-run-optimizer-scope";
 
 function isStoredGeneratorSection(value: unknown): value is BlogGeneratorSectionId {
-  return value === "opt" || value === "report" || value === "bulk-csv";
+  return value === "opt" || value === "bulk-csv";
 }
 
 export type AgentRunOptimizerScope = {
@@ -79,7 +79,12 @@ function readStoredScope(): AgentRunOptimizerScope | null {
         batchKey: parsed.batchKey.trim(),
         siteId: parsed.siteId.trim(),
         title: typeof parsed.title === "string" ? parsed.title : "",
-        generatorSection: isStoredGeneratorSection(parsed.generatorSection) ? parsed.generatorSection : "opt",
+        generatorSection:
+          parsed.generatorSection === "report"
+            ? "opt"
+            : isStoredGeneratorSection(parsed.generatorSection)
+              ? parsed.generatorSection
+              : "opt",
       };
     }
   } catch {

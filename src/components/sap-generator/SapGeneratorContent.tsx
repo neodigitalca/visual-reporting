@@ -5,13 +5,16 @@ import {
   LocalAnalysisPanel,
   type LocalAnalysisWorkspaceControls,
 } from "@/components/sap-generator/LocalAnalysisPanel";
-import { SEO_WORKSPACE_SHELL_CLASS } from "@/components/seo/seo-workspace-layout";
-import { cn } from "@/lib/utils";
+import { CompetitorAnalysisPanel } from "@/components/competitor-generator/CompetitorAnalysisPanel";
+import type { EntityGeneratorSubmode } from "@/components/sap-generator/entity-generator-submode";
+import { BLOG_GENERATOR_TAB_ROOT_CLASS } from "@/components/keyword-research/blog-generator-tab-classes";
 
 export interface SapGeneratorContentProps {
   localAnalysisSite: WordPressSite;
   localAnalysisWorkspaceKey: string;
   localAnalysisWorkspace: LocalAnalysisWorkspaceControls;
+  entitySubmode: EntityGeneratorSubmode;
+  onEntitySubmodeChange: (mode: EntityGeneratorSubmode) => void;
   activeSection: BlogGeneratorSectionId;
   onSectionChange: (id: BlogGeneratorSectionId) => void;
   apiKey: string;
@@ -27,6 +30,8 @@ export const SapGeneratorContent: React.FC<SapGeneratorContentProps> = ({
   localAnalysisSite,
   localAnalysisWorkspaceKey,
   localAnalysisWorkspace,
+  entitySubmode,
+  onEntitySubmodeChange,
   activeSection,
   onSectionChange,
   apiKey,
@@ -37,20 +42,34 @@ export const SapGeneratorContent: React.FC<SapGeneratorContentProps> = ({
   topP,
   flowPurpose,
 }) => (
-  <div className={cn(SEO_WORKSPACE_SHELL_CLASS, "min-h-0 gap-0")}>
-    <LocalAnalysisPanel
-      key={localAnalysisWorkspaceKey}
-      site={localAnalysisSite}
-      workspace={localAnalysisWorkspace}
-      activeSection={activeSection}
-      onSectionChange={onSectionChange}
-      apiKey={apiKey}
-      dataForSEOApiKey={dataForSEOApiKey}
-      selectedModel={selectedModel}
-      temperature={temperature}
-      maxTokens={maxTokens}
-      topP={topP}
-      flowPurpose={flowPurpose}
-    />
+  <div className={BLOG_GENERATOR_TAB_ROOT_CLASS}>
+    {entitySubmode === "locations" ? (
+      <LocalAnalysisPanel
+        key={`locations:${localAnalysisWorkspaceKey}`}
+        site={localAnalysisSite}
+        workspace={localAnalysisWorkspace}
+        activeSection={activeSection}
+        onSectionChange={onSectionChange}
+        entitySubmode={entitySubmode}
+        onEntitySubmodeChange={onEntitySubmodeChange}
+        apiKey={apiKey}
+        dataForSEOApiKey={dataForSEOApiKey}
+        selectedModel={selectedModel}
+        temperature={temperature}
+        maxTokens={maxTokens}
+        topP={topP}
+        flowPurpose={flowPurpose}
+      />
+    ) : (
+      <CompetitorAnalysisPanel
+        key={`competitors:${localAnalysisWorkspaceKey}`}
+        site={localAnalysisSite}
+        workspace={localAnalysisWorkspace}
+        activeSection={activeSection}
+        onSectionChange={onSectionChange}
+        entitySubmode={entitySubmode}
+        onEntitySubmodeChange={onEntitySubmodeChange}
+      />
+    )}
   </div>
 );

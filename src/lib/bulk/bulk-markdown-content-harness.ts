@@ -12,6 +12,8 @@ import { ensurePressReleaseSectionHeading } from '@/lib/press-release/press-rele
 import { pressReleaseHarnessSectionLabel } from '@/lib/press-release/press-release-harness-prompts';
 import { buildFocusedArticlePurpose } from '@/lib/content-generation/article-length-policy';
 import { formatSapPageWriterBlock } from '@/lib/prompt-builders/sap-page-template';
+import { formatCompetitorComparisonWriterBlock } from '@/lib/prompt-builders/competitor-comparison-page-template';
+import { isCompetitorComparisonRow } from '@/lib/competitor/competitor-csv-row';
 import { getBlogModel } from '@/lib/optimization-settings-storage';
 import { resolveHarnessHttpReferer, runHarnessOpenRouterSection } from '@/lib/bulk/harness-openrouter-worker-client';
 import {
@@ -61,6 +63,7 @@ import type { WordPressSite } from '@/components/integrations/types';
 import type { AIDrivenACFContext } from "@/lib/prompt-builders/system-user";
 import { mergeOptimizerInstructions } from "@/lib/prompt-builders/system-user";
 import { resolveAgentsForBulk } from "./bulk-blueprint-agents";
+import { formatLinkTargetsPlanForSection } from "@/lib/bulk/bulk-generation-wp-inventory";
 
 function agentHasIllustrativeFeature(agent: AgentConfig): boolean {
   return (
@@ -209,12 +212,15 @@ export async function generateMarkdownContentHarnessed(
   const harnessPageLocalBlock =
     harnessPageCtx?.primaryCity ? formatPageLocalContextPromptBlock(harnessPageCtx) : "";
 
+  const competitorComparisonHarness = isCompetitorComparisonRow(row);
   const acfContext: AIDrivenACFContext =
     promptEnv?.acfContextOverride ??
     ({
       promptModifier: mergeOptimizerInstructions(options.optionalPrompt, row.prompt_modifier),
       keywordFocus: row.keyword_focus?.trim() || undefined,
-      serviceArea: row.service_area_fields?.trim() || undefined,
+      serviceArea: competitorComparisonHarness
+        ? row.competitor_fields?.trim() || undefined
+        : row.service_area_fields?.trim() || undefined,
     } satisfies AIDrivenACFContext);
 
   const portfolioBlocked = options.portfolioBlockedHosts;
@@ -240,7 +246,9 @@ export async function generateMarkdownContentHarnessed(
 
 
   if (entity && !isPressReleaseHarness) {
-    systemPrompt += `\n${formatSapPageWriterBlock(entity)}`;
+    systemPrompt += competitorComparisonHarness
+      ? `\n${formatCompetitorComparisonWriterBlock(entity, connectedSite?.name)}`
+      : `\n${formatSapPageWriterBlock(entity)}`;
   }
 
   const totalBudget = options.maxTokens || 16000;
@@ -302,6 +310,8 @@ export async function generateMarkdownContentHarnessed(
           promptEnv?.dfsArticleAuditBlock,
           promptEnv?.firstPartyAuthorityBlock,
           promptEnv?.llmAuditAuthorityExternalPairs,
+          undefined,
+          competitorComparisonHarness,
         );
         const importedTone = getImportedToneFromRow(row);
         if (importedTone) {
@@ -562,6 +572,14 @@ export async function generateMarkdownContentHarnessed(
         console.warn("[Harness] [ILLUSTRATIVE] section running without persona block; using blueprint only");
       }
     }
+    const sectionLinkTargetsBlock =
+      promptEnv?.linkTargetsPlan &&
+      !opts.isOverviewSection &&
+      !opts.isAnswerSection &&
+      titleForCb.trim()
+        ? formatLinkTargetsPlanForSection(promptEnv.linkTargetsPlan, titleForCb)
+        : undefined;
+
     let userPrompt = buildBulkHarnessSectionUserPrompt(
       blueprint.title || row.title,
       blueprint.purpose || buildFocusedArticlePurpose(keywordData.keyword),
@@ -594,6 +612,8 @@ export async function generateMarkdownContentHarnessed(
         opts.isAnswerSection ? undefined : opts.answerSectionHtml,
       ),
       promptEnv?.llmAuditAuthorityExternalPairs,
+      sectionLinkTargetsBlock,
+      competitorComparisonHarness,
     );
     if (harnessPageLocalBlock) {
       userPrompt += `\n\n${harnessPageLocalBlock}`;

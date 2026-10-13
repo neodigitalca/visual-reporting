@@ -24,6 +24,9 @@ import {
   ensureEntitySiteWarmCache,
   gscAllQueriesFromWarmBundle,
 } from "@/lib/local-analysis/entity-site-warm-cache";
+import { mergeGscQueriesWithInventoryFallback } from "@/lib/local-analysis/entity-gsc-inventory-fallback";
+import { sapKeywordFromShortBaseAndEntity } from "@/lib/local-analysis/entity-sap-row-keyword-fill";
+import { keywordUniquenessKey } from "@/lib/local-analysis-fill-keywords-from-wp-inventory";
 import {
   buildEntityAdGroupSections,
   finalizeEntitySapRowsForAdGroups,
@@ -68,6 +71,40 @@ export function preloadTargetsToTitleTargets(
 
 export function countBlankEntityKeywordRows(rows: readonly CSVRow[]): number {
   return rows.filter((r) => r.entity?.trim() && !r.keyword?.trim()).length;
+}
+
+/** Assign keywords when GSC/OpenRouter fill leaves blanks (Clusters must always show rows). */
+export function fillBlankEntitySapKeywordsDeterministic(
+  rows: CSVRow[],
+  baseKeyword: string,
+): CSVRow[] {
+  const base = baseKeyword.trim() || "services";
+  const used = new Set<string>();
+  for (const row of rows) {
+    const kw = row.keyword?.trim();
+    if (kw) used.add(keywordUniquenessKey(kw));
+  }
+  return rows.map((row) => {
+    if (row.keyword?.trim() || !row.entity?.trim()) return row;
+    let kw =
+      sapKeywordFromShortBaseAndEntity(base, row.entity) ||
+      `${base} ${row.entity}`.replace(/\s+/g, " ").trim();
+    let key = keywordUniquenessKey(kw);
+    let n = 2;
+    while (used.has(key)) {
+      kw = `${base} ${n}`;
+      key = keywordUniquenessKey(kw);
+      n += 1;
+    }
+    used.add(key);
+    return { ...row, keyword: kw };
+  });
+}
+
+export function fallbackEntityClusterSapRows(locationLabel: string, total: number): CSVRow[] {
+  const entity = locationLabel.trim() || "Service area";
+  const n = Math.max(1, Math.floor(total));
+  return Array.from({ length: n }, () => ({ entity }));
 }
 
 const DEFAULT_ENTITY_TITLE_TEMPLATE = "{keyword} Near {entity}";
@@ -129,7 +166,7 @@ export type FillEntitySlotKeywordsFromGscArgs = {
   gridLocations: string[];
   entityTypeFocus?: readonly string[];
   clientAudienceContextMarkdown?: string;
-  onPhase?: (phase: string, completed?: number) => void;
+  onPhase?: (phase: string, completed?: number, stepTotal?: number) => void;
   onRowsUpdate?: (rows: CSVRow[]) => void;
 };
 
@@ -161,13 +198,10 @@ export async function fillEntitySlotKeywordsFromGsc(
       "WordPress sitemap inventory is empty. Connect the site and ensure Pages, Posts, and SAP sitemaps return URLs.",
     );
   }
-  const gscQueries = gscAllQueriesFromWarmBundle(warm);
-  if (gscQueries.length === 0) {
-    throw new Error(
-      warm.error ||
-        "Google Search Console returned no keywords for this site. Connect GSC and ensure query data exists.",
-    );
-  }
+  const gscQueries = mergeGscQueriesWithInventoryFallback(
+    gscAllQueriesFromWarmBundle(warm),
+    warm.inventory.buckets,
+  );
 
   const keywordSources: EntitySapKeywordSources = {
     links: warm.inventory.links,
@@ -200,20 +234,18 @@ export async function fillEntitySlotKeywordsFromGsc(
       args.onRowsUpdate?.(partialRows);
       args.onPhase?.(
         "Assigning unique keywords from GSC",
-        Math.min(Math.max(0, doneGroups - 1), Math.max(0, totalGroups - 1)),
+        Math.min(Math.max(0, doneGroups), totalGroups),
+        totalGroups,
       );
     },
   });
 
   const finalized = finalizeEntitySapRowsForAdGroups(withKeywords.map((row) => ({ ...row })));
-  const blankCount = countBlankEntityKeywordRows(finalized);
-  if (blankCount > 0) {
-    throw new Error(
-      `GSC keyword fill left ${blankCount} blank row${blankCount === 1 ? "" : "s"}. Connect GSC and retry upload.`,
-    );
-  }
+  const seedBase =
+    finalized.find((r) => r.keyword?.trim())?.keyword?.trim() || args.siteName.trim() || "services";
+  const filled = fillBlankEntitySapKeywordsDeterministic(finalized, seedBase);
 
-  return { rows: finalized, keywordSources };
+  return { rows: filled, keywordSources };
 }
 
 export type HydratePreloadedEntitySapRowsArgs = {
@@ -232,7 +264,7 @@ export type HydratePreloadedEntitySapRowsArgs = {
   clusterWikipedia?: GridClusterWikipedia[];
   skipKeywordFill?: boolean;
   titleTemplate?: string;
-  onPhase?: (phase: string, completed?: number) => void;
+  onPhase?: (phase: string, completed?: number, stepTotal?: number) => void;
   onRowsUpdate?: (rows: CSVRow[]) => void;
 };
 
@@ -289,19 +321,11 @@ export async function hydratePreloadedEntitySapRows(
         );
       },
     });
-    const blankCount = countBlankEntityKeywordRows(withKeywords);
-    if (blankCount > 0) {
-      throw new Error(
-        `GSC keyword fill left ${blankCount} blank row${blankCount === 1 ? "" : "s"}. Re-upload the grid after connecting GSC.`,
-      );
-    }
     args.onRowsUpdate?.(withKeywords);
   }
 
   args.onPhase?.("Writing titles", 0);
-  let hydrated = withKeywords;
-  try {
-    hydrated = await hydrateEntityClusterSapRows({
+  const hydrated = await hydrateEntityClusterSapRows({
       apiKey: args.apiKey,
       model: args.model,
       siteId: args.siteId,
@@ -314,17 +338,14 @@ export async function hydratePreloadedEntitySapRows(
       ...(args.entityTypeFocus && args.entityTypeFocus.length > 0
         ? { entityTypeFocus: args.entityTypeFocus }
         : {}),
-      onTitleProgress: (done) => {
-        args.onPhase?.("Writing titles", done);
+      onTitleProgress: (done, titleTotal) => {
+        args.onPhase?.("Writing titles", done, titleTotal);
       },
-      onMetaProgress: (done) => {
-        args.onPhase?.("Writing meta descriptions", done);
+      onMetaProgress: (done, metaTotal) => {
+        args.onPhase?.("Writing meta descriptions", done, metaTotal);
       },
       onRowsUpdate: args.onRowsUpdate,
     });
-  } catch {
-    /* keep keyword rows when titles/meta hydrate fails */
-  }
 
   if (hydrated.length === 0) {
     throw new Error("Clusters finished with 0 SAP rows after hydrate.");

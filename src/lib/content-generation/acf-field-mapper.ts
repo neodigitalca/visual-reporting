@@ -1,4 +1,5 @@
-import { streamChatCompletion } from "@/lib/api";
+import { callOpenRouterChatCompletion } from "@/lib/competitor-research/competitor-report-openrouter";
+import { parseJsonStrict } from "@/lib/json-repair-utility";
 import { getResearchModel } from "@/lib/optimization-settings-storage";
 
 /**
@@ -251,79 +252,51 @@ Field names: ${fieldNames.join(", ")}
 Map these fields to the purposes listed above. Return only the JSON mapping object.`;
 
   try {
-    let responseContent = "";
-    await streamChatCompletion({
-      apiKey,
-      model: model || getResearchModel(),
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.3, // Lower temperature for more deterministic mapping
-      maxTokens: 1000,
-      topP: 0.9,
-      onContentChunk: (chunk) => {
-        responseContent += chunk;
-      },
+  const { content, parsed: structuredParsed } = await callOpenRouterChatCompletion({
+    apiKey,
+    model: model || getResearchModel(),
+    system: systemPrompt,
+    user: userPrompt,
+    temperature: 0.2,
+    maxTokens: 1000,
+    responseFormat: { type: "json_object" },
+  });
+
+  const parsed =
+    structuredParsed ??
+    parseJsonStrict<Record<string, string | null>>(content);
+  const mapping: ACFFieldMapping = {
+    dateModifier: parsed.dateModifier || undefined,
+    faq: parsed.faq || undefined,
+    metaDescription: parsed.metaDescription || undefined,
+    promptModifier: parsed.promptModifier || undefined,
+    extraText: parsed.extraText || undefined,
+    extraImage: parsed.extraImage || undefined,
+    origin: parsed.origin || undefined,
+    keywordFocus: parsed.keywordFocus || undefined,
+    seoResearch: parsed.seoResearch || undefined,
+    seoTitle: parsed.seoTitle || undefined,
+  };
+
+  const validatedMapping: ACFFieldMapping = {};
+  for (const [purpose, fieldName] of Object.entries(mapping)) {
+    if (fieldName && fieldNames.includes(fieldName)) {
+      validatedMapping[purpose as keyof ACFFieldMapping] = fieldName;
+    }
+  }
+
+  if (siteUrl) {
+    const cacheKey = `${siteUrl}|${postType}`;
+    fieldMappingCache.set(cacheKey, {
+      mapping: validatedMapping,
+      timestamp: Date.now(),
     });
+  }
 
-    // Parse response
-    let jsonStr = responseContent.trim();
-    jsonStr = jsonStr.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-
-    // Try to extract JSON object
-    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      jsonStr = jsonMatch[0];
-    }
-
-    const parsed = JSON.parse(jsonStr);
-    const mapping: ACFFieldMapping = {
-      dateModifier: parsed.dateModifier || undefined,
-      faq: parsed.faq || undefined,
-      metaDescription: parsed.metaDescription || undefined,
-      promptModifier: parsed.promptModifier || undefined,
-      extraText: parsed.extraText || undefined,
-      extraImage: parsed.extraImage || undefined,
-      origin: parsed.origin || undefined,
-      keywordFocus: parsed.keywordFocus || undefined,
-      seoResearch: parsed.seoResearch || undefined,
-      seoTitle: parsed.seoTitle || undefined,
-    };
-
-    // Validate that mapped fields actually exist
-    const validatedMapping: ACFFieldMapping = {};
-    for (const [purpose, fieldName] of Object.entries(mapping)) {
-      if (fieldName && fieldNames.includes(fieldName)) {
-        validatedMapping[purpose as keyof ACFFieldMapping] = fieldName;
-      }
-    }
-
-    // Cache the mapping
-    if (siteUrl) {
-      const cacheKey = `${siteUrl}|${postType}`;
-      fieldMappingCache.set(cacheKey, {
-        mapping: validatedMapping,
-        timestamp: Date.now(),
-      });
-    }
-
-    console.log(`[ACF Field Mapper] Discovered mapping:`, validatedMapping);
-    return validatedMapping;
-  } catch (error) {
-    console.warn(
-      "[ACF Field Mapper] AI mapping failed, using fallback:",
-      error
-    );
-    const fallbackMapping = fallbackFieldMapping(acfFields);
-    if (siteUrl) {
-      const cacheKey = `${siteUrl}|${postType}`;
-      fieldMappingCache.set(cacheKey, {
-        mapping: fallbackMapping,
-        timestamp: Date.now(),
-      });
-    }
-    return fallbackMapping;
+  console.log(`[ACF Field Mapper] Discovered mapping:`, validatedMapping);
+  return validatedMapping;
+  } catch {
+    return fallbackFieldMapping(acfFields);
   }
 }
 

@@ -55,11 +55,7 @@ export function BulkPromptWorkspaceBody({
     <GeneratedBlogIdeasList
       hasGeneratedChecklist={hasGeneratedChecklist}
       slotMode={!hasGeneratedChecklist}
-      placeholderCount={
-        !hasGeneratedChecklist && generatedRows.length > 0
-          ? generatedRows.length
-          : BULK_GENERATOR_EMPTY_ROW_COUNT
-      }
+      placeholderCount={BULK_GENERATOR_EMPTY_ROW_COUNT}
       generatedRows={generatedRows}
       selectedBlogIndices={selectedBlogIndices}
       setSelectedBlogIndices={setSelectedBlogIndices}

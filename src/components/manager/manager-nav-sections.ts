@@ -20,6 +20,7 @@ import {
   Server,
   Target,
   TrendingUp,
+  LineChart,
   Wrench,
   Zap,
 } from "lucide-react";
@@ -38,6 +39,8 @@ export type ManagerNavItem = {
   dashboardCluster?: ManagerSettingsClusterId;
   /** Opens a React Router path outside manager tabs (e.g. /docs). */
   docsPath?: string;
+  /** Opens the property-scoped organic dashboard for the active (or first) site. */
+  organicDashboard?: boolean;
 };
 
 export type ManagerNavSection = {
@@ -94,6 +97,21 @@ export const MANAGER_NAV_SECTIONS: ManagerNavSection[] = [
         label: "Pulse Host",
         description: "Managed WordPress sites",
         icon: Server,
+      },
+    ],
+  },
+  {
+    id: "reporting",
+    label: "Reporting",
+    icon: LineChart,
+    items: [
+      {
+        id: "reporting-performance",
+        value: "reporting-performance",
+        label: "Performance",
+        description: "GA4 organic traffic and Search Console for the active property",
+        icon: LineChart,
+        organicDashboard: true,
       },
     ],
   },
@@ -156,7 +174,7 @@ export const MANAGER_NAV_SECTIONS: ManagerNavSection[] = [
           {
             value: "generator",
             label: "Generator",
-            description: "Opt, CSV, prompt, import, PR, entity, pages, flow, image, research, and report",
+            description: "Opt, CSV, prompt, import, PR, entity, pages, flow, image, and research",
             icon: TrendingUp,
           },
           {
@@ -252,6 +270,9 @@ export function isManagerNavItemSelected(
 ): boolean {
   if (item.dashboardCluster) {
     return managerTab === "dashboard" && dashboardCluster === item.dashboardCluster;
+  }
+  if (item.organicDashboard) {
+    return managerTab === "organic-reporting";
   }
   if (managerTab === "generator" && item.value === "generator") return true;
   return managerTab === item.value;

@@ -5,7 +5,7 @@ section: Google Business Profile
 method: GET
 path: /api/gmb/config-status
 auth: open
-order: 210
+order: 220
 ---
 
 GET `/api/gmb/config-status`.

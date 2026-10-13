@@ -23,11 +23,13 @@ import {
 } from "@/components/overview/overview-tab/overview-tab-content-constants";
 import { bulkSitemapDefaultLabel } from "@/lib/bulk/bulk-sitemap-default-label";
 import type { BulkRowSitemapType, BulkSitemapMode } from "@/lib/bulk/bulk-sitemap-mode";
+import { BULK_GENERATOR_ROW_GRID_MIN_CLASS } from "@/components/keyword-research/blog-generator-tab-classes";
 import { cn } from "@/lib/utils";
 
 /** Same rhythm as Content Optimizer rows; flexible columns so nothing ellipsizes. */
 const BULK_CSV_PAGE_ROW_GRID_CLASS = cn(
-  "grid w-full min-w-0 min-h-[3rem] grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,7rem)_auto] gap-x-2 sm:min-h-[3.25rem] sm:gap-x-3",
+  "grid w-full min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,7rem)_auto] gap-x-2 sm:gap-x-3",
+  BULK_GENERATOR_ROW_GRID_MIN_CLASS,
 );
 
 const BULK_CSV_CELL_TEXT = "whitespace-normal break-words text-sm leading-snug sm:text-base";

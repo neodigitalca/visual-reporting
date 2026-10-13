@@ -130,3 +130,24 @@ export function parseAssistantJsonObject(content: string): unknown {
 
   throw firstErr instanceof Error ? firstErr : new Error(String(firstErr));
 }
+
+/** Same repairs as {@link parseAssistantJsonObject} but returns null instead of throwing. */
+export function tryParseAssistantJsonObject(content: string): unknown | null {
+  try {
+    return parseAssistantJsonObject(content);
+  } catch {
+    return null;
+  }
+}
+
+export function jsonObjectFromOpenRouterChatResult(result: {
+  content: string;
+  parsed?: Record<string, unknown>;
+}): unknown | null {
+  if (result.parsed && typeof result.parsed === "object" && !Array.isArray(result.parsed)) {
+    return result.parsed;
+  }
+  const trimmed = result.content.trim();
+  if (!trimmed) return null;
+  return tryParseAssistantJsonObject(trimmed);
+}

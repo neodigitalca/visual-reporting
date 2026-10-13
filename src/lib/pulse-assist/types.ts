@@ -22,6 +22,7 @@ export type AssistNavigateTarget =
   | { kind: "generatorSection"; section: string }
   | { kind: "dashboardCluster"; cluster: string }
   | { kind: "pulseForge"; hash: string }
+  | { kind: "organicReporting" }
   | { kind: "agentRuns"; runId?: number };
 
 export type AssistCardLink = {
