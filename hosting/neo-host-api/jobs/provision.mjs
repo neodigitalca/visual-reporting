@@ -2,6 +2,14 @@ import crypto from "node:crypto";
 import { getPool } from "../db/pool.mjs";
 import { getOwnerId, createDockerService, addCustomDomain, deleteService } from "../render-client.mjs";
 
+/** Paths whose changes should redeploy hosted services (mirrors render.yaml buildFilter for staging). */
+export const MARIADB_BUILD_PATHS = ["hosting/docker/mariadb/**"];
+export const WORDPRESS_BUILD_PATHS = [
+  "hosting/docker/wordpress/**",
+  "wordpress-plugins/neo-pulse-wp/**",
+  "wordpress-plugins/neo-pulse-app/**",
+];
+
 function payload(job) {
   const p = job.payload_json;
   return typeof p === "string" ? JSON.parse(p) : p || {};
@@ -62,6 +70,7 @@ export async function runProvisionJob(job) {
       plan: "starter",
       region,
       disk: { name: `${dbName}-disk`, mountPath: "/var/lib/mysql", sizeGB: site.disk_gb || 10 },
+      buildFilterPaths: MARIADB_BUILD_PATHS,
       envVars: [
         { key: "MARIADB_ROOT_PASSWORD", value: mariaPass },
         { key: "MARIADB_PASSWORD", value: mariaPass },
@@ -86,6 +95,7 @@ export async function runProvisionJob(job) {
       plan: "standard",
       region,
       disk: { name: `${wpName}-disk`, mountPath: "/var/www/html", sizeGB: site.disk_gb || 10 },
+      buildFilterPaths: WORDPRESS_BUILD_PATHS,
       envVars: [
         { key: "WORDPRESS_DB_HOST", value: `${dbName}:3306` },
         { key: "WORDPRESS_DB_USER", value: "wordpress" },

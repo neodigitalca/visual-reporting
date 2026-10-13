@@ -20,12 +20,13 @@ install_wordpress() {
   local port="${WORDPRESS_DB_HOST##*:}"
   [[ "$port" == "$host" ]] && port=3306
   local attempt
-  for attempt in $(seq 1 90); do
+  # A MariaDB redeploy on Render can take several minutes; wait up to 10 minutes before failing the boot.
+  for attempt in $(seq 1 300); do
     if mariadb-admin ping -h "$host" -P "$port" -u "$WORDPRESS_DB_USER" -p"$WORDPRESS_DB_PASSWORD" --silent >/dev/null 2>&1; then
       break
     fi
-    if [[ "$attempt" == 90 ]]; then
-      echo "[pulse-host] MariaDB at ${host}:${port} not reachable after 180s" >&2
+    if [[ "$attempt" == 300 ]]; then
+      echo "[pulse-host] MariaDB at ${host}:${port} not reachable after 600s" >&2
       exit 1
     fi
     sleep 2
@@ -45,11 +46,13 @@ install_wordpress() {
       --admin_user="$WORDPRESS_ADMIN_USER" \
       --admin_password="$WORDPRESS_ADMIN_PASSWORD" \
       --admin_email="$WORDPRESS_ADMIN_EMAIL"
-    wp rewrite structure '/%postname%/' --allow-root
     echo "[pulse-host] WordPress installed at $WORDPRESS_SITE_URL"
   fi
   wp plugin activate neo-pulse-wp --allow-root
-  # Pretty permalinks + .htaccess so /wp-json/ (host-report, Pulse integrations) routes through WordPress.
+  # Pretty permalinks (unless the site owner already chose a structure) + .htaccess so /wp-json/ routes through WordPress.
+  if [[ -z "$(wp option get permalink_structure --allow-root 2>/dev/null)" ]]; then
+    wp rewrite structure '/%postname%/' --allow-root
+  fi
   wp rewrite flush --hard --allow-root
 }
 

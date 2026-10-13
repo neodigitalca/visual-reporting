@@ -62,13 +62,14 @@ async function getOwnerId() {
 
 async function ensureWebService(
   ownerId,
-  { name, type = "web_service", dockerfilePath, dockerContext, plan = "standard", envVars = [], disk },
+  { name, type = "web_service", dockerfilePath, dockerContext, plan = "standard", envVars = [], disk, buildPaths },
 ) {
   const existing = (await listServices()).find((s) => s.name === name);
   let svc = existing;
   if (svc?.id && svc.type !== type) {
     throw new Error(`${name} exists as ${svc.type} but must be ${type}. Delete it in Render and re-run.`);
   }
+  const buildFilter = { paths: buildPaths, ignoredPaths: [] };
   if (!svc?.id) {
     const created = await api("POST", "/services", {
       type,
@@ -77,6 +78,7 @@ async function ensureWebService(
       repo: REPO,
       branch: BRANCH,
       autoDeploy: "yes",
+      buildFilter,
       serviceDetails: {
         runtime: "docker",
         plan,
@@ -89,7 +91,7 @@ async function ensureWebService(
     console.log(`[created] ${name}:`, svc.id);
   } else {
     console.log(`[skip] ${name} exists:`, svc.id);
-    await api("PATCH", `/services/${svc.id}`, { repo: REPO, branch: BRANCH });
+    await api("PATCH", `/services/${svc.id}`, { repo: REPO, branch: BRANCH, buildFilter });
   }
   if (envVars.length) {
     await api(
@@ -144,6 +146,7 @@ async function main() {
     dockerContext: ".",
     plan: "starter",
     disk: { name: "pulse-host-db-staging-disk", mountPath: "/var/lib/mysql", sizeGB: 10 },
+    buildPaths: ["hosting/docker/mariadb/**"],
     envVars: [
       { key: "MARIADB_ROOT_PASSWORD", value: mariaPass },
       { key: "MARIADB_PASSWORD", value: mariaPass },
@@ -157,6 +160,7 @@ async function main() {
     dockerfilePath: "./hosting/docker/wordpress/Dockerfile",
     dockerContext: ".",
     plan: "standard",
+    buildPaths: ["hosting/docker/wordpress/**", "wordpress-plugins/neo-pulse-wp/**", "wordpress-plugins/neo-pulse-app/**"],
     envVars: [
       { key: "WORDPRESS_DB_HOST", value: `${dbSvc.name}:${dbSvc.serviceDetails?.port || 3306}` },
       { key: "WORDPRESS_DB_USER", value: "wordpress" },
@@ -177,6 +181,7 @@ async function main() {
     dockerfilePath: "./Dockerfile.neo-host-api",
     dockerContext: ".",
     plan: "standard",
+    buildPaths: ["hosting/neo-host-api/**", "hosting/agents/**", "Dockerfile.neo-host-api", "package.json", "package-lock.json"],
     envVars: [
       { key: "PULSE_HOST_API_TOKEN", value: hostToken },
       { key: "NEO_HOST_API_TOKEN", value: hostToken },

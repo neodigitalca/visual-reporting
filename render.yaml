@@ -141,6 +141,13 @@ services:
     branch: main
     plan: standard
     region: ohio
+    buildFilter:
+      paths:
+        - hosting/neo-host-api/**
+        - hosting/agents/**
+        - Dockerfile.neo-host-api
+        - package.json
+        - package-lock.json
     envVars:
       - key: PULSE_HOST_API_TOKEN
         sync: false
@@ -182,6 +189,11 @@ services:
     branch: main
     plan: standard
     region: ohio
+    buildFilter:
+      paths:
+        - hosting/docker/wordpress/**
+        - wordpress-plugins/neo-pulse-wp/**
+        - wordpress-plugins/neo-pulse-app/**
     disk:
       name: pulse-host-wp-staging-disk
       mountPath: /var/www/html/wp-content
@@ -217,6 +229,9 @@ services:
     branch: main
     plan: starter
     region: ohio
+    buildFilter:
+      paths:
+        - hosting/docker/mariadb/**
     disk:
       name: pulse-host-db-staging-disk
       mountPath: /var/lib/mysql

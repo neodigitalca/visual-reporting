@@ -42,7 +42,9 @@ function repoConfig() {
 
 /**
  * Create a Docker-based Render service from this repo.
- * @param {{ type: "web_service" | "private_service", name: string, dockerfilePath: string, plan: string, region: string, envVars: Array<{key:string,value:string}>, disk?: { name: string, mountPath: string, sizeGB: number } }} opts
+ * `buildFilterPaths` limits auto-deploys to pushes touching those paths, so unrelated Pulse commits
+ * do not restart every hosted site.
+ * @param {{ type: "web_service" | "private_service", name: string, dockerfilePath: string, plan: string, region: string, envVars: Array<{key:string,value:string}>, disk?: { name: string, mountPath: string, sizeGB: number }, buildFilterPaths: string[] }} opts
  */
 export async function createDockerService(ownerId, opts) {
   const { repo, branch } = repoConfig();
@@ -53,6 +55,7 @@ export async function createDockerService(ownerId, opts) {
     repo,
     branch,
     autoDeploy: "yes",
+    buildFilter: { paths: opts.buildFilterPaths, ignoredPaths: [] },
     envVars: opts.envVars.map((v) => ({ key: v.key, value: String(v.value) })),
     serviceDetails: {
       runtime: "docker",
