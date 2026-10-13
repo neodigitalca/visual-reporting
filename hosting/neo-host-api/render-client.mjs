@@ -6,7 +6,7 @@ function apiKey() {
   return key;
 }
 
-async function api(method, route, body) {
+async function api(method, route, body, { allowStatus = [] } = {}) {
   const res = await fetch(`${API}${route}`, {
     method,
     headers: {
@@ -17,7 +17,7 @@ async function api(method, route, body) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const text = await res.text();
-  if (!res.ok) {
+  if (!res.ok && !allowStatus.includes(res.status)) {
     throw new Error(`${method} ${route} failed (${res.status}): ${text.slice(0, 500)}`);
   }
   return text ? JSON.parse(text) : null;
@@ -72,8 +72,9 @@ export async function addCustomDomain(serviceId, domain) {
   return api("POST", `/services/${serviceId}/custom-domains`, { name: domain });
 }
 
+/** Idempotent: a service already removed on Render (404) counts as deleted. */
 export async function deleteService(serviceId) {
-  await api("DELETE", `/services/${serviceId}`);
+  await api("DELETE", `/services/${serviceId}`, undefined, { allowStatus: [404] });
 }
 
 export async function triggerServiceDeploy(serviceId) {
