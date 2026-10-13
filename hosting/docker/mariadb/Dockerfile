@@ -1,0 +1,5 @@
+FROM mariadb:11.4
+
+ENV MARIADB_DATABASE=wordpress
+ENV MARIADB_USER=wordpress
+ENV MARIADB_PASSWORD=changeme

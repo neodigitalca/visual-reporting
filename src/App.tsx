@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import HuddlePopupPage from "./pages/HuddlePopupPage";
+import HostingManagerPage from "./pages/manager/HostingManagerPage";
 import { WordPressSitesProvider } from "@/hooks/use-wordpress-sites";
 import { SitesHydrate } from "@/components/integrations/SitesHydrate";
 import { ActiveWordPressSiteProvider } from "@/contexts/active-wordpress-site-context";
@@ -94,6 +95,16 @@ const App = () => {
                           <ProtectedRoute>
                             <div className="flex h-dvh max-h-dvh min-h-0 flex-1 flex-col overflow-hidden">
                               <Index />
+                            </div>
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/manager/hosting"
+                        element={
+                          <ProtectedRoute>
+                            <div className="flex h-dvh max-h-dvh min-h-0 flex-1 flex-col overflow-hidden">
+                              <HostingManagerPage />
                             </div>
                           </ProtectedRoute>
                         }

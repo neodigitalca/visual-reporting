@@ -119,6 +119,7 @@ require_once NEO_PULSE_WP_PLUGIN_DIR . 'includes/class-neo-pulse-wp-speed-assets
 require_once NEO_PULSE_WP_PLUGIN_DIR . 'includes/class-neo-pulse-wp-speed-aggregator.php';
 require_once NEO_PULSE_WP_PLUGIN_DIR . 'includes/class-neo-pulse-wp-speed-buffer.php';
 require_once NEO_PULSE_WP_PLUGIN_DIR . 'includes/class-neo-pulse-wp-speed.php';
+require_once NEO_PULSE_WP_PLUGIN_DIR . 'includes/class-neo-pulse-wp-host-report.php';
 require_once NEO_PULSE_WP_PLUGIN_DIR . 'includes/class-neo-pulse-wp-speed-image-settings.php';
 require_once NEO_PULSE_WP_PLUGIN_DIR . 'includes/class-neo-pulse-wp-speed-image-stats.php';
 require_once NEO_PULSE_WP_PLUGIN_DIR . 'includes/class-neo-pulse-wp-speed-image-optimizer.php';
@@ -236,6 +237,7 @@ add_action(
 		Neo_Pulse_Wp_Script_Manager_Rest::init();
 		Neo_Pulse_Wp_Cache_Flush::init();
 		Neo_Pulse_Wp_Speed::init();
+		Neo_Pulse_Wp_Host_Report::init();
 		Neo_Pulse_Wp_Speed_Images::init();
 		Neo_Pulse_Wp_Ai_Rest::init();
 		Neo_Pulse_Wp_Overview_Seo_Bulk::init();

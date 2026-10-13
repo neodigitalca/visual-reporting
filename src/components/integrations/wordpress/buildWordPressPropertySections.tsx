@@ -7,7 +7,6 @@ import {
   Map,
   ScrollText,
   Settings,
-  Server,
 } from "lucide-react";
 import type { WordPressSite } from "../types";
 import { WordPressCardActions } from "./WordPressCardActions";
@@ -17,8 +16,6 @@ import type { WordPressSiteAdminSection } from "./WordPressSiteAdminLayout";
 import { openDashboardMasterRulesSettings } from "@/lib/open-master-rules-settings";
 import { MasterInstructionsSection } from "./MasterInstructionsSection";
 import { FunctionsUpdaterPanel } from "./FunctionsUpdaterPanel";
-import { WpEnginePropertyPanel } from "./WpEnginePropertyPanel";
-
 export type BuildWordPressPropertySectionsParams = {
   site: WordPressSite;
   isTesting: boolean;
@@ -213,13 +210,5 @@ export function buildWordPressPropertySections(
           },
         ]
       : []),
-    {
-      id: "wp-engine",
-      label: "WP Engine",
-      icon: Server,
-      content: (
-        <WpEnginePropertyPanel site={site} onPatchSite={onPatchSite} />
-      ),
-    },
   ];
 }

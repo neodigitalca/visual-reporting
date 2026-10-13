@@ -275,6 +275,7 @@ class Neo_Pulse_App_Loader {
 
 		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/auth/class-auth-session.php';
 		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/auth/class-auth-route-handlers.php';
+		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/hosting/class-hosting-route-handlers.php';
 
 		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/push/class-push-notification-actions.php';
 		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/push/class-push-device-store.php';

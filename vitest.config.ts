@@ -7,6 +7,7 @@ export default defineConfig({
     environment: 'node',
     include: [
       'src/**/*.test.ts',
+      'hosting/**/*.test.ts',
       'wordpress-plugins/neo-pulse-app/tests/**/*.test.mjs',
       'wordpress-plugins/neo-pulse-wp/tests/**/*.test.mjs',
       'scripts/research/browser-automation/__tests__/**/*.test.mjs',

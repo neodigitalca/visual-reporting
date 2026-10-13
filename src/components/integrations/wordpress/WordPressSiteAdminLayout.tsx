@@ -11,7 +11,6 @@ export type WordPressSiteAdminSectionId =
   | "master-instructions"
   | "sitemaps"
   | "site-settings"
-  | "wp-engine"
   | "ai-models"
   | "history";
 

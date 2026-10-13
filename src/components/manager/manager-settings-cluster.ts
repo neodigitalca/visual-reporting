@@ -6,8 +6,7 @@ export type ManagerSettingsClusterId =
   | "api-keys"
   | "master-rules"
   | "ai-generation"
-  | "google"
-  | "wp-engine";
+  | "google";
 
 const CLUSTER_IDS: readonly ManagerSettingsClusterId[] = [
   "properties",
@@ -15,7 +14,6 @@ const CLUSTER_IDS: readonly ManagerSettingsClusterId[] = [
   "master-rules",
   "ai-generation",
   "google",
-  "wp-engine",
 ];
 
 export function readStoredManagerSettingsCluster(): ManagerSettingsClusterId {

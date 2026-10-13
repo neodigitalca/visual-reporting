@@ -132,3 +132,125 @@ services:
         sync: false
     domains:
       - ld.neodigital.ca
+
+  - type: web
+    name: pulse-host-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile.neo-host-api
+    repo: https://github.com/neodigitalca/Google-Ads
+    branch: main
+    plan: standard
+    region: ohio
+    envVars:
+      - key: PULSE_HOST_API_TOKEN
+        sync: false
+      - key: PULSE_HOST_DB_URL
+        sync: false
+      - key: NEO_HOST_API_TOKEN
+        sync: false
+      - key: NEO_HOST_DB_URL
+        sync: false
+      - key: RENDER_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: NEO_HOST_BOOTSTRAP_STAGING
+        value: "1"
+      - key: NEO_HOST_STAGING_DOMAIN
+        value: host-staging.neodigital.ca
+      - key: NEO_HOST_DEFAULT_REGION
+        value: ohio
+      # Provisioning (Add site) creates Docker services from this repo under this owner.
+      - key: PULSE_HOST_RENDER_REPO
+        value: https://github.com/neodigitalca/Google-Ads
+      - key: PULSE_HOST_RENDER_BRANCH
+        value: main
+      - key: RENDER_OWNER_ID
+        sync: false
+      - key: PULSE_HOST_ADMIN_EMAIL
+        value: sean@neodigital.ca
+      # Must equal PULSE_HOST_REPORT_TOKEN on pulse-host-wp-staging (host-report auth).
+      - key: PULSE_HOST_STAGING_REPORT_TOKEN
+        sync: false
+
+  - type: web
+    name: pulse-host-wp-staging
+    runtime: docker
+    dockerfilePath: ./hosting/docker/wordpress/Dockerfile
+    dockerContext: .
+    repo: https://github.com/neodigitalca/Google-Ads
+    branch: main
+    plan: standard
+    region: ohio
+    disk:
+      name: pulse-host-wp-staging-disk
+      mountPath: /var/www/html/wp-content
+      sizeGB: 10
+    envVars:
+      - key: WORDPRESS_DB_HOST
+        sync: false
+      - key: WORDPRESS_DB_USER
+        value: wordpress
+      - key: WORDPRESS_DB_PASSWORD
+        sync: false
+      - key: WORDPRESS_DB_NAME
+        value: wordpress
+      - key: WORDPRESS_SITE_URL
+        value: https://host-staging.neodigital.ca
+      - key: WORDPRESS_ADMIN_PASSWORD
+        sync: false
+      - key: WORDPRESS_ADMIN_USER
+        value: admin
+      - key: WORDPRESS_ADMIN_EMAIL
+        value: sean@neodigital.ca
+      - key: PULSE_HOST_REPORT_TOKEN
+        sync: false
+
+  - type: web
+    name: pulse-host-db-staging
+    runtime: docker
+    dockerfilePath: ./hosting/docker/mariadb/Dockerfile
+    dockerContext: .
+    repo: https://github.com/neodigitalca/Google-Ads
+    branch: main
+    plan: starter
+    region: ohio
+    envVars:
+      - key: MARIADB_ROOT_PASSWORD
+        sync: false
+      - key: MARIADB_PASSWORD
+        sync: false
+      - key: MARIADB_USER
+        value: wordpress
+      - key: MARIADB_DATABASE
+        value: wordpress
+
+  - type: cron
+    name: pulse-host-backup-cron
+    runtime: node
+    repo: https://github.com/neodigitalca/Google-Ads
+    branch: main
+    schedule: "0 6 * * *"
+    region: ohio
+    buildCommand: npm ci
+    startCommand: node scripts/neo-host-cron-trigger.mjs backup
+    envVars:
+      - key: PULSE_HOST_API_BASE
+        sync: false
+      - key: PULSE_HOST_API_TOKEN
+        sync: false
+
+  - type: cron
+    name: pulse-host-health-cron
+    runtime: node
+    repo: https://github.com/neodigitalca/Google-Ads
+    branch: main
+    schedule: "*/15 * * * *"
+    region: ohio
+    buildCommand: npm ci
+    startCommand: node scripts/neo-host-cron-trigger.mjs health
+    envVars:
+      - key: PULSE_HOST_API_BASE
+        sync: false
+      - key: PULSE_HOST_API_TOKEN
+        sync: false

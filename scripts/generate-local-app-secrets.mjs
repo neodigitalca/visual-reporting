@@ -255,6 +255,12 @@ function main() {
     `if ( ! defined( 'NEO_PULSE_APP_PUBLIC_API_BASE' ) ) {`,
     `\tdefine( 'NEO_PULSE_APP_PUBLIC_API_BASE', ${phpString(siteUrl)} );`,
     "}",
+    `if ( ! defined( 'PULSE_HOST_API_BASE' ) ) {`,
+    `\tdefine( 'PULSE_HOST_API_BASE', ${phpString(pick(dotenv, "PULSE_HOST_API_BASE"))} );`,
+    "}",
+    `if ( ! defined( 'PULSE_HOST_API_TOKEN' ) ) {`,
+    `\tdefine( 'PULSE_HOST_API_TOKEN', ${phpString(pick(dotenv, "PULSE_HOST_API_TOKEN"))} );`,
+    "}",
     "",
   ];
 

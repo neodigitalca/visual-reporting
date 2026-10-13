@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AiModelsSettingsContent } from "@/components/manager/AiModelsSettingsContent";
 import { ApiKeysSettingsContent } from "@/components/manager/ApiKeysSettingsContent";
 import { GoogleServicesSettingsContent } from "@/components/manager/GoogleServicesSettingsContent";
-import { WpEngineSettingsContent } from "@/components/manager/WpEngineSettingsContent";
 import { ManagerMasterRulesSettingsContent } from "@/components/manager/ManagerMasterRulesSettingsContent";
 import { IntegrationsTab } from "@/components/IntegrationsTab";
 import { PropertiesDashboardChromeProvider } from "@/components/manager/dashboard/PropertiesDashboardChromeContext";
@@ -245,10 +244,6 @@ export function ManagerSettingsContent({
     {
       id: "google" as const,
       content: <GoogleServicesSettingsContent />,
-    },
-    {
-      id: "wp-engine" as const,
-      content: <WpEngineSettingsContent />,
     },
   ];
 

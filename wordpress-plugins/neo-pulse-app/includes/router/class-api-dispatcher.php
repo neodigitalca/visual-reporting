@@ -288,6 +288,12 @@ class Neo_Pulse_App_Api_Dispatcher {
 			return;
 		}
 
+		if ( 0 === strpos( $route, 'hosting/' ) || $route === 'hosting' ) {
+			$hosting_route = $route === 'hosting' ? '' : substr( $route, 8 );
+			Neo_Pulse_App_Hosting_Route_Handlers::dispatch_http( $hosting_route, $method, $body );
+			return;
+		}
+
 		if ( 0 === strpos( $route, 'wpengine/' ) ) {
 			Neo_Pulse_App_Wpengine_Route_Handlers::dispatch_http( substr( $route, 9 ), $method, $body );
 			return;

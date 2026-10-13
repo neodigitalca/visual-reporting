@@ -18,6 +18,7 @@ import { ContentCreatorCampaignWorkspace } from "@/components/social/content-cre
 import { SocialCreatorCampaignWorkspace } from "@/components/social/creator/SocialCreatorCampaignWorkspace";
 import { SitemapOptimizerResearchTab } from "@/components/research/sitemap-optimizer/SitemapOptimizerResearchTab";
 import { VerticalBenchmarkShell } from "@/components/vertical-benchmark/VerticalBenchmarkShell";
+import { PulseHostTabContent } from "@/components/hosting/PulseHostTabContent";
 
 const ApiDocsTabContent = lazy(() =>
   import("@/components/api-docs/ApiDocsTabContent").then((m) => ({ default: m.ApiDocsTabContent })),
@@ -464,6 +465,13 @@ export const ManagerWorkspace: React.FC<ManagerWorkspaceProps> = ({
           <VerticalBenchmarkShell openRouterApiKey={apiKey} />
         </TabsContent>
 
+
+        <TabsContent
+          value="pulse-host"
+          className={cn(embeddedTabPanelTopClass, "data-[state=inactive]:hidden", embeddedTabPanelStretch)}
+        >
+          <PulseHostTabContent />
+        </TabsContent>
 
         <TabsContent value="api" className={cn(embeddedTabPanelTopClass, "data-[state=inactive]:hidden", embeddedTabPanelStretch)}>
           <Suspense fallback={null}>
