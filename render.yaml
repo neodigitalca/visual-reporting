@@ -197,6 +197,8 @@ services:
         value: wordpress
       - key: WORDPRESS_SITE_URL
         value: https://host-staging.neodigital.ca
+      - key: WORDPRESS_SITE_TITLE
+        value: Pulse Host Staging
       - key: WORDPRESS_ADMIN_PASSWORD
         sync: false
       - key: WORDPRESS_ADMIN_USER

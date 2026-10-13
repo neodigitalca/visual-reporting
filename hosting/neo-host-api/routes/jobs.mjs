@@ -93,7 +93,8 @@ export async function handleJobsRoute(req, res, subpath, method, _body, _auth) {
 
 export async function runCronJob(jobType) {
   const pool = getPool();
-  const sites = await pool.query(`SELECT id FROM hosted_sites WHERE status = 'active'`);
+  // Degraded sites stay in rotation so they can recover; provisioning/failed ones have nothing to check yet.
+  const sites = await pool.query(`SELECT id FROM hosted_sites WHERE status IN ('active', 'degraded')`);
   const jobs = [];
   for (const row of sites.rows) {
     jobs.push(await createJob({ siteId: row.id, jobType, payload: { siteId: row.id, cron: true } }));

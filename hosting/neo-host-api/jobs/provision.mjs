@@ -92,6 +92,7 @@ export async function runProvisionJob(job) {
         { key: "WORDPRESS_DB_PASSWORD", value: mariaPass },
         { key: "WORDPRESS_DB_NAME", value: "wordpress" },
         { key: "WORDPRESS_SITE_URL", value: siteUrl },
+        { key: "WORDPRESS_SITE_TITLE", value: site.display_name || site.slug },
         { key: "WORDPRESS_ADMIN_USER", value: "admin" },
         { key: "WORDPRESS_ADMIN_PASSWORD", value: wpAdminPass },
         { key: "WORDPRESS_ADMIN_EMAIL", value: adminEmail },

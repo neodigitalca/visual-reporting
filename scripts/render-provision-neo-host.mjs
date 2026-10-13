@@ -163,6 +163,7 @@ async function main() {
       { key: "WORDPRESS_DB_PASSWORD", value: mariaPass },
       { key: "WORDPRESS_DB_NAME", value: "wordpress" },
       { key: "WORDPRESS_SITE_URL", value: "https://host-staging.neodigital.ca" },
+      { key: "WORDPRESS_SITE_TITLE", value: "Pulse Host Staging" },
       { key: "WORDPRESS_ADMIN_PASSWORD", value: wpAdminPass },
       { key: "WORDPRESS_ADMIN_USER", value: "admin" },
       { key: "WORDPRESS_ADMIN_EMAIL", value: "sean@neodigital.ca" },
