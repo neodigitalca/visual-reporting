@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SEO_WORKSPACE_BODY_SCROLL_CLASS } from "@/components/seo/seo-workspace-layout";
 import { fetchHostedSiteActivity, fetchHostingJob, refreshHostedSiteStats, type HostedEnvironment, type HostedSiteActivity, type HostedSiteGroup } from "@/lib/hosting-api";
 import { setPulseHostHash, type PulseHostRoute, type SiteProfileSection } from "@/lib/hosting/pulse-host-hash";
@@ -43,6 +43,8 @@ export function SiteProfilePage({ route, groups, groupsLoading, canAdmin, teamMe
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
   const envId = env?.id ?? null;
+  const currentEnvId = useRef(envId);
+  currentEnvId.current = envId;
 
   /* Canonical hash carries the environment id so refresh and sharing land on the same install. */
   useEffect(() => {
@@ -54,6 +56,8 @@ export function SiteProfilePage({ route, groups, groupsLoading, canAdmin, teamMe
     if (!envId) return;
     setActivityLoading(true);
     const res = await fetchHostedSiteActivity(envId);
+    /* Ignore responses for an environment the user already switched away from. */
+    if (currentEnvId.current !== envId) return;
     setActivityLoading(false);
     if (res.ok === false) {
       setIsError(true);
