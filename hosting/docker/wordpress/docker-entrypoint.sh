@@ -36,6 +36,8 @@ install_wordpress() {
     sleep 1
   done
   cd /var/www/html
+  # wp-cli only writes .htaccess rewrite rules when told mod_rewrite is loaded.
+  printf 'apache_modules:\n  - mod_rewrite\n' > /var/www/html/wp-cli.yml
   if ! wp core is-installed --allow-root >/dev/null 2>&1; then
     wp core install --allow-root --skip-email \
       --url="$WORDPRESS_SITE_URL" \
@@ -43,9 +45,12 @@ install_wordpress() {
       --admin_user="$WORDPRESS_ADMIN_USER" \
       --admin_password="$WORDPRESS_ADMIN_PASSWORD" \
       --admin_email="$WORDPRESS_ADMIN_EMAIL"
+    wp rewrite structure '/%postname%/' --allow-root
     echo "[pulse-host] WordPress installed at $WORDPRESS_SITE_URL"
   fi
   wp plugin activate neo-pulse-wp --allow-root
+  # Pretty permalinks + .htaccess so /wp-json/ (host-report, Pulse integrations) routes through WordPress.
+  wp rewrite flush --hard --allow-root
 }
 
 copy_plugins
