@@ -35,6 +35,15 @@ Schema lives in `hosting/neo-host-api/db/schema.sql` and is applied on API start
 - Toolbar: search, Filter popover (environment, status, tags, PHP version), Manage tags, CSV export.
 - Cards: one per site group; rows per environment with Prd/Stg/Dev pill, slug, domain, status, WP Admin link, and a kebab menu (Visit site, Copy environment, Backup now, Clear cache, Redeploy, Retry provision, Delete environment).
 - Stats line per environment: PHP, WordPress, Storage, Bandwidth, Visits, Updates. "Stats incomplete" is shown when the last collection recorded an error.
+- Clicking the site title (or an install slug) opens the **site profile page** below.
+
+## Site profile page
+
+Hash routes (`src/lib/hosting/pulse-host-hash.ts`): `#pulse-host` is My Sites; `#pulse-host/sites/<groupId>/<envId>/<section>` is one environment of one site. A missing or unknown env id resolves to production (else the first environment) and the hash is rewritten once; an unknown section opens Overview. `Index.tsx` keeps the Pulse Host tab for any `pulse-host/...` hash so refresh and the post-deploy `?v=` reload land on the same page.
+
+- Header: back to Sites, site name, Prd / Stg / Dev switcher (missing environments disabled), Add environment, tags, WP Admin, and the same kebab as My Sites. Meta line: slug, domain, status, region.
+- Sections (`src/components/hosting/site-profile/`): **Overview** (WordPress, PHP, plugin and theme update counts, Refresh, environment facts, 30 day usage), **Plugins and themes** (inventory tables scoped to the environment), **Backups** (rows from `hosted_backups`, Backup now), **Users** (shared `SiteUsersPanel`), **Usage** (30 day tiles plus Render service ids and stats collection facts), **Activity** (jobs, deploys, backups, and audit entries merged newest first).
+- API: `GET /v1/hosting/sites/:id/activity` returns the last 50 backups, deploys, jobs, and audit rows for the environment (audit filtered on `payload_json->>'siteId'`). `POST /v1/hosting/sites/:id/health` (hosting write) enqueues the same `health` job the cron runs; the Overview **Refresh** button polls the job and reloads stats when it finishes.
 
 ## Provisioning (Add site)
 

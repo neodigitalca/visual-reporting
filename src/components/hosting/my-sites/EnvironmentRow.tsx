@@ -14,6 +14,7 @@ export type EnvironmentRowProps = {
   env: HostedEnvironment;
   canAdmin: boolean;
   onAction: (action: EnvironmentAction, env: HostedEnvironment) => void;
+  onOpen: (env: HostedEnvironment) => void;
 };
 
 function Stat({ label, value, title }: { label: string; value: string; title?: string }) {
@@ -25,7 +26,7 @@ function Stat({ label, value, title }: { label: string; value: string; title?: s
   );
 }
 
-export function EnvironmentRow({ env, canAdmin, onAction }: EnvironmentRowProps) {
+export function EnvironmentRow({ env, canAdmin, onAction, onOpen }: EnvironmentRowProps) {
   const domain = env.primaryDomain || (env.siteUrl ? env.siteUrl.replace(/^https?:\/\//, "").replace(/\/$/, "") : "");
   const s = env.stats;
   const updates = envUpdateCount(env);
@@ -37,7 +38,9 @@ export function EnvironmentRow({ env, canAdmin, onAction }: EnvironmentRowProps)
       <div className="flex items-center gap-3">
         <span className={ENV_PILL_CLASS[env.environment]}>{ENVIRONMENT_LABEL[env.environment]}</span>
         <div className="flex min-w-0 flex-col leading-tight">
-          <span className={`${MY_SITES_LINK} truncate font-medium`}>{env.slug}</span>
+          <button type="button" className={`${MY_SITES_LINK} truncate text-left font-medium`} onClick={() => onOpen(env)}>
+            {env.slug}
+          </button>
           <span className="truncate text-muted-foreground">{domain || "Provisioning URL…"}</span>
         </div>
         <span className={`ml-2 min-w-[7rem] truncate ${STATUS_TEXT_CLASS[env.status]}`} title={env.statusMessage ?? undefined}>

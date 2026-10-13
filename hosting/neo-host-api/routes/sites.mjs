@@ -5,6 +5,7 @@ import { sendJson } from "../lib/http.mjs";
 import { triggerServiceDeploy, deleteService } from "../render-client.mjs";
 import { createJob } from "./jobs.mjs";
 import { handleSiteUsersRoute, handleBulkUsersRoute } from "./site-users.mjs";
+import { handleSiteActivityRoute } from "./site-activity.mjs";
 
 const ENVIRONMENTS = new Set(["production", "staging", "development"]);
 const ENV_SUFFIX = { production: "", staging: "-stg", development: "-dev" };
@@ -164,6 +165,11 @@ export async function handleSitesRoute(req, res, subpath, method, body, auth) {
     return;
   }
 
+  if (parts[1] === "activity" && parts.length === 2) {
+    await handleSiteActivityRoute(res, row, method);
+    return;
+  }
+
   if (parts.length === 1 && method === "GET") {
     sendJson(res, 200, { ok: true, site: mapSiteRow(row) });
     return;
@@ -205,9 +211,9 @@ export async function handleSitesRoute(req, res, subpath, method, body, auth) {
     return;
   }
 
-  if (action === "backups" || action === "cache-clear" || action === "retry-provision") {
+  if (action === "backups" || action === "cache-clear" || action === "retry-provision" || action === "health") {
     if (!requireWrite(res, auth)) return;
-    const jobType = action === "backups" ? "backup" : action === "cache-clear" ? "cache_clear" : "provision";
+    const jobType = action === "backups" ? "backup" : action === "cache-clear" ? "cache_clear" : action === "health" ? "health" : "provision";
     if (jobType === "provision" && row.render_service_id) {
       sendJson(res, 409, { ok: false, error: "Environment is already provisioned." });
       return;

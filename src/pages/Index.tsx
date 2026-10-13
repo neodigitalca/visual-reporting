@@ -71,6 +71,7 @@ import {
 import { NEO_PULSE_OPEN_MASTER_RULES_EVENT } from "@/lib/open-master-rules-settings";
 import { isApiTabHash } from "@/lib/api-docs/api-docs-hash";
 import { isPulseForgeHash, parsePulseForgeRouteFromHash, setPulseForgeHash } from "@/lib/pulse-forge/pulse-forge-hash";
+import { isPulseHostHash } from "@/lib/hosting/pulse-host-hash";
 
 const OPENROUTER_API_KEY_STORAGE_KEY = "openrouter-api-key";
 
@@ -131,6 +132,9 @@ const Index = () => {
       if (isPulseForgeHash(hashTab)) {
         return "pulse-forge";
       }
+      if (isPulseHostHash(hashTab)) {
+        return "pulse-host";
+      }
       if (hashTab === "settings") {
         return "dashboard";
       }
@@ -185,6 +189,9 @@ const Index = () => {
         } else if (tab === "pulse-forge") {
           const current = window.location.hash.replace(/^#/, "").trim();
           hash = isPulseForgeHash(current) ? current : "pulse-forge/forge";
+        } else if (tab === "pulse-host") {
+          const current = window.location.hash.replace(/^#/, "").trim();
+          hash = isPulseHostHash(current) ? current : "pulse-host";
         } else {
           hash = tab;
         }

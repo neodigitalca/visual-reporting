@@ -217,3 +217,44 @@ export function addUserToAllSites(input: HostedUserInput) {
     body: JSON.stringify(input),
   });
 }
+
+export type HostedBackup = {
+  id: number;
+  storageUri: string;
+  sizeBytes: number;
+  status: string;
+  errorMessage: string | null;
+  createdAt: string;
+};
+
+export type HostedDeploy = {
+  id: number;
+  renderDeployId: string | null;
+  gitCommit: string | null;
+  status: string;
+  createdAt: string;
+};
+
+export type HostedAuditEntry = {
+  id: number;
+  actorUserId: number | null;
+  action: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type HostedSiteActivity = {
+  backups: HostedBackup[];
+  deploys: HostedDeploy[];
+  jobs: HostingJob[];
+  audit: HostedAuditEntry[];
+};
+
+export function fetchHostedSiteActivity(siteId: string) {
+  return api<HostedSiteActivity>(`/hosting/sites/${siteId}/activity`);
+}
+
+/** Re-runs the health job: PHP/WP versions, storage, plugins, themes, and Render 30d usage. */
+export function refreshHostedSiteStats(siteId: string) {
+  return api<{ jobId: string }>(`/hosting/sites/${siteId}/health`, { method: "POST" });
+}

@@ -12,11 +12,12 @@ export type SiteGroupCardProps = {
   onAddEnvironment: (group: HostedSiteGroup) => void;
   onManageTags: (group: HostedSiteGroup) => void;
   onEnvironmentAction: (action: EnvironmentAction, env: HostedEnvironment) => void;
+  onOpenSite: (group: HostedSiteGroup, env: HostedEnvironment | null) => void;
 };
 
 const ICON_BTN = "h-8 w-8 shrink-0 rounded-none p-0 text-muted-foreground hover:bg-zinc-800 hover:text-foreground";
 
-export function SiteGroupCard({ group, canAdmin, onAddEnvironment, onManageTags, onEnvironmentAction }: SiteGroupCardProps) {
+export function SiteGroupCard({ group, canAdmin, onAddEnvironment, onManageTags, onEnvironmentAction, onOpenSite }: SiteGroupCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [first, ...rest] = group.environments;
   const tagNames = group.tags.map((t) => t.name).join(", ");
@@ -24,7 +25,11 @@ export function SiteGroupCard({ group, canAdmin, onAddEnvironment, onManageTags,
   return (
     <section className={MY_SITES_CARD} aria-label={group.name}>
       <header className={MY_SITES_CARD_HEADER}>
-        <h2 className={`${MY_SITES_LINK} truncate text-lg font-semibold`}>{group.name}</h2>
+        <h2 className="min-w-0 truncate text-lg font-semibold">
+          <button type="button" className={`${MY_SITES_LINK} max-w-full truncate text-left`} onClick={() => onOpenSite(group, null)}>
+            {group.name}
+          </button>
+        </h2>
         <div className="flex shrink-0 items-center gap-1">
           <Button
             type="button"
@@ -60,8 +65,10 @@ export function SiteGroupCard({ group, canAdmin, onAddEnvironment, onManageTags,
           </Button>
         </div>
       </header>
-      {first ? <EnvironmentRow env={first} canAdmin={canAdmin} onAction={onEnvironmentAction} /> : null}
-      {expanded ? rest.map((env) => <EnvironmentRow key={env.id} env={env} canAdmin={canAdmin} onAction={onEnvironmentAction} />) : null}
+      {first ? <EnvironmentRow env={first} canAdmin={canAdmin} onAction={onEnvironmentAction} onOpen={(env) => onOpenSite(group, env)} /> : null}
+      {expanded
+        ? rest.map((env) => <EnvironmentRow key={env.id} env={env} canAdmin={canAdmin} onAction={onEnvironmentAction} onOpen={(e) => onOpenSite(group, e)} />)
+        : null}
       {rest.length > 0 ? (
         <div className="flex h-10 shrink-0 items-center justify-center">
           <Button

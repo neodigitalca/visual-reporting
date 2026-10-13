@@ -12,6 +12,7 @@ import {
   type HostedSiteGroup,
   type HostedTag,
 } from "@/lib/hosting-api";
+import { setPulseHostHash, usePulseHostRoute } from "@/lib/hosting/pulse-host-hash";
 import { fetchTeamMembers } from "@/lib/teams-api";
 import type { TeamMember } from "@/lib/teams-types";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,7 @@ import { MySitesTabs } from "./my-sites/MySitesTabs";
 import { MySitesToolbar } from "./my-sites/MySitesToolbar";
 import { SiteGroupCard } from "./my-sites/SiteGroupCard";
 import { SiteUsersDialog } from "./my-sites/SiteUsersDialog";
+import { SiteProfilePage } from "./site-profile/SiteProfilePage";
 import {
   EMPTY_FILTERS,
   csvForGroups,
@@ -46,6 +48,7 @@ type DialogState =
 export function PulseHostTabContent() {
   const { activeTeam, permissions } = useTeam();
   const canAdmin = Boolean(permissions?.hosting?.write);
+  const route = usePulseHostRoute();
   const [groups, setGroups] = useState<HostedSiteGroup[]>([]);
   const [tags, setTags] = useState<HostedTag[]>([]);
   const [loading, setLoading] = useState(true);
@@ -133,49 +136,64 @@ export function PulseHostTabContent() {
 
   return (
     <div className={cn(SEO_WORKSPACE_SHELL_CLASS, "font-sans text-base")}>
-      <MySitesHeader canAdmin={canAdmin} onAddSite={() => setDialog({ kind: "add", group: null })} />
-      <MySitesTabs active={tab} counts={counts} onChange={setTab} />
-      <MySitesToolbar
-        filters={filters}
-        onFiltersChange={setFilters}
-        tags={tags}
-        phpVersions={phpVersions}
-        canAdmin={canAdmin}
-        onManageTags={() => setDialog({ kind: "tags", group: null })}
-        onAddUserToAllSites={() => {
-          setUsersEnv(null);
-          setDialog({ kind: "users" });
-        }}
-        onDownloadCsv={downloadCsv}
-      />
-      <p className={cn(MY_SITES_STATUS_LINE, error ? "text-red-300" : "")} title={error || notice || undefined}>
-        <span className="truncate">{error || notice}</span>
-      </p>
-      <div className={cn(SEO_WORKSPACE_BODY_SCROLL_CLASS, "flex flex-col gap-3 pb-4")}>
-        {inventoryTab ? (
-          <InventoryTable kind={tab === "plugins" ? "plugins" : "themes"} rows={inventoryRows(visible, tab === "plugins" ? "plugins" : "themes")} loading={loading} />
-        ) : null}
-        {!inventoryTab && loading && groups.length === 0 ? (
-          <div className={cn(MY_SITES_CARD, "h-32 animate-pulse")} aria-busy />
-        ) : null}
-        {!inventoryTab && !loading && visible.length === 0 ? (
-          <div className={cn(MY_SITES_CARD, "flex h-32 items-center justify-center text-muted-foreground")}>
-            {groups.length === 0 ? "No hosted sites yet. Use Add site to provision your first WordPress environment." : "No sites match the current tab and filters."}
+      {route.view === "site" ? (
+        <SiteProfilePage
+          route={route}
+          groups={groups}
+          groupsLoading={loading}
+          canAdmin={canAdmin}
+          teamMembers={teamMembers}
+          onEnvironmentAction={onEnvironmentAction}
+          onAddEnvironment={(g) => setDialog({ kind: "add", group: g })}
+          onManageTags={(g) => setDialog({ kind: "tags", group: g })}
+          onReloadGroups={load}
+        />
+      ) : (
+        <>
+          <MySitesHeader canAdmin={canAdmin} onAddSite={() => setDialog({ kind: "add", group: null })} />
+          <MySitesTabs active={tab} counts={counts} onChange={setTab} />
+          <MySitesToolbar
+            filters={filters}
+            onFiltersChange={setFilters}
+            tags={tags}
+            phpVersions={phpVersions}
+            canAdmin={canAdmin}
+            onManageTags={() => setDialog({ kind: "tags", group: null })}
+            onAddUserToAllSites={() => {
+              setUsersEnv(null);
+              setDialog({ kind: "users" });
+            }}
+            onDownloadCsv={downloadCsv}
+          />
+          <p className={cn(MY_SITES_STATUS_LINE, error ? "text-red-300" : "")} title={error || notice || undefined}>
+            <span className="truncate">{error || notice}</span>
+          </p>
+          <div className={cn(SEO_WORKSPACE_BODY_SCROLL_CLASS, "flex flex-col gap-3 pb-4")}>
+            {inventoryTab ? (
+              <InventoryTable kind={tab === "plugins" ? "plugins" : "themes"} rows={inventoryRows(visible, tab === "plugins" ? "plugins" : "themes")} loading={loading} />
+            ) : null}
+            {!inventoryTab && loading && groups.length === 0 ? <div className={cn(MY_SITES_CARD, "h-32 animate-pulse")} aria-busy /> : null}
+            {!inventoryTab && !loading && visible.length === 0 ? (
+              <div className={cn(MY_SITES_CARD, "flex h-32 items-center justify-center text-muted-foreground")}>
+                {groups.length === 0 ? "No hosted sites yet. Use Add site to provision your first WordPress environment." : "No sites match the current tab and filters."}
+              </div>
+            ) : null}
+            {!inventoryTab
+              ? visible.map((group) => (
+                  <SiteGroupCard
+                    key={group.id}
+                    group={group}
+                    canAdmin={canAdmin}
+                    onAddEnvironment={(g) => setDialog({ kind: "add", group: g })}
+                    onManageTags={(g) => setDialog({ kind: "tags", group: g })}
+                    onEnvironmentAction={(action, env) => void onEnvironmentAction(action, env)}
+                    onOpenSite={(g, env) => setPulseHostHash({ view: "site", groupId: g.id, envId: env?.id ?? null, section: "overview" })}
+                  />
+                ))
+              : null}
           </div>
-        ) : null}
-        {!inventoryTab
-          ? visible.map((group) => (
-              <SiteGroupCard
-                key={group.id}
-                group={group}
-                canAdmin={canAdmin}
-                onAddEnvironment={(g) => setDialog({ kind: "add", group: g })}
-                onManageTags={(g) => setDialog({ kind: "tags", group: g })}
-                onEnvironmentAction={(action, env) => void onEnvironmentAction(action, env)}
-              />
-            ))
-          : null}
-      </div>
+        </>
+      )}
       <AddSiteDialog
         open={dialog.kind === "add"}
         group={dialog.kind === "add" ? dialog.group : null}
