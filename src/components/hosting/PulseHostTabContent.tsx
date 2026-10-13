@@ -114,11 +114,8 @@ export function PulseHostTabContent() {
               : deleteHostedEnvironment;
     setNotice(`${env.slug}: working…`);
     const res = await call(env.id);
-    if (res.ok === false) {
-      setNotice(`${env.slug}: ${res.error}`);
-      return;
-    }
-    setNotice(`${env.slug}: ${action.replace("-", " ")} started.`);
+    setNotice(res.ok === false ? `${env.slug}: ${res.error}` : `${env.slug}: ${action.replace("-", " ")} started.`);
+    // Reload on failure too: the server state may already differ from the list (e.g. the row was deleted elsewhere).
     await load();
   }
 
