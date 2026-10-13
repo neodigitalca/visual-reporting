@@ -285,12 +285,11 @@ export const ManagerWorkspace: React.FC<ManagerWorkspaceProps> = ({
             !embedded && "flex flex-col overflow-hidden"
           )}
         >
+        {/* Mounted only while active: the panel syncs its state into the URL (#organic-reporting), which must not run from other tabs. */}
         <TabsContent
           value="organic-reporting"
-          forceMount
           className={cn(
             embeddedTabPanelTopClass,
-            "data-[state=inactive]:hidden",
             embeddedTabPanelStretch,
             embedded && "overflow-hidden",
           )}

@@ -162,6 +162,14 @@ export function OrganicReportingPanel({ site, inAppTab = false }: OrganicReporti
     navigate({ pathname: `/sites/${site.id}/organic`, search: qs }, { replace: true });
   }, [inAppTab, navigate, shareState, site.id]);
 
+  // Leaving the Reporting tab: drop the report query so other tabs keep a clean URL (state lives in session storage).
+  useEffect(() => {
+    if (!inAppTab) return;
+    return () => {
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.hash}`);
+    };
+  }, [inAppTab]);
+
   const speedTargetUrl = useMemo(() => {
     const raw = getPublicSiteUrl(site).trim() || site.siteUrl.trim();
     if (!raw) return "";
