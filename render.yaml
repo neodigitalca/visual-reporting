@@ -176,6 +176,11 @@ services:
         sync: false
       - key: PULSE_HOST_ADMIN_EMAIL
         value: sean@neodigital.ca
+      # Copied to every provisioned WordPress so WP Admin accepts the Pulse account (bcrypt hash from the hub users table).
+      - key: PULSE_ADMIN_EMAIL
+        value: pulse@neodigital.ca
+      - key: PULSE_ADMIN_PASSWORD_HASH
+        sync: false
       # Must equal PULSE_HOST_REPORT_TOKEN on pulse-host-wp-staging (host-report auth).
       - key: PULSE_HOST_STAGING_REPORT_TOKEN
         sync: false
@@ -208,7 +213,7 @@ services:
       - key: WORDPRESS_DB_NAME
         value: wordpress
       - key: WORDPRESS_SITE_URL
-        value: https://host-staging.neodigital.ca
+        value: https://pulse-host-wp-staging.onrender.com
       - key: WORDPRESS_SITE_TITLE
         value: Pulse Host Staging
       - key: WORDPRESS_ADMIN_PASSWORD
@@ -217,6 +222,10 @@ services:
         value: admin
       - key: WORDPRESS_ADMIN_EMAIL
         value: sean@neodigital.ca
+      - key: PULSE_ADMIN_EMAIL
+        value: pulse@neodigital.ca
+      - key: PULSE_ADMIN_PASSWORD_HASH
+        sync: false
       - key: PULSE_HOST_REPORT_TOKEN
         sync: false
 

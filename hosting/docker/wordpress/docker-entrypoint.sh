@@ -14,6 +14,21 @@ copy_plugins() {
   fi
 }
 
+# WP Admin signs in with the Pulse account: an administrator whose user_pass is the Pulse hub bcrypt hash
+# (WordPress verifies $2y$ hashes via crypt/password_verify). Runs every boot so a changed hash is applied.
+ensure_pulse_admin() {
+  if [[ -z "${PULSE_ADMIN_EMAIL:-}" || -z "${PULSE_ADMIN_PASSWORD_HASH:-}" ]]; then
+    echo "[pulse-host] PULSE_ADMIN_EMAIL / PULSE_ADMIN_PASSWORD_HASH not set; no Pulse admin user created" >&2
+    return
+  fi
+  if ! wp user get "$PULSE_ADMIN_EMAIL" --field=ID --allow-root >/dev/null 2>&1; then
+    wp user create pulse "$PULSE_ADMIN_EMAIL" --role=administrator --display_name=FLO --allow-root >/dev/null
+  fi
+  wp user set-role "$PULSE_ADMIN_EMAIL" administrator --allow-root >/dev/null
+  wp eval 'global $wpdb; $wpdb->update( $wpdb->users, array( "user_pass" => getenv( "PULSE_ADMIN_PASSWORD_HASH" ) ), array( "user_email" => getenv( "PULSE_ADMIN_EMAIL" ) ) );' --allow-root
+  echo "[pulse-host] Pulse admin user ready for $PULSE_ADMIN_EMAIL"
+}
+
 # Wait for MariaDB, install WordPress on first boot, and activate neo-pulse-wp (host-report endpoint).
 install_wordpress() {
   local host="${WORDPRESS_DB_HOST%%:*}"
@@ -49,6 +64,7 @@ install_wordpress() {
     echo "[pulse-host] WordPress installed at $WORDPRESS_SITE_URL"
   fi
   wp plugin activate neo-pulse-wp --allow-root
+  ensure_pulse_admin
   # Pretty permalinks (unless the site owner already chose a structure) + .htaccess so /wp-json/ routes through WordPress.
   if [[ -z "$(wp option get permalink_structure --allow-root 2>/dev/null)" ]]; then
     wp rewrite structure '/%postname%/' --allow-root

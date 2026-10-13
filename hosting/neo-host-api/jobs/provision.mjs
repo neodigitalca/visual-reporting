@@ -37,6 +37,11 @@ export async function runProvisionJob(job) {
 
   const adminEmail = (process.env.PULSE_HOST_ADMIN_EMAIL || "").trim();
   if (!adminEmail) return fail(pool, siteId, "PULSE_HOST_ADMIN_EMAIL is not set on pulse-host-api.");
+  const pulseAdminEmail = (process.env.PULSE_ADMIN_EMAIL || "").trim();
+  const pulseAdminHash = (process.env.PULSE_ADMIN_PASSWORD_HASH || "").trim();
+  if (!pulseAdminEmail || !pulseAdminHash) {
+    return fail(pool, siteId, "PULSE_ADMIN_EMAIL / PULSE_ADMIN_PASSWORD_HASH are not set on pulse-host-api.");
+  }
 
   const dbName = `pulse-host-db-${site.slug}`;
   const wpName = `pulse-host-wp-${site.slug}`;
@@ -106,6 +111,8 @@ export async function runProvisionJob(job) {
         { key: "WORDPRESS_ADMIN_USER", value: "admin" },
         { key: "WORDPRESS_ADMIN_PASSWORD", value: wpAdminPass },
         { key: "WORDPRESS_ADMIN_EMAIL", value: adminEmail },
+        { key: "PULSE_ADMIN_EMAIL", value: pulseAdminEmail },
+        { key: "PULSE_ADMIN_PASSWORD_HASH", value: pulseAdminHash },
         { key: "PULSE_HOST_REPORT_TOKEN", value: site.report_token || "" },
       ],
     });
