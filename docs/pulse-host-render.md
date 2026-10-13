@@ -10,7 +10,7 @@ Pulse Host is Neo Digital's own managed WordPress hosting, built on Render. The 
 | Hub API proxy | `neodigital.ca` (`neo-pulse-app`) | `/api/hosting/*` forwards to pulse-host-api with team/user headers |
 | Control API | `pulse-host-api` | Postgres, jobs, Render orchestration (`hosting/neo-host-api`) |
 | Control DB | `pulse-host-control-db` | Render Postgres (`PULSE_HOST_DB_URL`) |
-| WP staging | `pulse-host-wp-staging` | Bench at `host-staging.neodigital.ca` |
+| WP staging | `pulse-host-wp-staging` | Bench at `pulse-host-wp-staging.onrender.com` (also runs the `neo-pulse-app` hub backend for `neo-pulse-static`) |
 | DB staging | `pulse-host-db-staging` | MariaDB for staging WP |
 | Cron | `pulse-host-backup-cron`, `pulse-host-health-cron` | Daily backup + 15 minute health/stats |
 
@@ -72,7 +72,7 @@ npm run provision:render-pulse-host
 
 Requires `RENDER_API_KEY` or `Downloads/Render API.txt`. Creates Postgres, MariaDB (private service), WP staging, and pulse-host-api if missing.
 
-The script also registers `host-staging.neodigital.ca` as a Render custom domain on the WP service (the provision job does the same for new sites). DNS (Cloudflare, manual): CNAME `host-staging` to `pulse-host-wp-staging.onrender.com`, DNS only (grey cloud) so Render can issue the certificate. Until this exists the staging row shows **degraded** with "wp-json HTTP unreachable" because the API checks `https://host-staging.neodigital.ca`.
+The script also registers `host-staging.neodigital.ca` as a Render custom domain on the WP service (the provision job does the same for new sites). The staging row, `WORDPRESS_SITE_URL`, and the WP `home`/`siteurl` options currently use `https://pulse-host-wp-staging.onrender.com` because that hostname resolves today. Switching to the custom domain later is three edits: Cloudflare CNAME `host-staging` to `pulse-host-wp-staging.onrender.com` (DNS only, grey cloud, so Render can issue the certificate), `WORDPRESS_SITE_URL` + WP `home`/`siteurl` to the new URL, and `hosted_sites.site_url` / `wp_admin_url` / `primary_domain` on the staging row. The health job checks `site_url` + `/wp-json/`; a row whose URL does not resolve shows **degraded** with "wp-json HTTP unreachable".
 
 ## Hub secrets (neodigital.ca and local)
 
