@@ -4,6 +4,7 @@ import { ensureTenant, auditLog, mapSiteRow, mapGroupRow, SITE_WITH_STATS_SQL } 
 import { sendJson } from "../lib/http.mjs";
 import { triggerServiceDeploy, deleteService } from "../render-client.mjs";
 import { createJob } from "./jobs.mjs";
+import { handleSiteUsersRoute, handleBulkUsersRoute } from "./site-users.mjs";
 
 const ENVIRONMENTS = new Set(["production", "staging", "development"]);
 const ENV_SUFFIX = { production: "", staging: "-stg", development: "-dev" };
@@ -146,10 +147,20 @@ export async function handleSitesRoute(req, res, subpath, method, body, auth) {
     return;
   }
 
+  if (parts[0] === "users-bulk") {
+    await handleBulkUsersRoute(res, method, body, auth, tenantId);
+    return;
+  }
+
   const siteId = parts[0];
   const row = await loadSite(pool, tenantId, siteId);
   if (!row) {
     sendJson(res, 404, { ok: false, error: "Site not found." });
+    return;
+  }
+
+  if (parts[1] === "users") {
+    await handleSiteUsersRoute(res, row, parts, method, body, auth, tenantId);
     return;
   }
 

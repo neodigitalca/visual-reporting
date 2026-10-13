@@ -1,4 +1,4 @@
-import { Download, Filter, Tag } from "lucide-react";
+import { Download, Filter, Tag, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -14,6 +14,7 @@ export type MySitesToolbarProps = {
   phpVersions: string[];
   canAdmin: boolean;
   onManageTags: () => void;
+  onAddUserToAllSites: () => void;
   onDownloadCsv: () => void;
 };
 
@@ -24,6 +25,7 @@ export function MySitesToolbar({
   phpVersions,
   canAdmin,
   onManageTags,
+  onAddUserToAllSites,
   onDownloadCsv,
 }: MySitesToolbarProps) {
   const active = activeFilterCount(filters);
@@ -52,6 +54,10 @@ export function MySitesToolbar({
         <Button type="button" variant="ghost" className={MY_SITES_TOOL_BTN} disabled={!canAdmin} onClick={onManageTags}>
           <Tag className="h-4 w-4" aria-hidden />
           Manage tags
+        </Button>
+        <Button type="button" variant="ghost" className={MY_SITES_TOOL_BTN} disabled={!canAdmin} onClick={onAddUserToAllSites}>
+          <UserPlus className="h-4 w-4" aria-hidden />
+          Add user to all sites
         </Button>
         <Button type="button" variant="ghost" className={MY_SITES_TOOL_BTN} onClick={onDownloadCsv}>
           <Download className="h-4 w-4" aria-hidden />

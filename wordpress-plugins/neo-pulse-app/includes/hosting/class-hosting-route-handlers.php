@@ -56,6 +56,14 @@ class Neo_Pulse_App_Hosting_Route_Handlers {
 			return;
 		}
 
+		if ( isset( $body['pulseUserId'] ) ) {
+			$body = self::resolve_pulse_user( $body, (int) $team_id );
+			if ( $body === null ) {
+				Neo_Pulse_App_Api_Dispatcher::send_json( array( 'ok' => false, 'error' => 'Pulse team member not found.' ), 404 );
+				return;
+			}
+		}
+
 		$subpath = trim( $subpath, '/' );
 		$target  = rtrim( $base, '/' ) . '/v1/hosting/' . $subpath;
 
@@ -107,6 +115,31 @@ class Neo_Pulse_App_Hosting_Route_Handlers {
 		}
 
 		Neo_Pulse_App_Api_Dispatcher::send_json( $data, $code > 0 ? $code : 200 );
+	}
+
+	/**
+	 * A Pulse team member becomes a hosted-site user with the same password: the browser sends
+	 * `pulseUserId`, the hub replaces it with email, display name, and the bcrypt hash server-side.
+	 *
+	 * @param array<string,mixed> $body
+	 * @return array<string,mixed>|null Null when the id is not an active member of the team.
+	 */
+	private static function resolve_pulse_user( array $body, int $team_id ): ?array {
+		$pulse_user_id = (int) $body['pulseUserId'];
+		unset( $body['pulseUserId'] );
+		$member = Neo_Pulse_App_Teams_Store::get_user_by_id( $pulse_user_id );
+		if ( ! $member || ! Neo_Pulse_App_Teams_Store::get_membership( $team_id, $pulse_user_id ) ) {
+			return null;
+		}
+		$member = Neo_Pulse_App_Teams_Store::get_user_by_email( (string) $member['email'] );
+		if ( ! $member ) {
+			return null;
+		}
+		$body['email']        = (string) $member['email'];
+		$body['displayName']  = (string) $member['display_name'];
+		$body['passwordHash'] = (string) $member['password_hash'];
+		unset( $body['password'] );
+		return $body;
 	}
 
 	/** Constant from neo-pulse-app-secrets.php, else process env (Docker/Render). */

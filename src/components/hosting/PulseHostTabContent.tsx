@@ -12,6 +12,8 @@ import {
   type HostedSiteGroup,
   type HostedTag,
 } from "@/lib/hosting-api";
+import { fetchTeamMembers } from "@/lib/teams-api";
+import type { TeamMember } from "@/lib/teams-types";
 import { cn } from "@/lib/utils";
 import { AddSiteDialog } from "./my-sites/AddSiteDialog";
 import type { EnvironmentAction } from "./my-sites/EnvironmentKebabMenu";
@@ -21,6 +23,7 @@ import { MySitesHeader } from "./my-sites/MySitesHeader";
 import { MySitesTabs } from "./my-sites/MySitesTabs";
 import { MySitesToolbar } from "./my-sites/MySitesToolbar";
 import { SiteGroupCard } from "./my-sites/SiteGroupCard";
+import { SiteUsersDialog } from "./my-sites/SiteUsersDialog";
 import {
   EMPTY_FILTERS,
   csvForGroups,
@@ -33,7 +36,11 @@ import {
 } from "./my-sites/my-sites-view-model";
 import { MY_SITES_CARD, MY_SITES_STATUS_LINE } from "./my-sites/my-sites-theme";
 
-type DialogState = { kind: "none" } | { kind: "add"; group: HostedSiteGroup | null } | { kind: "tags"; group: HostedSiteGroup | null };
+type DialogState =
+  | { kind: "none" }
+  | { kind: "add"; group: HostedSiteGroup | null }
+  | { kind: "tags"; group: HostedSiteGroup | null }
+  | { kind: "users"; env: HostedEnvironment | null };
 
 /** Pulse Host "My Sites": Pulse dark theme, Render-hosted sites only. */
 export function PulseHostTabContent() {
@@ -47,6 +54,12 @@ export function PulseHostTabContent() {
   const [tab, setTab] = useState<MySitesTab>("all");
   const [filters, setFilters] = useState<MySitesFilters>(EMPTY_FILTERS);
   const [dialog, setDialog] = useState<DialogState>({ kind: "none" });
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+
+  useEffect(() => {
+    if (!activeTeam?.id) return;
+    void fetchTeamMembers(activeTeam.id).then(setTeamMembers);
+  }, [activeTeam?.id]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -73,6 +86,10 @@ export function PulseHostTabContent() {
     if (action === "copy") {
       const group = groups.find((g) => g.id === env.groupId) ?? null;
       setDialog({ kind: "add", group });
+      return;
+    }
+    if (action === "users") {
+      setDialog({ kind: "users", env });
       return;
     }
     if (action === "delete") {
@@ -122,6 +139,7 @@ export function PulseHostTabContent() {
         phpVersions={phpVersions}
         canAdmin={canAdmin}
         onManageTags={() => setDialog({ kind: "tags", group: null })}
+        onAddUserToAllSites={() => setDialog({ kind: "users", env: null })}
         onDownloadCsv={downloadCsv}
       />
       <p className={cn(MY_SITES_STATUS_LINE, error ? "text-red-300" : "")} title={error || notice || undefined}>
@@ -164,6 +182,13 @@ export function PulseHostTabContent() {
         group={dialog.kind === "tags" ? dialog.group : null}
         onOpenChange={(open) => !open && setDialog({ kind: "none" })}
         onChanged={() => void load()}
+      />
+      <SiteUsersDialog
+        open={dialog.kind === "users"}
+        env={dialog.kind === "users" ? dialog.env : null}
+        teamMembers={teamMembers}
+        canAdmin={canAdmin}
+        onOpenChange={(open) => !open && setDialog({ kind: "none" })}
       />
     </div>
   );

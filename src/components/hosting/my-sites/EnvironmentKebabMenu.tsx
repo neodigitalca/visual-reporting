@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { HostedEnvironment } from "@/lib/hosting-api";
 
-export type EnvironmentAction = "backup" | "cache-clear" | "redeploy" | "retry-provision" | "delete" | "copy";
+export type EnvironmentAction = "backup" | "cache-clear" | "redeploy" | "retry-provision" | "delete" | "copy" | "users";
 
 export type EnvironmentKebabMenuProps = {
   env: HostedEnvironment;
@@ -41,6 +41,9 @@ export function EnvironmentKebabMenu({ env, canAdmin, onAction }: EnvironmentKeb
           <a href={env.siteUrl ?? "#"} target="_blank" rel="noreferrer">
             Visit site
           </a>
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={!provisioned} onSelect={() => onAction("users", env)}>
+          Users
         </DropdownMenuItem>
         <DropdownMenuSeparator className="bg-white/10" />
         <DropdownMenuItem disabled={!canAdmin} onSelect={() => onAction("copy", env)}>

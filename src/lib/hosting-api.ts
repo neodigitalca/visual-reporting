@@ -163,3 +163,57 @@ export function assignHostedGroupTags(groupId: string, tagIds: number[]) {
     body: JSON.stringify({ groupId, tagIds }),
   });
 }
+
+/** A WordPress user on one hosted environment. */
+export type HostedSiteUser = {
+  id: number;
+  login: string;
+  email: string;
+  displayName: string;
+  roles: string[];
+  registered: string;
+};
+
+export type HostedSiteRole = "administrator" | "editor" | "author" | "contributor" | "subscriber";
+
+/** Either a Pulse team member (same password as Pulse) or a manual email + password. */
+export type HostedUserInput =
+  | { pulseUserId: number; role: HostedSiteRole }
+  | { email: string; displayName?: string; password: string; role: HostedSiteRole };
+
+export type HostedBulkUserResult = {
+  siteId: string;
+  slug: string;
+  environment: HostedEnvironmentKind;
+  ok: boolean;
+  error: string | null;
+};
+
+export function fetchHostedSiteUsers(siteId: string) {
+  return api<{ users: HostedSiteUser[] }>(`/hosting/sites/${siteId}/users`);
+}
+
+export function createHostedSiteUser(siteId: string, input: HostedUserInput) {
+  return api<{ user: HostedSiteUser }>(`/hosting/sites/${siteId}/users`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateHostedSiteUser(siteId: string, userId: number, patch: { role?: HostedSiteRole; password?: string }) {
+  return api<{ user: HostedSiteUser }>(`/hosting/sites/${siteId}/users/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+}
+
+export function deleteHostedSiteUser(siteId: string, userId: number) {
+  return api<unknown>(`/hosting/sites/${siteId}/users/${userId}`, { method: "DELETE" });
+}
+
+export function addUserToAllSites(input: HostedUserInput) {
+  return api<{ results: HostedBulkUserResult[] }>("/hosting/sites/users-bulk", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
