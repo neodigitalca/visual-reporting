@@ -10,8 +10,8 @@ Pulse Host is Neo Digital's own managed WordPress hosting, built on Render. The 
 | Hub API proxy | `neodigital.ca` (`neo-pulse-app`) | `/api/hosting/*` forwards to pulse-host-api with team/user headers |
 | Control API | `pulse-host-api` | Postgres, jobs, Render orchestration (`hosting/neo-host-api`) |
 | Control DB | `pulse-host-control-db` | Render Postgres (`PULSE_HOST_DB_URL`) |
-| WP staging | `pulse-host-wp-staging` | Bench at `pulse-host-wp-staging.onrender.com` (also runs the `neo-pulse-app` hub backend for `neo-pulse-static`) |
-| DB staging | `pulse-host-db-staging` | MariaDB for staging WP |
+| WP hub | `pulse-host-wp-hub` | `neo-pulse-app` backend for `neo-pulse-static` (`/api/*` rewrite); `NEO_PULSE_HUB=1`; not a My Sites row |
+| DB hub | `pulse-host-db-hub` | MariaDB for the hub WP |
 | Cron | `pulse-host-backup-cron`, `pulse-host-health-cron` | Daily backup + 15 minute health/stats |
 
 Browser code never calls Render or hosted sites directly. It calls `backendApiUrl("/hosting/...")`; the PHP proxy adds the bearer token and `X-Neo-Pulse-Team-Id`, `X-Neo-Pulse-User-Id`, `X-Neo-Pulse-Hosting-Write` headers.
@@ -62,17 +62,21 @@ Every 15 minutes `pulse-host-health-cron` calls the API, which for each environm
 
 **Clear cache** posts to `/host-report/purge-cache` on the hosted site with the same token.
 
-The staging environment uses `PULSE_HOST_STAGING_REPORT_TOKEN` on `pulse-host-api` and the same value as `PULSE_HOST_REPORT_TOKEN` on `pulse-host-wp-staging`.
+The health job checks `site_url` + `/wp-json/`; a row whose URL does not resolve shows **degraded** with "wp-json HTTP unreachable". Provisioned sites use their `*.onrender.com` URL until a custom domain has DNS (Cloudflare CNAME to the onrender host, DNS only, so Render can issue the certificate).
+
+## WP Admin with the Pulse account
+
+Every hosted WordPress gets an administrator `pulse` (`PULSE_ADMIN_EMAIL`) whose `user_pass` is the Pulse hub bcrypt hash (`PULSE_ADMIN_PASSWORD_HASH`). The container entrypoint creates or refreshes it on every boot; the provision job copies both values from `pulse-host-api` to each new WP service. WordPress verifies `$2y$` hashes via `crypt()` / `password_verify()`, so WP Admin accepts `pulse@neodigital.ca` + the Pulse password. If the Pulse password changes, update `PULSE_ADMIN_PASSWORD_HASH` on `pulse-host-api` and each WP service, then redeploy.
 
 ## Provision the platform
 
 ```bash
-npm run provision:render-pulse-host
+PULSE_ADMIN_PASSWORD_HASH='<pulse@ hash>' npm run provision:render-pulse-host
 ```
 
-Requires `RENDER_API_KEY` or `Downloads/Render API.txt`. Creates Postgres, MariaDB (private service), WP staging, and pulse-host-api if missing.
+Requires `RENDER_API_KEY` or `Downloads/Render API.txt`. Creates Postgres, the hub MariaDB (private service), the hub WordPress, and pulse-host-api if missing; env vars are merged into existing services, never replaced wholesale.
 
-The script also registers `host-staging.neodigital.ca` as a Render custom domain on the WP service (the provision job does the same for new sites). The staging row, `WORDPRESS_SITE_URL`, and the WP `home`/`siteurl` options currently use `https://pulse-host-wp-staging.onrender.com` because that hostname resolves today. Switching to the custom domain later is three edits: Cloudflare CNAME `host-staging` to `pulse-host-wp-staging.onrender.com` (DNS only, grey cloud, so Render can issue the certificate), `WORDPRESS_SITE_URL` + WP `home`/`siteurl` to the new URL, and `hosted_sites.site_url` / `wp_admin_url` / `primary_domain` on the staging row. The health job checks `site_url` + `/wp-json/`; a row whose URL does not resolve shows **degraded** with "wp-json HTTP unreachable".
+The hub WordPress (`pulse-host-wp-hub`) runs `neo-pulse-app` (`NEO_PULSE_HUB=1`) with `PULSE_HOST_API_BASE` / `PULSE_HOST_API_TOKEN`, and `neo-pulse-static` rewrites `/api/*` to `https://pulse-host-wp-hub.onrender.com/api/*` (Render static site routes, which replace `dist/_redirects`; the `/*` to `/index.html` rule lives there too). It is intentionally not a `hosted_sites` row so the My Sites delete action cannot remove it. Hub users are the `wp_neo-pulse_users` / team tables copied from the local hub with identical password hashes.
 
 ## Hub secrets (neodigital.ca and local)
 

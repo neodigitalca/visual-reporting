@@ -161,10 +161,9 @@ services:
         sync: false
       - key: OPENROUTER_API_KEY
         sync: false
+      # The hub WordPress is not a My Sites row; no staging bootstrap.
       - key: NEO_HOST_BOOTSTRAP_STAGING
-        value: "1"
-      - key: NEO_HOST_STAGING_DOMAIN
-        value: host-staging.neodigital.ca
+        value: "0"
       - key: NEO_HOST_DEFAULT_REGION
         value: ohio
       # Provisioning (Add site) creates Docker services from this repo under this owner.
@@ -181,12 +180,10 @@ services:
         value: pulse@neodigital.ca
       - key: PULSE_ADMIN_PASSWORD_HASH
         sync: false
-      # Must equal PULSE_HOST_REPORT_TOKEN on pulse-host-wp-staging (host-report auth).
-      - key: PULSE_HOST_STAGING_REPORT_TOKEN
-        sync: false
 
+  # Neo Pulse hub: runs neo-pulse-app (/api/*) for neo-pulse-static. Not a My Sites row, so the hosting UI cannot delete it.
   - type: web
-    name: pulse-host-wp-staging
+    name: pulse-host-wp-hub
     runtime: docker
     dockerfilePath: ./hosting/docker/wordpress/Dockerfile
     dockerContext: .
@@ -200,12 +197,12 @@ services:
         - wordpress-plugins/neo-pulse-wp/**
         - wordpress-plugins/neo-pulse-app/**
     disk:
-      name: pulse-host-wp-staging-disk
+      name: pulse-host-wp-hub-disk
       mountPath: /var/www/html/wp-content
       sizeGB: 10
     envVars:
       - key: WORDPRESS_DB_HOST
-        sync: false
+        value: pulse-host-db-hub:3306
       - key: WORDPRESS_DB_USER
         value: wordpress
       - key: WORDPRESS_DB_PASSWORD
@@ -213,24 +210,28 @@ services:
       - key: WORDPRESS_DB_NAME
         value: wordpress
       - key: WORDPRESS_SITE_URL
-        value: https://pulse-host-wp-staging.onrender.com
+        value: https://pulse-host-wp-hub.onrender.com
       - key: WORDPRESS_SITE_TITLE
-        value: Pulse Host Staging
+        value: Neo Pulse Hub
       - key: WORDPRESS_ADMIN_PASSWORD
         sync: false
       - key: WORDPRESS_ADMIN_USER
         value: admin
       - key: WORDPRESS_ADMIN_EMAIL
         value: sean@neodigital.ca
+      - key: NEO_PULSE_HUB
+        value: "1"
+      - key: PULSE_HOST_API_BASE
+        value: https://pulse-host-api.onrender.com
+      - key: PULSE_HOST_API_TOKEN
+        sync: false
       - key: PULSE_ADMIN_EMAIL
         value: pulse@neodigital.ca
       - key: PULSE_ADMIN_PASSWORD_HASH
         sync: false
-      - key: PULSE_HOST_REPORT_TOKEN
-        sync: false
 
   - type: pserv
-    name: pulse-host-db-staging
+    name: pulse-host-db-hub
     runtime: docker
     dockerfilePath: ./hosting/docker/mariadb/Dockerfile
     dockerContext: .
@@ -242,7 +243,7 @@ services:
       paths:
         - hosting/docker/mariadb/**
     disk:
-      name: pulse-host-db-staging-disk
+      name: pulse-host-db-hub-disk
       mountPath: /var/lib/mysql
       sizeGB: 10
     envVars:

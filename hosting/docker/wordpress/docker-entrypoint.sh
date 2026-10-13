@@ -64,6 +64,10 @@ install_wordpress() {
     echo "[pulse-host] WordPress installed at $WORDPRESS_SITE_URL"
   fi
   wp plugin activate neo-pulse-wp --allow-root
+  # The hub container also runs the Neo Pulse app backend (/api/*) for neo-pulse-static.
+  if [[ "${NEO_PULSE_HUB:-}" == "1" ]]; then
+    wp plugin activate neo-pulse-app --allow-root
+  fi
   ensure_pulse_admin
   # Pretty permalinks (unless the site owner already chose a structure) + .htaccess so /wp-json/ routes through WordPress.
   if [[ -z "$(wp option get permalink_structure --allow-root 2>/dev/null)" ]]; then

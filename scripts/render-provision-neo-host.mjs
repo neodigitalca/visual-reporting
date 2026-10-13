@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Provision Pulse Host control plane + staging WordPress on Render.
- * Requires RENDER_API_KEY env or .secrets/render-api-key.txt
+ * Provision Pulse Host control plane + the Neo Pulse hub WordPress (neo-pulse-app backend for neo-pulse-static) on Render.
+ * The hub is deliberately not a My Sites row, so it cannot be deleted from the hosting UI.
+ * Requires RENDER_API_KEY env or .secrets/render-api-key.txt, plus PULSE_ADMIN_PASSWORD_HASH (pulse@ bcrypt hash).
  */
 import fs from "node:fs";
 import os from "node:os";
@@ -94,25 +95,19 @@ async function ensureWebService(
     await api("PATCH", `/services/${svc.id}`, { repo: REPO, branch: BRANCH, buildFilter });
   }
   if (envVars.length) {
+    // PUT replaces the whole env var list, so merge with what is already set on the service.
+    const current = await api("GET", `/services/${svc.id}/env-vars?limit=100`);
+    const merged = new Map(
+      (Array.isArray(current) ? current : []).map((row) => row.envVar ?? row).map((v) => [v.key, String(v.value ?? "")]),
+    );
+    for (const v of envVars) if (v.value?.trim()) merged.set(v.key, String(v.value));
     await api(
       "PUT",
       `/services/${svc.id}/env-vars`,
-      envVars.filter((v) => v.value?.trim()).map((v) => ({ key: v.key, value: String(v.value) })),
+      [...merged.entries()].map(([key, value]) => ({ key, value })),
     );
   }
   return svc;
-}
-
-/** Render only serves a hostname it knows about; the Cloudflare CNAME to *.onrender.com is a manual step. */
-async function ensureCustomDomain(serviceId, domain) {
-  const existing = await api("GET", `/services/${serviceId}/custom-domains`);
-  const rows = (Array.isArray(existing) ? existing : []).map((row) => row.customDomain ?? row);
-  if (rows.some((d) => d.name === domain)) {
-    console.log(`[skip] custom domain ${domain} exists`);
-    return;
-  }
-  await api("POST", `/services/${serviceId}/custom-domains`, { name: domain });
-  console.log(`[created] custom domain ${domain}; add CNAME ${domain} -> pulse-host-wp-staging.onrender.com`);
 }
 
 async function listPostgres() {
@@ -149,15 +144,18 @@ async function main() {
     process.env.PULSE_HOST_API_TOKEN || process.env.NEO_HOST_API_TOKEN || crypto.randomBytes(24).toString("hex");
   const mariaPass = process.env.NEO_HOST_MARIADB_PASSWORD || crypto.randomBytes(16).toString("hex");
   const wpAdminPass = process.env.NEO_HOST_WP_ADMIN_PASSWORD || crypto.randomBytes(16).toString("hex");
+  const pulseAdminHash = (process.env.PULSE_ADMIN_PASSWORD_HASH || "").trim();
+  if (!pulseAdminHash) throw new Error("Set PULSE_ADMIN_PASSWORD_HASH (pulse@neodigital.ca bcrypt hash from the hub users table).");
+  const hubUrl = "https://pulse-host-wp-hub.onrender.com";
 
   // MariaDB must be a private service: Render only health-checks web services over HTTP.
   const dbSvc = await ensureWebService(ownerId, {
-    name: "pulse-host-db-staging",
+    name: "pulse-host-db-hub",
     type: "private_service",
     dockerfilePath: "./hosting/docker/mariadb/Dockerfile",
     dockerContext: ".",
     plan: "starter",
-    disk: { name: "pulse-host-db-staging-disk", mountPath: "/var/lib/mysql", sizeGB: 10 },
+    disk: { name: "pulse-host-db-hub-disk", mountPath: "/var/lib/mysql", sizeGB: 10 },
     buildPaths: ["hosting/docker/mariadb/**"],
     envVars: [
       { key: "MARIADB_ROOT_PASSWORD", value: mariaPass },
@@ -168,25 +166,29 @@ async function main() {
   });
 
   const wpSvc = await ensureWebService(ownerId, {
-    name: "pulse-host-wp-staging",
+    name: "pulse-host-wp-hub",
     dockerfilePath: "./hosting/docker/wordpress/Dockerfile",
     dockerContext: ".",
     plan: "standard",
+    disk: { name: "pulse-host-wp-hub-disk", mountPath: "/var/www/html/wp-content", sizeGB: 10 },
     buildPaths: ["hosting/docker/wordpress/**", "wordpress-plugins/neo-pulse-wp/**", "wordpress-plugins/neo-pulse-app/**"],
     envVars: [
       { key: "WORDPRESS_DB_HOST", value: `${dbSvc.name}:${dbSvc.serviceDetails?.port || 3306}` },
       { key: "WORDPRESS_DB_USER", value: "wordpress" },
       { key: "WORDPRESS_DB_PASSWORD", value: mariaPass },
       { key: "WORDPRESS_DB_NAME", value: "wordpress" },
-      { key: "WORDPRESS_SITE_URL", value: "https://host-staging.neodigital.ca" },
-      { key: "WORDPRESS_SITE_TITLE", value: "Pulse Host Staging" },
+      { key: "WORDPRESS_SITE_URL", value: hubUrl },
+      { key: "WORDPRESS_SITE_TITLE", value: "Neo Pulse Hub" },
       { key: "WORDPRESS_ADMIN_PASSWORD", value: wpAdminPass },
       { key: "WORDPRESS_ADMIN_USER", value: "admin" },
       { key: "WORDPRESS_ADMIN_EMAIL", value: "sean@neodigital.ca" },
+      { key: "NEO_PULSE_HUB", value: "1" },
+      { key: "PULSE_HOST_API_BASE", value: "https://pulse-host-api.onrender.com" },
+      { key: "PULSE_HOST_API_TOKEN", value: hostToken },
+      { key: "PULSE_ADMIN_EMAIL", value: "pulse@neodigital.ca" },
+      { key: "PULSE_ADMIN_PASSWORD_HASH", value: pulseAdminHash },
     ],
   });
-
-  await ensureCustomDomain(wpSvc.id, "host-staging.neodigital.ca");
 
   const dbUrl = (process.env.PULSE_HOST_DB_URL || process.env.NEO_HOST_DB_URL || pg?.connectionInfo?.internalConnectionString || "").trim();
 
@@ -202,28 +204,24 @@ async function main() {
       { key: "PULSE_HOST_DB_URL", value: dbUrl },
       { key: "NEO_HOST_DB_URL", value: dbUrl },
       { key: "RENDER_API_KEY", value: loadApiKey() },
-      { key: "NEO_HOST_BOOTSTRAP_STAGING", value: "1" },
-      { key: "NEO_HOST_STAGING_DOMAIN", value: "host-staging.neodigital.ca" },
-      { key: "NEO_HOST_STAGING_WP_SERVICE_ID", value: wpSvc.id },
-      { key: "NEO_HOST_STAGING_DB_SERVICE_ID", value: dbSvc.id },
-      { key: "NEO_HOST_STAGING_SITE_URL", value: "https://host-staging.neodigital.ca" },
+      { key: "NEO_HOST_BOOTSTRAP_STAGING", value: "0" },
       { key: "NEO_HOST_DEFAULT_REGION", value: REGION },
+      { key: "PULSE_ADMIN_EMAIL", value: "pulse@neodigital.ca" },
+      { key: "PULSE_ADMIN_PASSWORD_HASH", value: pulseAdminHash },
     ],
   });
 
   console.log("\nPulse Host Render services:");
   console.log("- API:", apiSvc.serviceDetails?.url || `https://${apiSvc.name}.onrender.com`);
-  console.log("- WP staging:", wpSvc.serviceDetails?.url || `https://${wpSvc.name}.onrender.com`);
-  console.log("- MariaDB staging:", dbSvc.id);
+  console.log("- WP hub:", wpSvc.serviceDetails?.url || hubUrl);
+  console.log("- MariaDB hub:", dbSvc.id);
   console.log("- Postgres control:", pg?.id || "(see dashboard for connection string)");
   console.log("- PULSE_HOST_API_TOKEN:", hostToken);
-  console.log("- WP admin password (staging):", wpAdminPass);
+  console.log("- WP admin password (hub):", wpAdminPass);
   if (!dbUrl) {
     console.log("\nSet PULSE_HOST_DB_URL on pulse-host-api from Render Postgres connection string.");
   }
-  console.log("\nSet on neodigital.ca (neo-pulse-app-secrets.php):");
-  console.log("define('PULSE_HOST_API_BASE', '<API URL above>');");
-  console.log("define('PULSE_HOST_API_TOKEN', '<token above>');");
+  console.log(`\nPoint the neo-pulse-static rewrite /api/* at ${hubUrl}/api/*`);
 }
 
 main().catch((err) => {
