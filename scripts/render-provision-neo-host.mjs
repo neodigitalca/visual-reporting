@@ -103,6 +103,18 @@ async function ensureWebService(
   return svc;
 }
 
+/** Render only serves a hostname it knows about; the Cloudflare CNAME to *.onrender.com is a manual step. */
+async function ensureCustomDomain(serviceId, domain) {
+  const existing = await api("GET", `/services/${serviceId}/custom-domains`);
+  const rows = (Array.isArray(existing) ? existing : []).map((row) => row.customDomain ?? row);
+  if (rows.some((d) => d.name === domain)) {
+    console.log(`[skip] custom domain ${domain} exists`);
+    return;
+  }
+  await api("POST", `/services/${serviceId}/custom-domains`, { name: domain });
+  console.log(`[created] custom domain ${domain}; add CNAME ${domain} -> pulse-host-wp-staging.onrender.com`);
+}
+
 async function listPostgres() {
   const data = await api("GET", "/postgres?limit=50");
   const rows = Array.isArray(data) ? data : [];
@@ -173,6 +185,8 @@ async function main() {
       { key: "WORDPRESS_ADMIN_EMAIL", value: "sean@neodigital.ca" },
     ],
   });
+
+  await ensureCustomDomain(wpSvc.id, "host-staging.neodigital.ca");
 
   const dbUrl = (process.env.PULSE_HOST_DB_URL || process.env.NEO_HOST_DB_URL || pg?.connectionInfo?.internalConnectionString || "").trim();
 

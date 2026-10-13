@@ -72,7 +72,7 @@ npm run provision:render-pulse-host
 
 Requires `RENDER_API_KEY` or `Downloads/Render API.txt`. Creates Postgres, MariaDB (private service), WP staging, and pulse-host-api if missing.
 
-DNS (Cloudflare, manual): CNAME `host-staging` to `pulse-host-wp-staging.onrender.com`, DNS only (grey cloud) so Render can issue the certificate. Until this exists the staging row shows **degraded** with "wp-json HTTP unreachable" because the API checks `https://host-staging.neodigital.ca`.
+The script also registers `host-staging.neodigital.ca` as a Render custom domain on the WP service (the provision job does the same for new sites). DNS (Cloudflare, manual): CNAME `host-staging` to `pulse-host-wp-staging.onrender.com`, DNS only (grey cloud) so Render can issue the certificate. Until this exists the staging row shows **degraded** with "wp-json HTTP unreachable" because the API checks `https://host-staging.neodigital.ca`.
 
 ## Hub secrets (neodigital.ca and local)
 
