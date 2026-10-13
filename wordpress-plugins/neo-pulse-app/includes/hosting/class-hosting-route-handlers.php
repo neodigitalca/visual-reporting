@@ -138,7 +138,6 @@ class Neo_Pulse_App_Hosting_Route_Handlers {
 		$body['email']        = (string) $member['email'];
 		$body['displayName']  = (string) $member['display_name'];
 		$body['passwordHash'] = (string) $member['password_hash'];
-		unset( $body['password'] );
 		return $body;
 	}
 

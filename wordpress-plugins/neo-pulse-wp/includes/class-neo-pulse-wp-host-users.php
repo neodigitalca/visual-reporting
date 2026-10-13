@@ -72,6 +72,9 @@ class Neo_Pulse_Wp_Host_Users {
 		if ( is_wp_error( $credential ) ) {
 			return $credential;
 		}
+		if ( $credential === array() ) {
+			return self::error( 'password or passwordHash is required.', 400 );
+		}
 		$login = sanitize_user( (string) ( $body['login'] ?? '' ), true );
 		if ( $login === '' ) {
 			$login = sanitize_user( strstr( $email, '@', true ) ?: $email, true );
@@ -82,7 +85,7 @@ class Neo_Pulse_Wp_Host_Users {
 			array(
 				'user_login'   => $login,
 				'user_email'   => $email,
-				'user_pass'    => $credential['password'] ?? wp_generate_password( 32 ),
+				'user_pass'    => $credential['password'] ?? $credential['hash'],
 				'display_name' => $display !== '' ? $display : $login,
 				'role'         => $role,
 			)

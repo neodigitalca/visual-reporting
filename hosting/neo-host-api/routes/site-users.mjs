@@ -133,18 +133,16 @@ export async function handleBulkUsersRoute(res, method, body, auth, tenantId) {
      WHERE tenant_id = $1 AND render_service_id IS NOT NULL ORDER BY slug ASC`,
     [tenantId],
   );
-  const results = await Promise.all(
-    sites.rows.map(async (site) => {
-      const result = await callSite(site, "POST", "", payload);
-      return {
-        siteId: site.id,
-        slug: site.slug,
-        environment: site.environment,
-        ok: Boolean(result.data.ok),
-        error: result.data.ok ? null : String(result.data.error || `HTTP ${result.status}`),
-      };
-    }),
-  );
+  const settled = await Promise.allSettled(sites.rows.map((site) => callSite(site, "POST", "", payload)));
+  const results = sites.rows.map((site, i) => {
+    const outcome = settled[i];
+    const ok = outcome.status === "fulfilled" && Boolean(outcome.value.data.ok);
+    const error =
+      outcome.status === "rejected"
+        ? String(outcome.reason instanceof Error ? outcome.reason.message : outcome.reason)
+        : String(outcome.value.data.error || `HTTP ${outcome.value.status}`);
+    return { siteId: site.id, slug: site.slug, environment: site.environment, ok, error: ok ? null : error };
+  });
   await auditLog({
     tenantId,
     actorUserId: auth.userId,
