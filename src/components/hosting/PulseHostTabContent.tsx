@@ -40,7 +40,7 @@ type DialogState =
   | { kind: "none" }
   | { kind: "add"; group: HostedSiteGroup | null }
   | { kind: "tags"; group: HostedSiteGroup | null }
-  | { kind: "users"; env: HostedEnvironment | null };
+  | { kind: "users" };
 
 /** Pulse Host "My Sites": Pulse dark theme, Render-hosted sites only. */
 export function PulseHostTabContent() {
@@ -55,6 +55,8 @@ export function PulseHostTabContent() {
   const [filters, setFilters] = useState<MySitesFilters>(EMPTY_FILTERS);
   const [dialog, setDialog] = useState<DialogState>({ kind: "none" });
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  /** Kept outside DialogState so the dialog content stays put during its close animation. */
+  const [usersEnv, setUsersEnv] = useState<HostedEnvironment | null>(null);
 
   useEffect(() => {
     if (!activeTeam?.id) return;
@@ -89,7 +91,8 @@ export function PulseHostTabContent() {
       return;
     }
     if (action === "users") {
-      setDialog({ kind: "users", env });
+      setUsersEnv(env);
+      setDialog({ kind: "users" });
       return;
     }
     if (action === "delete") {
@@ -139,7 +142,10 @@ export function PulseHostTabContent() {
         phpVersions={phpVersions}
         canAdmin={canAdmin}
         onManageTags={() => setDialog({ kind: "tags", group: null })}
-        onAddUserToAllSites={() => setDialog({ kind: "users", env: null })}
+        onAddUserToAllSites={() => {
+          setUsersEnv(null);
+          setDialog({ kind: "users" });
+        }}
         onDownloadCsv={downloadCsv}
       />
       <p className={cn(MY_SITES_STATUS_LINE, error ? "text-red-300" : "")} title={error || notice || undefined}>
@@ -185,7 +191,7 @@ export function PulseHostTabContent() {
       />
       <SiteUsersDialog
         open={dialog.kind === "users"}
-        env={dialog.kind === "users" ? dialog.env : null}
+        env={usersEnv}
         teamMembers={teamMembers}
         canAdmin={canAdmin}
         onOpenChange={(open) => !open && setDialog({ kind: "none" })}
