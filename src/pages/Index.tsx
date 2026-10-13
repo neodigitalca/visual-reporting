@@ -109,6 +109,7 @@ const VALID_MANAGER_TABS = new Set([
   "ppc-meta",
   "api",
   "pulse-forge",
+  "pulse-host",
 ]);
 
 const Index = () => {
