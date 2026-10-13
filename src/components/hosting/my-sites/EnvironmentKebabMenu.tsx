@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { HostedEnvironment } from "@/lib/hosting-api";
+import { MY_SITES_ICON_BTN, MY_SITES_POPOVER } from "./my-sites-theme";
 
 export type EnvironmentAction = "backup" | "cache-clear" | "redeploy" | "retry-provision" | "delete" | "copy" | "users";
 
@@ -25,13 +26,13 @@ export function EnvironmentKebabMenu({ env, canAdmin, onAction }: EnvironmentKeb
         <Button
           type="button"
           variant="ghost"
-          className="h-8 w-8 shrink-0 rounded-none p-0 text-muted-foreground hover:bg-zinc-800 hover:text-foreground"
+          className={MY_SITES_ICON_BTN}
           aria-label={`Actions for ${env.slug}`}
         >
           <MoreVertical className="h-4 w-4" aria-hidden />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56 rounded-none border-0 bg-zinc-900 text-base">
+      <DropdownMenuContent align="end" className={`w-56 ${MY_SITES_POPOVER}`}>
         <DropdownMenuItem asChild disabled={!env.wpAdminUrl}>
           <a href={env.wpAdminUrl ?? "#"} target="_blank" rel="noreferrer">
             WP Admin

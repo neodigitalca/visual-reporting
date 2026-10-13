@@ -24,6 +24,13 @@ export function formatDateTime(iso: string | null | undefined): string {
   return new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(d);
 }
 
+export function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "–";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "–";
+  return new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(d);
+}
+
 export type ActivityKind = "job" | "deploy" | "backup" | "audit";
 
 export type ActivityEntry = {

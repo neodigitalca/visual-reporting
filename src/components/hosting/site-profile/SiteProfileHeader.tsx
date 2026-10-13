@@ -1,12 +1,13 @@
-import { ChevronLeft, Plus, Tag } from "lucide-react";
+import { ChevronLeft, ExternalLink, Plus, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { HostedEnvironment, HostedEnvironmentKind, HostedSiteGroup } from "@/lib/hosting-api";
 import { EnvironmentKebabMenu, type EnvironmentAction } from "../my-sites/EnvironmentKebabMenu";
 import { ENVIRONMENT_LABEL } from "../my-sites/my-sites-view-model";
-import { MY_SITES_LINK, MY_SITES_TOOL_BTN, STATUS_TEXT_CLASS } from "../my-sites/my-sites-theme";
-import { PROFILE_ENV_SWITCH_BTN, PROFILE_META_BAND, PROFILE_TITLE_BAND } from "./site-profile-theme";
+import { MY_SITES_LINK, MY_SITES_TOOL_BTN, STATUS_DOT_CLASS, STATUS_TEXT_CLASS } from "../my-sites/my-sites-theme";
+import { PROFILE_ENV_SWITCH, PROFILE_ENV_SWITCH_BTN, PROFILE_META_BAND, PROFILE_TITLE_BAND } from "./site-profile-theme";
 
 const ENV_ORDER: HostedEnvironmentKind[] = ["production", "staging", "development"];
+const META_SEP = <span className="text-white/20" aria-hidden>·</span>;
 
 export type SiteProfileHeaderProps = {
   group: HostedSiteGroup;
@@ -26,12 +27,13 @@ export function SiteProfileHeader({ group, env, canAdmin, onBack, onSelectEnviro
   return (
     <>
       <div className={PROFILE_TITLE_BAND}>
-        <button type="button" className={`${MY_SITES_LINK} inline-flex h-8 shrink-0 items-center gap-1`} onClick={onBack}>
+        <button type="button" className="inline-flex h-8 shrink-0 items-center gap-1 text-muted-foreground hover:text-foreground" onClick={onBack}>
           <ChevronLeft className="h-4 w-4" aria-hidden />
           Sites
         </button>
-        <h1 className="min-w-0 truncate text-2xl font-semibold text-white">{group.name}</h1>
-        <div className="flex shrink-0 items-center gap-1" role="group" aria-label="Environment">
+        <span className="h-5 w-px shrink-0 bg-white/10" aria-hidden />
+        <h1 className="min-w-0 truncate text-2xl font-semibold tracking-tight text-white">{group.name}</h1>
+        <div className={PROFILE_ENV_SWITCH} role="group" aria-label="Environment">
           {ENV_ORDER.map((kind) => {
             const target = group.environments.find((e) => e.environment === kind);
             return (
@@ -47,11 +49,11 @@ export function SiteProfileHeader({ group, env, canAdmin, onBack, onSelectEnviro
               </button>
             );
           })}
-          <Button type="button" variant="ghost" className={MY_SITES_TOOL_BTN} disabled={!canAdmin} onClick={() => onAddEnvironment(group)}>
-            <Plus className="h-4 w-4" aria-hidden />
-            Add environment
-          </Button>
         </div>
+        <Button type="button" variant="ghost" className={MY_SITES_TOOL_BTN} disabled={!canAdmin} onClick={() => onAddEnvironment(group)}>
+          <Plus className="h-4 w-4" aria-hidden />
+          Add environment
+        </Button>
         <div className="ml-auto flex shrink-0 items-center gap-2">
           <Button type="button" variant="ghost" className={MY_SITES_TOOL_BTN} title={tagNames || "No tags"} disabled={!canAdmin} onClick={() => onManageTags(group)}>
             <Tag className="h-4 w-4" aria-hidden />
@@ -60,6 +62,7 @@ export function SiteProfileHeader({ group, env, canAdmin, onBack, onSelectEnviro
           {env.wpAdminUrl ? (
             <a className={`${MY_SITES_TOOL_BTN} inline-flex items-center text-primary`} href={env.wpAdminUrl} target="_blank" rel="noreferrer">
               WP Admin
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
             </a>
           ) : (
             <span className={`${MY_SITES_TOOL_BTN} inline-flex items-center text-muted-foreground`}>WP Admin</span>
@@ -68,17 +71,23 @@ export function SiteProfileHeader({ group, env, canAdmin, onBack, onSelectEnviro
         </div>
       </div>
       <div className={PROFILE_META_BAND}>
+        <span className="inline-flex items-center gap-2">
+          <span className={`h-2 w-2 shrink-0 ${STATUS_DOT_CLASS[env.status]}`} aria-hidden />
+          <span className={`truncate ${STATUS_TEXT_CLASS[env.status]}`} title={env.statusMessage ?? undefined}>
+            {env.statusMessage ?? env.status}
+          </span>
+        </span>
+        {META_SEP}
         <span className="font-medium text-foreground">{env.slug}</span>
+        {META_SEP}
         {env.siteUrl ? (
-          <a className={MY_SITES_LINK} href={env.siteUrl} target="_blank" rel="noreferrer">
+          <a className={`${MY_SITES_LINK} truncate`} href={env.siteUrl} target="_blank" rel="noreferrer">
             {domain}
           </a>
         ) : (
-          <span>{domain || "Provisioning URL…"}</span>
+          <span className="truncate">{domain || "Provisioning URL…"}</span>
         )}
-        <span className={`min-w-[7rem] truncate ${STATUS_TEXT_CLASS[env.status]}`} title={env.statusMessage ?? undefined}>
-          {env.statusMessage ?? env.status}
-        </span>
+        {META_SEP}
         <span>{env.region}</span>
       </div>
     </>

@@ -23,7 +23,7 @@ export type ManageTagsDialogProps = {
   onChanged: () => void;
 };
 
-const ICON_BTN = "h-7 w-7 shrink-0 rounded-none p-0 text-muted-foreground hover:bg-zinc-800 hover:text-foreground";
+const ICON_BTN = "h-7 w-7 shrink-0 rounded-none p-0 text-muted-foreground hover:bg-white/[0.06] hover:text-foreground";
 
 export function ManageTagsDialog({ open, tags, group, onOpenChange, onChanged }: ManageTagsDialogProps) {
   const [newName, setNewName] = useState("");
@@ -94,10 +94,10 @@ export function ManageTagsDialog({ open, tags, group, onOpenChange, onChanged }:
               Add
             </Button>
           </div>
-          <ul className="flex max-h-64 flex-col gap-1 overflow-y-auto">
-            {tags.length === 0 ? <li className="h-8 text-muted-foreground">No tags yet</li> : null}
+          <ul className="flex max-h-64 flex-col overflow-y-auto border border-white/[0.08]">
+            {tags.length === 0 ? <li className="flex h-9 items-center px-2 text-muted-foreground">No tags yet</li> : null}
             {tags.map((tag) => (
-              <li key={tag.id} className="flex h-8 items-center gap-2 bg-zinc-900 px-2">
+              <li key={tag.id} className="flex h-9 items-center gap-2 border-t border-white/[0.06] px-2 first:border-t-0">
                 {group ? (
                   <Checkbox
                     checked={selected.includes(tag.id)}
@@ -107,7 +107,7 @@ export function ManageTagsDialog({ open, tags, group, onOpenChange, onChanged }:
                 ) : null}
                 {editingId === tag.id ? (
                   <Input
-                    className={`${MY_SITES_FIELD} h-7 flex-1 bg-zinc-800`}
+                    className={`${MY_SITES_FIELD} h-7 flex-1`}
                     value={editName}
                     aria-label="Tag name"
                     autoFocus

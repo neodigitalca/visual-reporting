@@ -168,7 +168,7 @@ export function PulseHostTabContent() {
           <p className={cn(MY_SITES_STATUS_LINE, error ? "text-red-300" : "")} title={error || notice || undefined}>
             <span className="truncate">{error || notice}</span>
           </p>
-          <div className={cn(SEO_WORKSPACE_BODY_SCROLL_CLASS, "flex flex-col gap-3 pb-4")}>
+          <div className={cn(SEO_WORKSPACE_BODY_SCROLL_CLASS, "flex flex-col gap-4 pb-4")}>
             {inventoryTab ? (
               <InventoryTable kind={tab === "plugins" ? "plugins" : "themes"} rows={inventoryRows(visible, tab === "plugins" ? "plugins" : "themes")} loading={loading} />
             ) : null}

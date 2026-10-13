@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createHostedEnvironment, type HostedEnvironmentKind, type HostedSiteGroup } from "@/lib/hosting-api";
-import { MY_SITES_FIELD, MY_SITES_PRIMARY_BTN } from "./my-sites-theme";
+import { MY_SITES_FIELD, MY_SITES_POPOVER, MY_SITES_PRIMARY_BTN } from "./my-sites-theme";
 
 export type AddSiteDialogProps = {
   open: boolean;
@@ -79,7 +79,7 @@ export function AddSiteDialog({ open, group, onOpenChange, onCreated }: AddSiteD
             <SelectTrigger className={`${MY_SITES_FIELD} [&_svg]:text-muted-foreground`} aria-label="Environment">
               <SelectValue placeholder="Environment" />
             </SelectTrigger>
-            <SelectContent className="rounded-none border-0 bg-zinc-900 text-base">
+            <SelectContent className={MY_SITES_POPOVER}>
               {KINDS.map((k) => (
                 <SelectItem key={k.value} value={k.value} disabled={taken.has(k.value)}>
                   {k.label}

@@ -7,6 +7,7 @@ import {
   MY_SITES_LINK,
   MY_SITES_STAT_LABEL,
   MY_SITES_STAT_VALUE,
+  STATUS_DOT_CLASS,
   STATUS_TEXT_CLASS,
 } from "./my-sites-theme";
 
@@ -31,20 +32,21 @@ export function EnvironmentRow({ env, canAdmin, onAction, onOpen }: EnvironmentR
   const s = env.stats;
   const updates = envUpdateCount(env);
   const wpValue = s?.wpVersion ?? "–";
-  const statusLine = env.statusMessage ?? (env.status === "active" ? null : env.status);
+  const statusLine = env.statusMessage ?? env.status;
 
   return (
     <div className={MY_SITES_ENV_ROW}>
       <div className="flex items-center gap-3">
         <span className={ENV_PILL_CLASS[env.environment]}>{ENVIRONMENT_LABEL[env.environment]}</span>
         <div className="flex min-w-0 flex-col leading-tight">
-          <button type="button" className={`${MY_SITES_LINK} truncate text-left font-medium`} onClick={() => onOpen(env)}>
+          <button type="button" className="truncate text-left font-medium text-white hover:text-primary" onClick={() => onOpen(env)}>
             {env.slug}
           </button>
           <span className="truncate text-muted-foreground">{domain || "Provisioning URL…"}</span>
         </div>
-        <span className={`ml-2 min-w-[7rem] truncate ${STATUS_TEXT_CLASS[env.status]}`} title={env.statusMessage ?? undefined}>
-          {statusLine}
+        <span className="ml-2 inline-flex min-w-[7rem] items-center gap-2" title={env.statusMessage ?? undefined}>
+          <span className={`h-2 w-2 shrink-0 ${STATUS_DOT_CLASS[env.status]}`} aria-hidden />
+          <span className={`truncate ${STATUS_TEXT_CLASS[env.status]}`}>{statusLine}</span>
         </span>
         <div className="ml-auto flex items-center gap-2">
           {env.wpAdminUrl ? (

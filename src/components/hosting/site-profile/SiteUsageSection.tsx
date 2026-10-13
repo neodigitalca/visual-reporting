@@ -1,7 +1,9 @@
 import type { HostedEnvironment } from "@/lib/hosting-api";
+import { HOST_TD, HOST_TH, HOST_TR } from "../my-sites/my-sites-theme";
 import { formatBytes, formatCount } from "../my-sites/my-sites-view-model";
+import { StatCell } from "./SiteOverviewSection";
 import { formatDateTime } from "./site-profile-view-model";
-import { PROFILE_CARD, PROFILE_CARD_HEAD, PROFILE_CARD_TITLE, PROFILE_TD, PROFILE_TH, PROFILE_TILE, PROFILE_TILE_LABEL, PROFILE_TILE_VALUE } from "./site-profile-theme";
+import { PROFILE_CARD, PROFILE_CARD_HEAD, PROFILE_CARD_TITLE, PROFILE_STAT_GRID } from "./site-profile-theme";
 
 export type SiteUsageSectionProps = { env: HostedEnvironment };
 
@@ -18,38 +20,29 @@ const ROWS = (env: HostedEnvironment): Array<[string, string]> => [
 export function SiteUsageSection({ env }: SiteUsageSectionProps) {
   const s = env.stats;
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       <section className={PROFILE_CARD} aria-label="Usage for last 30 days">
         <div className={PROFILE_CARD_HEAD}>
           <h2 className={PROFILE_CARD_TITLE}>Usage for last 30 days</h2>
         </div>
-        <div className="grid grid-cols-3 gap-2">
-          <div className={PROFILE_TILE}>
-            <span className={PROFILE_TILE_LABEL}>Storage</span>
-            <span className={PROFILE_TILE_VALUE}>{formatBytes(s?.storageBytes ?? null)}</span>
-            <span className="h-6 text-muted-foreground">WordPress files and uploads</span>
-          </div>
-          <div className={PROFILE_TILE}>
-            <span className={PROFILE_TILE_LABEL}>Bandwidth</span>
-            <span className={PROFILE_TILE_VALUE}>{formatBytes(s?.bandwidthBytes30d ?? null)}</span>
-            <span className="h-6 text-muted-foreground">Render egress</span>
-          </div>
-          <div className={PROFILE_TILE}>
-            <span className={PROFILE_TILE_LABEL}>Visits</span>
-            <span className={PROFILE_TILE_VALUE}>{formatCount(s?.visits30d ?? null)}</span>
-            <span className="h-6 text-muted-foreground">HTTP requests</span>
-          </div>
+        <div className={`${PROFILE_STAT_GRID} grid-cols-3`}>
+          <StatCell label="Storage" value={formatBytes(s?.storageBytes ?? null)} note="WordPress files and uploads" />
+          <StatCell label="Bandwidth" value={formatBytes(s?.bandwidthBytes30d ?? null)} note="Render egress" />
+          <StatCell label="Visits" value={formatCount(s?.visits30d ?? null)} note="HTTP requests" />
         </div>
       </section>
-      <section className="bg-zinc-900/60" aria-label="Environment details">
+      <section className={PROFILE_CARD} aria-label="Environment details">
+        <div className={PROFILE_CARD_HEAD}>
+          <h2 className={PROFILE_CARD_TITLE}>Environment details</h2>
+        </div>
         <table className="w-full table-fixed border-collapse text-base">
           <tbody>
             {ROWS(env).map(([label, value]) => (
-              <tr key={label} className="border-t border-white/5 first:border-t-0">
-                <th scope="row" className={`${PROFILE_TH} w-[14rem]`}>
+              <tr key={label} className={HOST_TR}>
+                <th scope="row" className={`${HOST_TH} w-[14rem] border-b-0`}>
                   {label}
                 </th>
-                <td className={`${PROFILE_TD} truncate`} title={value}>
+                <td className={`${HOST_TD} truncate`} title={value}>
                   {value}
                 </td>
               </tr>

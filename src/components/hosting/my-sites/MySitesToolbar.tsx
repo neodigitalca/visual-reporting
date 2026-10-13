@@ -5,7 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { HostedTag } from "@/lib/hosting-api";
 import { MySitesFilterPopover } from "./MySitesFilterPopover";
 import { activeFilterCount, type MySitesFilters } from "./my-sites-view-model";
-import { MY_SITES_COUNT_BADGE, MY_SITES_FIELD, MY_SITES_TOOL_BTN, MY_SITES_TOOLBAR_BAND } from "./my-sites-theme";
+import { MY_SITES_COUNT_BADGE, MY_SITES_FIELD, MY_SITES_POPOVER, MY_SITES_TOOL_BTN, MY_SITES_TOOLBAR_BAND } from "./my-sites-theme";
 
 export type MySitesToolbarProps = {
   filters: MySitesFilters;
@@ -39,7 +39,7 @@ export function MySitesToolbar({
             <span className={MY_SITES_COUNT_BADGE}>{active}</span>
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-72 rounded-none border-0 bg-zinc-900 p-3 text-base">
+        <PopoverContent align="start" className={`w-72 p-3 ${MY_SITES_POPOVER}`}>
           <MySitesFilterPopover filters={filters} onChange={onFiltersChange} tags={tags} phpVersions={phpVersions} />
         </PopoverContent>
       </Popover>

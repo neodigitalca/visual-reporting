@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import type { HostedEnvironment, HostedSiteGroup } from "@/lib/hosting-api";
 import { EnvironmentRow } from "./EnvironmentRow";
 import type { EnvironmentAction } from "./EnvironmentKebabMenu";
-import { MY_SITES_CARD, MY_SITES_CARD_HEADER, MY_SITES_LINK } from "./my-sites-theme";
+import { HOST_DIVIDER, MY_SITES_CARD, MY_SITES_CARD_HEADER, MY_SITES_ICON_BTN } from "./my-sites-theme";
 
 export type SiteGroupCardProps = {
   group: HostedSiteGroup;
@@ -15,8 +15,6 @@ export type SiteGroupCardProps = {
   onOpenSite: (group: HostedSiteGroup, env: HostedEnvironment | null) => void;
 };
 
-const ICON_BTN = "h-8 w-8 shrink-0 rounded-none p-0 text-muted-foreground hover:bg-zinc-800 hover:text-foreground";
-
 export function SiteGroupCard({ group, canAdmin, onAddEnvironment, onManageTags, onEnvironmentAction, onOpenSite }: SiteGroupCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [first, ...rest] = group.environments;
@@ -25,8 +23,8 @@ export function SiteGroupCard({ group, canAdmin, onAddEnvironment, onManageTags,
   return (
     <section className={MY_SITES_CARD} aria-label={group.name}>
       <header className={MY_SITES_CARD_HEADER}>
-        <h2 className="min-w-0 truncate text-lg font-semibold">
-          <button type="button" className={`${MY_SITES_LINK} max-w-full truncate text-left`} onClick={() => onOpenSite(group, null)}>
+        <h2 className="min-w-0 truncate text-lg font-semibold tracking-tight">
+          <button type="button" className="max-w-full truncate text-left text-white hover:text-primary" onClick={() => onOpenSite(group, null)}>
             {group.name}
           </button>
         </h2>
@@ -34,7 +32,7 @@ export function SiteGroupCard({ group, canAdmin, onAddEnvironment, onManageTags,
           <Button
             type="button"
             variant="ghost"
-            className={ICON_BTN}
+            className={MY_SITES_ICON_BTN}
             aria-label={`Add environment to ${group.name}`}
             disabled={!canAdmin}
             onClick={() => onAddEnvironment(group)}
@@ -44,7 +42,7 @@ export function SiteGroupCard({ group, canAdmin, onAddEnvironment, onManageTags,
           <Button
             type="button"
             variant="ghost"
-            className="h-8 shrink-0 gap-1 rounded-none px-2 text-muted-foreground hover:bg-zinc-800 hover:text-foreground"
+            className={`${MY_SITES_ICON_BTN} w-auto gap-1 px-2`}
             aria-label={`Tags for ${group.name}`}
             title={tagNames || "No tags"}
             disabled={!canAdmin}
@@ -56,7 +54,7 @@ export function SiteGroupCard({ group, canAdmin, onAddEnvironment, onManageTags,
           <Button
             type="button"
             variant="ghost"
-            className={ICON_BTN}
+            className={MY_SITES_ICON_BTN}
             aria-label={`Settings for ${group.name}`}
             disabled={!canAdmin}
             onClick={() => onManageTags(group)}
@@ -70,11 +68,11 @@ export function SiteGroupCard({ group, canAdmin, onAddEnvironment, onManageTags,
         ? rest.map((env) => <EnvironmentRow key={env.id} env={env} canAdmin={canAdmin} onAction={onEnvironmentAction} onOpen={(e) => onOpenSite(group, e)} />)
         : null}
       {rest.length > 0 ? (
-        <div className="flex h-10 shrink-0 items-center justify-center">
+        <div className={`flex h-10 shrink-0 items-center justify-center border-t ${HOST_DIVIDER}`}>
           <Button
             type="button"
             variant="ghost"
-            className="h-7 gap-1 rounded-full bg-zinc-800 px-3 text-primary hover:bg-zinc-700"
+            className="h-7 gap-1 rounded-none px-3 text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
             onClick={() => setExpanded((v) => !v)}
           >
             {expanded ? "Show less" : `Show (${rest.length}) more`}

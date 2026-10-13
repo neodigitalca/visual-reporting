@@ -16,7 +16,7 @@ import {
   type HostedUserInput,
 } from "@/lib/hosting-api";
 import type { TeamMember } from "@/lib/teams-types";
-import { MY_SITES_FIELD, MY_SITES_PRIMARY_BTN } from "./my-sites-theme";
+import { HOST_DIVIDER, MY_SITES_FIELD, MY_SITES_POPOVER, MY_SITES_PRIMARY_BTN } from "./my-sites-theme";
 
 export type SiteUsersPanelProps = {
   /** Null = add one user to every provisioned site. */
@@ -29,10 +29,10 @@ export type SiteUsersPanelProps = {
 
 const ROLES: HostedSiteRole[] = ["administrator", "editor", "author", "contributor", "subscriber"];
 const MANUAL = "manual";
-const ICON_BTN = "h-7 w-7 shrink-0 rounded-none p-0 text-muted-foreground hover:bg-zinc-800 hover:text-foreground";
+const ICON_BTN = "h-7 w-7 shrink-0 rounded-none p-0 text-muted-foreground hover:bg-white/[0.06] hover:text-foreground";
 const SELECT_TRIGGER = `${MY_SITES_FIELD} whitespace-nowrap [&>span]:line-clamp-none [&_svg]:text-muted-foreground`;
-const SELECT_CONTENT = "rounded-none border-0 bg-zinc-900 text-base";
-const ROW = "grid h-9 grid-cols-[1fr_1fr_9rem_4rem] items-center gap-2 bg-zinc-900 px-2";
+const SELECT_CONTENT = MY_SITES_POPOVER;
+const ROW = `grid h-11 grid-cols-[1fr_1fr_9rem_4rem] items-center gap-2 border-t ${HOST_DIVIDER} px-2`;
 
 const PASSWORD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
 
@@ -199,17 +199,17 @@ export function SiteUsersPanel({ env, teamMembers, canAdmin, listClassName = "mi
         </Button>
       </div>
 
-      <div className={`flex flex-col gap-1 overflow-y-auto ${listClassName}`}>
+      <div className={`flex flex-col overflow-y-auto ${listClassName}`}>
         {env ? (
           <>
-            <div className="grid h-8 grid-cols-[1fr_1fr_9rem_4rem] items-center gap-2 px-2 text-muted-foreground">
+            <div className="grid h-9 grid-cols-[1fr_1fr_9rem_4rem] items-center gap-2 px-2 font-medium text-muted-foreground">
               <span>User</span>
               <span>Email</span>
               <span>Role</span>
               <span />
             </div>
             {loading ? Array.from({ length: 3 }, (_, i) => <div key={i} className={`${ROW} animate-pulse`} />) : null}
-            {!loading && users.length === 0 ? <div className="flex h-9 items-center px-2 text-muted-foreground">No users returned</div> : null}
+            {!loading && users.length === 0 ? <div className={`flex h-11 items-center border-t ${HOST_DIVIDER} px-2 text-muted-foreground`}>No users returned</div> : null}
             {users.map((user) => (
               <div key={user.id} className={ROW}>
                 <span className="truncate" title={user.login}>
@@ -232,9 +232,9 @@ export function SiteUsersPanel({ env, teamMembers, canAdmin, listClassName = "mi
           </>
         ) : (
           <>
-            {bulkResults.length === 0 ? <div className="flex h-9 items-center px-2 text-muted-foreground">Pick a user and role, then Add. Results per site appear here.</div> : null}
+            {bulkResults.length === 0 ? <div className="flex h-11 items-center px-2 text-muted-foreground">Pick a user and role, then Add. Results per site appear here.</div> : null}
             {bulkResults.map((r) => (
-              <div key={r.siteId} className="grid h-9 grid-cols-[1fr_6rem_1fr] items-center gap-2 bg-zinc-900 px-2">
+              <div key={r.siteId} className={`grid h-11 grid-cols-[1fr_6rem_1fr] items-center gap-2 border-t ${HOST_DIVIDER} px-2`}>
                 <span className="truncate">{r.slug}</span>
                 <span className="text-muted-foreground">{r.environment}</span>
                 <span className={`truncate ${r.ok ? "text-primary" : "text-red-300"}`} title={r.error ?? undefined}>
