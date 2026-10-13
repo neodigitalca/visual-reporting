@@ -167,7 +167,14 @@ export function SiteUsersDialog({ open, env, teamMembers, canAdmin, onOpenChange
         </DialogHeader>
         <div className="flex flex-col gap-2">
           <div className="grid grid-cols-[1fr_1fr_9rem_4rem] items-center gap-2">
-            <Select value={source} disabled={!canAdmin} onValueChange={setSource}>
+            <Select
+              value={source}
+              disabled={!canAdmin}
+              onValueChange={(v) => {
+                setSource(v);
+                setEmail(teamMembers.find((m) => String(m.userId) === v)?.email ?? "");
+              }}
+            >
               <SelectTrigger className={SELECT_TRIGGER} aria-label="Pulse team member">
                 <SelectValue placeholder="Pulse team member" />
               </SelectTrigger>
@@ -188,7 +195,7 @@ export function SiteUsersDialog({ open, env, teamMembers, canAdmin, onOpenChange
               aria-label="Email"
               type="email"
               value={email}
-              disabled={source !== MANUAL || !canAdmin}
+              disabled={!canAdmin}
               onChange={(e) => setEmail(e.target.value)}
             />
             <RoleSelect value={role} disabled={!canAdmin} onChange={setRole} />
