@@ -4,7 +4,7 @@ import { runBackupJob } from "../jobs/backup.mjs";
 import { runHealthJob } from "../jobs/health.mjs";
 import { runProvisionJob } from "../jobs/provision.mjs";
 import { runCacheClearJob } from "../jobs/cache-clear.mjs";
-import { runOpsAgentJob } from "../agents/hosting-ops-agent.mjs";
+import { runOpsAgentJob } from "../../agents/hosting-ops-agent.mjs";
 
 export async function createJob({ siteId, jobType, payload }) {
   const result = await getPool().query(
