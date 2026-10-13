@@ -2,9 +2,16 @@
 set -euo pipefail
 
 # Replace the plugin folders on the persistent disk with the copies baked into this image.
+# Hosted sites get neo-pulse-wp only; neo-pulse-app (the Neo Pulse app backend) belongs on the hub alone.
 copy_plugins() {
   mkdir -p /var/www/html/wp-content/plugins
-  for plugin in neo-pulse-wp neo-pulse-app; do
+  local plugins="neo-pulse-wp"
+  if [[ "${NEO_PULSE_HUB:-}" == "1" ]]; then
+    plugins="neo-pulse-wp neo-pulse-app"
+  else
+    rm -rf /var/www/html/wp-content/plugins/neo-pulse-app
+  fi
+  for plugin in $plugins; do
     if [[ -d "/usr/src/$plugin" ]]; then
       rm -rf "/var/www/html/wp-content/plugins/$plugin"
       cp -a "/usr/src/$plugin" "/var/www/html/wp-content/plugins/$plugin"

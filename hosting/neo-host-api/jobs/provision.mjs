@@ -2,12 +2,11 @@ import crypto from "node:crypto";
 import { getPool } from "../db/pool.mjs";
 import { getOwnerId, createDockerService, addCustomDomain, deleteService } from "../render-client.mjs";
 
-/** Paths whose changes should redeploy hosted services (mirrors render.yaml buildFilter for staging). */
+/** Paths whose changes should redeploy hosted services. Hosted sites ship neo-pulse-wp only (neo-pulse-app is hub-only). */
 export const MARIADB_BUILD_PATHS = ["hosting/docker/mariadb/**"];
 export const WORDPRESS_BUILD_PATHS = [
   "hosting/docker/wordpress/**",
   "wordpress-plugins/neo-pulse-wp/**",
-  "wordpress-plugins/neo-pulse-app/**",
 ];
 
 function payload(job) {
