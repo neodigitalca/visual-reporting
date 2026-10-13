@@ -78,6 +78,10 @@ export async function triggerServiceDeploy(serviceId) {
   return data?.id || data?.deploy?.id || null;
 }
 
+/** Multipliers to bytes for the `unit` Render reports on bandwidth series. */
+const BYTES_PER_UNIT = { bytes: 1, kb: 1024, mb: 1024 ** 2, gb: 1024 ** 3 };
+
+/** Sums every point in the series; bandwidth is converted to whole bytes using the declared unit. */
 async function metricSeries(kind, serviceId, { startTime, endTime, resolutionSeconds }) {
   const params = new URLSearchParams();
   params.append("resource", serviceId);
@@ -88,11 +92,17 @@ async function metricSeries(kind, serviceId, { startTime, endTime, resolutionSec
   const series = Array.isArray(data) ? data : [];
   let total = 0;
   for (const s of series) {
+    let scale = 1;
+    if (kind === "bandwidth") {
+      const unit = String(s.unit ?? "bytes").toLowerCase();
+      scale = BYTES_PER_UNIT[unit];
+      if (!scale) throw new Error(`Render bandwidth metric has unknown unit "${unit}".`);
+    }
     for (const point of s.values ?? []) {
-      total += Number(point.value) || 0;
+      total += (Number(point.value) || 0) * scale;
     }
   }
-  return total;
+  return Math.round(total);
 }
 
 /** Sum of bandwidth bytes and HTTP requests over the last 30 days. */
