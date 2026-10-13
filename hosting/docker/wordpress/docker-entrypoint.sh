@@ -1,17 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Replace the plugin folders on the persistent disk with the copies baked into this image.
 copy_plugins() {
-  if [[ -d /usr/src/neo-pulse-wp ]]; then
-    mkdir -p /var/www/html/wp-content/plugins
-    rsync -a --delete /usr/src/neo-pulse-wp/ /var/www/html/wp-content/plugins/neo-pulse-wp/ 2>/dev/null \
-      || cp -a /usr/src/neo-pulse-wp /var/www/html/wp-content/plugins/neo-pulse-wp
-  fi
-  if [[ -d /usr/src/neo-pulse-app ]]; then
-    mkdir -p /var/www/html/wp-content/plugins
-    rsync -a --delete /usr/src/neo-pulse-app/ /var/www/html/wp-content/plugins/neo-pulse-app/ 2>/dev/null \
-      || cp -a /usr/src/neo-pulse-app /var/www/html/wp-content/plugins/neo-pulse-app
-  fi
+  mkdir -p /var/www/html/wp-content/plugins
+  for plugin in neo-pulse-wp neo-pulse-app; do
+    if [[ -d "/usr/src/$plugin" ]]; then
+      rm -rf "/var/www/html/wp-content/plugins/$plugin"
+      cp -a "/usr/src/$plugin" "/var/www/html/wp-content/plugins/$plugin"
+    fi
+  done
 }
 
 # WP Admin signs in with the Pulse account: an administrator whose user_pass is the Pulse hub bcrypt hash

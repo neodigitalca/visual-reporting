@@ -68,6 +68,15 @@ The health job checks `site_url` + `/wp-json/`; a row whose URL does not resolve
 
 Every hosted WordPress gets an administrator `pulse` (`PULSE_ADMIN_EMAIL`) whose `user_pass` is the Pulse hub bcrypt hash (`PULSE_ADMIN_PASSWORD_HASH`). The container entrypoint creates or refreshes it on every boot; the provision job copies both values from `pulse-host-api` to each new WP service. WordPress verifies `$2y$` hashes via `crypt()` / `password_verify()`, so WP Admin accepts `pulse@neodigital.ca` + the Pulse password. If the Pulse password changes, update `PULSE_ADMIN_PASSWORD_HASH` on `pulse-host-api` and each WP service, then redeploy.
 
+## Users (per site and all sites)
+
+Environment menu **Users** (My Sites) opens the user table for one hosted WordPress; the toolbar button **Add user to all sites** adds the same user to every provisioned environment of the team and lists one result per site.
+
+- Hosted plugin (`neo-pulse-wp`): `neo-pulse/v1/host-report/users` (GET, POST) and `/users/{id}` (PATCH, DELETE), guarded by the same `X-Pulse-Host-Token` as `host-report`. POST and PATCH accept `password` (plaintext, WordPress hashes it) or `passwordHash` (`$2y$` bcrypt written to `user_pass`). DELETE refuses the `PULSE_ADMIN_EMAIL` account and the last administrator (409); reassigns content to another administrator.
+- Control API (`pulse-host-api`): `/v1/hosting/sites/:id/users[/:userId]` and `POST /v1/hosting/sites/users-bulk` call the hosted plugin with the row's `report_token`. Mutations need hosting write; audit actions `site.user.create|update|delete|create_all`.
+- Hub proxy (`neo-pulse-app`): when the browser sends `pulseUserId`, the hub checks the member belongs to the active team and replaces it with the member's `email`, `displayName`, and Pulse `passwordHash` before forwarding. A Pulse team member therefore signs into every hosted WP Admin with their Pulse password; the hash never reaches the browser.
+- Manual users: the dialog generates a 24 character password client-side, sends it once, and shows it once. **Reset password** does the same for an existing user.
+
 ## Provision the platform
 
 ```bash
