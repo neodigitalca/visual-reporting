@@ -81,7 +81,14 @@ install_wordpress() {
   wp rewrite flush --hard --allow-root
 }
 
+# The persistent disk mounts root-owned; PHP (www-data) must be able to write uploads/neo-pulse-data (sites mirror, agent runs, team data).
+ensure_uploads_writable() {
+  mkdir -p /var/www/html/wp-content/uploads
+  chown -R www-data:www-data /var/www/html/wp-content/uploads
+}
+
 copy_plugins
+ensure_uploads_writable
 
 docker-entrypoint.sh apache2-foreground &
 apache_pid=$!

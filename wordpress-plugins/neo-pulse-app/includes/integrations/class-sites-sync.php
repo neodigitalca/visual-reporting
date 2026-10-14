@@ -30,7 +30,10 @@ class Neo_Pulse_App_Sites_Sync {
 			'syncedAt'     => gmdate( 'c' ),
 			'activeSiteId' => isset( $opts['activeSiteId'] ) ? (string) $opts['activeSiteId'] : null,
 		);
-		Neo_Pulse_App_Json_File_Store::write( Neo_Pulse_App_Data_Paths::sites_path(), $payload );
+		$path = Neo_Pulse_App_Data_Paths::sites_path();
+		if ( ! Neo_Pulse_App_Json_File_Store::write( $path, $payload ) ) {
+			throw new RuntimeException( 'Could not write sites mirror: ' . $path );
+		}
 		return array( 'ok' => true, 'count' => count( $sites ) );
 	}
 
