@@ -13,7 +13,7 @@ export const WP_ENGINE_INSTALL_BY_HOST_LABEL: Record<string, string> = {
   interiorsbylaura: "interiorsbyla",
   intheshadeflorida: "intheshade",
   kwbllp: "kwbllp",
-  lindseyblinds: "lindseyblinds",
+  lindseyblindsetc: "lindseyblinds",
   neodigital: "neodigital",
   phoenixpainting: "phoenixpaint",
   "posh-outdoors": "poshoutdoors",
@@ -24,7 +24,8 @@ export const WP_ENGINE_INSTALL_BY_HOST_LABEL: Record<string, string> = {
   youjunkit: "youjunkit",
 };
 
-function hostLabel(site: WordPressSite): string {
+/** First hostname label of the site (www stripped), e.g. blindmagic.com -> blindmagic. */
+export function siteHostLabel(site: WordPressSite): string {
   try {
     const raw = (site.productionSiteUrl || site.siteUrl || "").trim();
     if (!raw) return "";
@@ -38,7 +39,7 @@ function hostLabel(site: WordPressSite): string {
 /** Fill WP Engine install + account ID for known installs; never overwrites an existing account ID. */
 export function applyWpEngineHostingDefaults(site: WordPressSite): WordPressSite {
   if (site.wpEngineAccountId?.trim()) return site;
-  const install = WP_ENGINE_INSTALL_BY_HOST_LABEL[hostLabel(site)];
+  const install = WP_ENGINE_INSTALL_BY_HOST_LABEL[siteHostLabel(site)];
   if (!install) return site;
   return { ...site, wpEngineInstall: install, wpEngineAccountId: WP_ENGINE_ACCOUNT_ID };
 }

@@ -6,6 +6,7 @@ import { BACKEND_API_BASE } from "@/lib/wordpress-api/connection";
 import { isOptimizationPackageTier } from "@/lib/wordpress-optimization-package";
 import { wordPressSiteHostKey } from "@/lib/wordpress-site-host-key";
 import { applyWpEngineHostingDefaults } from "@/lib/wp-engine-install-defaults";
+import { applyGa4PropertyIdDefaults } from "@/lib/ga4-property-id-defaults";
 import {
   isShutterSpotProperty,
   SHUTTER_SPOT_CANONICAL_NAME,
@@ -285,8 +286,10 @@ export function getStoredSites(): WordPressSite[] {
           delete migratedSite.optimizationPackage;
         }
 
-        return applyWpEngineHostingDefaults(
-          applyInTheShadeSemrushPositionTrackingDefaults(applyShutterSpotDisplayNameMigration(migratedSite)),
+        return applyGa4PropertyIdDefaults(
+          applyWpEngineHostingDefaults(
+            applyInTheShadeSemrushPositionTrackingDefaults(applyShutterSpotDisplayNameMigration(migratedSite)),
+          ),
         );
       });
       
@@ -363,8 +366,10 @@ export async function restoreOriginalPropertyNamesOnce(): Promise<boolean> {
     const mirror = findMirrorSiteRow(site, serverSites);
     const before = JSON.stringify({ name: site.name, menuDisplayName: site.menuDisplayName });
     let next = restoreOriginalIntegrationsSiteName(site, mirror);
-    next = applyWpEngineHostingDefaults(
-      applyInTheShadeSemrushPositionTrackingDefaults(applyShutterSpotDisplayNameMigration(next)),
+    next = applyGa4PropertyIdDefaults(
+      applyWpEngineHostingDefaults(
+        applyInTheShadeSemrushPositionTrackingDefaults(applyShutterSpotDisplayNameMigration(next)),
+      ),
     );
     if (JSON.stringify({ name: next.name, menuDisplayName: next.menuDisplayName }) !== before) {
       changed = true;
