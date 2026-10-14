@@ -290,6 +290,7 @@ export const ManagerWorkspace: React.FC<ManagerWorkspaceProps> = ({
           value="organic-reporting"
           className={cn(
             embeddedTabPanelTopClass,
+            "data-[state=inactive]:hidden",
             embeddedTabPanelStretch,
             embedded && "overflow-hidden",
           )}
