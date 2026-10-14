@@ -5,12 +5,22 @@ export type PropertyConnectionTone = { label: string; dot: string; text: string 
 
 export function propertyConnectionTone(site: WordPressSite): PropertyConnectionTone {
   if (site.enabled === false) return { label: "Disabled", dot: "bg-zinc-500", text: "text-muted-foreground" };
+  if (isWpEngineHosted(site)) return { label: "Hosted on WP Engine", dot: "bg-primary", text: "text-primary" };
   return propertyConnectionStatusTone(site.connectionStatus);
 }
 
 /** WP Engine account ID present means the site is hosted on WP Engine; otherwise it runs on Pulse Host. */
+export function isWpEngineHosted(site: WordPressSite): boolean {
+  return Boolean(site.wpEngineAccountId?.trim());
+}
+
 export function propertyHostingLabel(site: WordPressSite): "WP Engine" | "Pulse Host" {
-  return site.wpEngineAccountId?.trim() ? "WP Engine" : "Pulse Host";
+  return isWpEngineHosted(site) ? "WP Engine" : "Pulse Host";
+}
+
+/** Note under the WordPress hosting cell: install name on WP Engine, Pulse connection result otherwise. */
+export function propertyHostingNote(site: WordPressSite): string {
+  return isWpEngineHosted(site) ? propertyWpEngineInstall(site) : propertyConnectionStatusTone(site.connectionStatus).label;
 }
 
 export function propertyConnectionStatusTone(status: WordPressSite["connectionStatus"]): PropertyConnectionTone {

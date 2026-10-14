@@ -1,7 +1,7 @@
 import { StatCell } from "@/components/hosting/site-profile/SiteOverviewSection";
 import { PROFILE_CARD, PROFILE_CARD_HEAD, PROFILE_CARD_TITLE, PROFILE_STAT_GRID } from "@/components/hosting/site-profile/site-profile-theme";
 import type { WordPressSite } from "../types";
-import { propertyConnectionStatusTone, propertyHostingLabel, propertyWpEngineInstall } from "./property-profile-view-model";
+import { isWpEngineHosted, propertyHostingLabel, propertyHostingNote, propertyWpEngineInstall } from "./property-profile-view-model";
 import { WordPressCardActions } from "./WordPressCardActions";
 
 export type PropertyOverviewSectionProps = {
@@ -31,7 +31,6 @@ function integrationStat(id: string | undefined): { value: string; note: string 
 }
 
 export function PropertyOverviewSection({ site, isTesting, isDetecting, isExtractingNAPAndGraph, onTest, onDetect, onExtractNAPAndGraph, onPatchSite }: PropertyOverviewSectionProps) {
-  const status = propertyConnectionStatusTone(site.connectionStatus);
   const sitemaps = sitemapStat(site);
   const scheduled = site.scheduledPosts;
   const ga4 = integrationStat(site.ga4PropertyId);
@@ -53,8 +52,8 @@ export function PropertyOverviewSection({ site, isTesting, isDetecting, isExtrac
           <StatCell
             label="WordPress"
             value={propertyHostingLabel(site)}
-            note={status.label}
-            tone={site.connectionStatus === "success" ? "ok" : site.connectionStatus === "failed" ? "warn" : undefined}
+            note={propertyHostingNote(site)}
+            tone={isWpEngineHosted(site) || site.connectionStatus === "success" ? "ok" : site.connectionStatus === "failed" ? "warn" : undefined}
           />
           <StatCell label="Sitemaps" value={sitemaps.value} note={sitemaps.note} />
           <StatCell label="Scheduled" value={scheduled ? String(scheduled.count) : "0"} note={scheduled ? (scheduled.count === 1 ? "post" : "posts") : "Not loaded"} />

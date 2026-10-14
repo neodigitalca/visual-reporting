@@ -5,7 +5,7 @@ import { PROFILE_META_BAND, PROFILE_TITLE_BAND } from "@/components/hosting/site
 import { wordpressSiteDisplayName } from "@/lib/wordpress-site-display-name";
 import { getPublicSiteUrl } from "@/lib/wordpress-site-public-url";
 import type { WordPressSite } from "../types";
-import { formatLastTested, propertyConnectionTone, propertyWpAdminUrl } from "./property-profile-view-model";
+import { formatLastTested, isWpEngineHosted, propertyConnectionTone, propertyWpAdminUrl } from "./property-profile-view-model";
 import { wordpressSiteDomainLabel } from "./wordpress-site-domain-label";
 
 const META_SEP = <span className="text-white/20" aria-hidden>·</span>;
@@ -60,8 +60,12 @@ export function PropertyProfileHeader({ site, onBack, onOpenTags }: PropertyProf
         ) : (
           <span className="truncate">No URL</span>
         )}
-        {META_SEP}
-        <span className="truncate">Last tested {formatLastTested(site.lastTested)}</span>
+        {isWpEngineHosted(site) ? null : (
+          <>
+            {META_SEP}
+            <span className="truncate">Last tested {formatLastTested(site.lastTested)}</span>
+          </>
+        )}
       </div>
     </>
   );

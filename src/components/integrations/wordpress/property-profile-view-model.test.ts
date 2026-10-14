@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { WordPressSite } from "../types";
-import { propertyConnectionStatusTone, propertyHostingLabel, propertyWpAdminUrl } from "./property-profile-view-model";
+import { propertyConnectionStatusTone, propertyConnectionTone, propertyHostingLabel, propertyWpAdminUrl } from "./property-profile-view-model";
 
 const base: WordPressSite = {
   id: "wp-1",
@@ -31,5 +31,6 @@ describe("property-profile-view-model", () => {
   it("maps connection status independently of enabled", () => {
     expect(propertyConnectionStatusTone(undefined).label).toBe("Not tested");
     expect(propertyConnectionStatusTone("success").label).toBe("Connected");
+    expect(propertyConnectionTone({ ...base, connectionStatus: "failed", wpEngineAccountId: "ed80c554" }).label).toBe("Hosted on WP Engine");
   });
 });
