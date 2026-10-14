@@ -84,6 +84,9 @@ export async function syncWordPressSitesToServer(sites: WordPressSite[]): Promis
       gbpLocationId: s.gbpLocationId,
       ga4PropertyId: s.ga4PropertyId,
       googleAdsCustomerId: s.googleAdsCustomerId,
+      semrushSiteAuditProjectId: s.semrushSiteAuditProjectId,
+      semrushPositionTrackingProjectId: s.semrushPositionTrackingProjectId,
+      semrushPositionTrackingCampaignId: s.semrushPositionTrackingCampaignId,
       optimizationPackage: s.optimizationPackage,
       editorialCountsPeriodStartYmd: s.editorialCountsPeriodStartYmd,
       entitySitemapUrl: s.entitySitemapUrl,
@@ -393,7 +396,16 @@ function findMirrorSiteRow(local: WordPressSite, serverSites: WordPressSite[]): 
   return serverSites.find((s) => (s.name ?? "").trim().toLowerCase() === nameKey);
 }
 
-/** Merge server-mirrored gbpLocationId / ga4PropertyId onto local sites when the browser copy is missing them. */
+const MIRROR_INTEGRATION_ID_FIELDS = [
+  "gbpLocationId",
+  "ga4PropertyId",
+  "googleAdsCustomerId",
+  "semrushSiteAuditProjectId",
+  "semrushPositionTrackingProjectId",
+  "semrushPositionTrackingCampaignId",
+] as const;
+
+/** Merge server-mirrored integration IDs (GBP, GA4, Google Ads, Semrush) onto local sites when the browser copy is missing them. */
 export async function mergeServerGbpLocationIdsIntoLocalSites(): Promise<boolean> {
   const serverSites = await fetchWordPressSitesMirror();
   if (serverSites.length === 0) return false;
@@ -406,20 +418,12 @@ export async function mergeServerGbpLocationIdsIntoLocalSites(): Promise<boolean
     const row = findMirrorSiteRow(site, serverSites);
     if (!row) return site;
     let next = site;
-    const gbp = row.gbpLocationId?.trim();
-    const ga4 = row.ga4PropertyId?.trim();
-    const ads = row.googleAdsCustomerId?.trim();
-    if (gbp && !site.gbpLocationId?.trim()) {
-      next = { ...next, gbpLocationId: gbp };
-      changed = true;
-    }
-    if (ga4 && !site.ga4PropertyId?.trim()) {
-      next = { ...next, ga4PropertyId: ga4 };
-      changed = true;
-    }
-    if (ads && !site.googleAdsCustomerId?.trim()) {
-      next = { ...next, googleAdsCustomerId: ads };
-      changed = true;
+    for (const field of MIRROR_INTEGRATION_ID_FIELDS) {
+      const value = row[field]?.trim();
+      if (value && !site[field]?.trim()) {
+        next = { ...next, [field]: value };
+        changed = true;
+      }
     }
     return next;
   });

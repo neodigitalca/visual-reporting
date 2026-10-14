@@ -9,6 +9,15 @@ defined( 'ABSPATH' ) || exit;
 
 class Neo_Pulse_App_Sites_Sync {
 
+	private const PRESERVED_INTEGRATION_FIELDS = array(
+		'gbpLocationId',
+		'ga4PropertyId',
+		'googleAdsCustomerId',
+		'semrushSiteAuditProjectId',
+		'semrushPositionTrackingProjectId',
+		'semrushPositionTrackingCampaignId',
+	);
+
 	/**
 	 * @param array<int,array<string,mixed>> $sites Site rows from browser.
 	 * @param array<string,mixed>              $opts  activeSiteId optional.
@@ -26,7 +35,7 @@ class Neo_Pulse_App_Sites_Sync {
 	}
 
 	/**
-	 * Keep server-side GBP/GA4 ids when a browser sync omits them (stale bundle or partial payload).
+	 * Keep server-side integration ids (GBP, GA4, Google Ads, Semrush) when a browser sync omits them (stale bundle or partial payload).
 	 *
 	 * @param array<int,array<string,mixed>> $sites
 	 * @return array<int,array<string,mixed>>
@@ -51,14 +60,10 @@ class Neo_Pulse_App_Sites_Sync {
 			if ( ! is_array( $prev ) ) {
 				continue;
 			}
-			if ( empty( $site['gbpLocationId'] ) && ! empty( $prev['gbpLocationId'] ) ) {
-				$sites[ $i ]['gbpLocationId'] = (string) $prev['gbpLocationId'];
-			}
-			if ( empty( $site['ga4PropertyId'] ) && ! empty( $prev['ga4PropertyId'] ) ) {
-				$sites[ $i ]['ga4PropertyId'] = (string) $prev['ga4PropertyId'];
-			}
-			if ( empty( $site['googleAdsCustomerId'] ) && ! empty( $prev['googleAdsCustomerId'] ) ) {
-				$sites[ $i ]['googleAdsCustomerId'] = (string) $prev['googleAdsCustomerId'];
+			foreach ( self::PRESERVED_INTEGRATION_FIELDS as $field ) {
+				if ( empty( $site[ $field ] ) && ! empty( $prev[ $field ] ) ) {
+					$sites[ $i ][ $field ] = (string) $prev[ $field ];
+				}
 			}
 		}
 		return $sites;
