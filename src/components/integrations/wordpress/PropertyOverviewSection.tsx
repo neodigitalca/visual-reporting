@@ -1,7 +1,7 @@
 import { StatCell } from "@/components/hosting/site-profile/SiteOverviewSection";
 import { PROFILE_CARD, PROFILE_CARD_HEAD, PROFILE_CARD_TITLE, PROFILE_STAT_GRID } from "@/components/hosting/site-profile/site-profile-theme";
 import type { WordPressSite } from "../types";
-import { formatLastTested, propertyConnectionTone } from "./property-profile-view-model";
+import { propertyConnectionStatusTone, propertyHostingLabel } from "./property-profile-view-model";
 import { WordPressCardActions } from "./WordPressCardActions";
 
 export type PropertyOverviewSectionProps = {
@@ -31,13 +31,17 @@ function integrationStat(id: string | undefined): { value: string; note: string 
 }
 
 export function PropertyOverviewSection({ site, isTesting, isDetecting, isExtractingNAPAndGraph, onTest, onDetect, onExtractNAPAndGraph, onPatchSite }: PropertyOverviewSectionProps) {
-  const connection = propertyConnectionTone(site);
+  const status = propertyConnectionStatusTone(site.connectionStatus);
   const sitemaps = sitemapStat(site);
   const scheduled = site.scheduledPosts;
   const ga4 = integrationStat(site.ga4PropertyId);
   const ads = integrationStat(site.googleAdsCustomerId);
   const gbp = integrationStat(site.gbpLocationId);
   const semrush = integrationStat(site.semrushSiteAuditProjectId ?? site.semrushPositionTrackingProjectId);
+  const wpEngineInstall = site.wpEngineInstall?.trim() ?? "";
+  const wpEngine = wpEngineInstall
+    ? { value: wpEngineInstall, note: site.wpEngineAccountId?.trim() || "No account ID" }
+    : { value: "Not set", note: "" };
 
   return (
     <div className="flex flex-col gap-5">
@@ -48,8 +52,8 @@ export function PropertyOverviewSection({ site, isTesting, isDetecting, isExtrac
         <div className={`${PROFILE_STAT_GRID} grid-cols-4`}>
           <StatCell
             label="WordPress"
-            value={connection.label}
-            note={`Last tested ${formatLastTested(site.lastTested)}`}
+            value={propertyHostingLabel(site)}
+            note={status.label}
             tone={site.connectionStatus === "success" ? "ok" : site.connectionStatus === "failed" ? "warn" : undefined}
           />
           <StatCell label="Sitemaps" value={sitemaps.value} note={sitemaps.note} />
@@ -62,11 +66,12 @@ export function PropertyOverviewSection({ site, isTesting, isDetecting, isExtrac
         <div className={PROFILE_CARD_HEAD}>
           <h2 className={PROFILE_CARD_TITLE}>Integrations</h2>
         </div>
-        <div className={`${PROFILE_STAT_GRID} grid-cols-4`}>
+        <div className={`${PROFILE_STAT_GRID} grid-cols-5`}>
           <StatCell label="GA4" value={ga4.value} note={ga4.note} />
           <StatCell label="Google Ads" value={ads.value} note={ads.note} />
           <StatCell label="GBP" value={gbp.value} note={gbp.note} />
           <StatCell label="Semrush" value={semrush.value} note={semrush.note} />
+          <StatCell label="WP Engine" value={wpEngine.value} note={wpEngine.note} />
         </div>
       </section>
 

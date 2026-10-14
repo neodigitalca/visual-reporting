@@ -373,7 +373,7 @@ export const WordPressFeature: React.FC<WordPressFeatureProps> = ({
       formSiteUrl,
       formUsername,
       formAppPassword,
-      activeEdit,
+      liveEdit,
       formProductionSiteUrl,
       ga4ForSave,
       gbpForSave,

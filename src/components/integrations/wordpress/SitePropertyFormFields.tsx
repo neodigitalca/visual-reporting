@@ -39,6 +39,7 @@ import {
 import { type PropertySettingsSubSectionId } from "./property-settings-types";
 import { buildSiteLocationsPatch } from "@/lib/wordpress-api/site-service-area";
 import { BenchmarkCategoryTagField } from "./BenchmarkCategoryTagField";
+import { WpEngineHostingFields } from "./WpEngineHostingFields";
 import {
   nextStateForCountry,
   ProfileLocationSelect,
@@ -581,6 +582,7 @@ export const SitePropertyFormFields: React.FC<SitePropertyFormFieldsProps> = ({
               className={flatInputClass}
             />
           </TaskFormFlatField>
+          <WpEngineHostingFields site={serviceAreaSite} onPatchSite={onPatchSite} />
         </TaskFormFlatGrid>
         <div className="mt-1 flex flex-wrap items-center gap-2 px-1">
           <Button

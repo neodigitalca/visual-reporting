@@ -16,6 +16,8 @@ class Neo_Pulse_App_Sites_Sync {
 		'semrushSiteAuditProjectId',
 		'semrushPositionTrackingProjectId',
 		'semrushPositionTrackingCampaignId',
+		'wpEngineInstall',
+		'wpEngineAccountId',
 	);
 
 	/**

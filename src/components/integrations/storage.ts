@@ -87,6 +87,8 @@ export async function syncWordPressSitesToServer(sites: WordPressSite[]): Promis
       semrushSiteAuditProjectId: s.semrushSiteAuditProjectId,
       semrushPositionTrackingProjectId: s.semrushPositionTrackingProjectId,
       semrushPositionTrackingCampaignId: s.semrushPositionTrackingCampaignId,
+      wpEngineInstall: s.wpEngineInstall,
+      wpEngineAccountId: s.wpEngineAccountId,
       optimizationPackage: s.optimizationPackage,
       editorialCountsPeriodStartYmd: s.editorialCountsPeriodStartYmd,
       entitySitemapUrl: s.entitySitemapUrl,
@@ -166,6 +168,8 @@ export function minimalSiteForLocalStorage(site: WordPressSite): WordPressSite {
     semrushSiteAuditProjectId: slim.semrushSiteAuditProjectId,
     semrushPositionTrackingProjectId: slim.semrushPositionTrackingProjectId,
     semrushPositionTrackingCampaignId: slim.semrushPositionTrackingCampaignId,
+    wpEngineInstall: slim.wpEngineInstall,
+    wpEngineAccountId: slim.wpEngineAccountId,
     editorialCountsPeriodStartYmd: slim.editorialCountsPeriodStartYmd,
     optimizationPackage: slim.optimizationPackage,
     industryVertical: slim.industryVertical,
@@ -403,9 +407,11 @@ const MIRROR_INTEGRATION_ID_FIELDS = [
   "semrushSiteAuditProjectId",
   "semrushPositionTrackingProjectId",
   "semrushPositionTrackingCampaignId",
+  "wpEngineInstall",
+  "wpEngineAccountId",
 ] as const;
 
-/** Merge server-mirrored integration IDs (GBP, GA4, Google Ads, Semrush) onto local sites when the browser copy is missing them. */
+/** Merge server-mirrored integration IDs (GBP, GA4, Google Ads, Semrush, WP Engine) onto local sites when the browser copy is missing them. */
 export async function mergeServerGbpLocationIdsIntoLocalSites(): Promise<boolean> {
   const serverSites = await fetchWordPressSitesMirror();
   if (serverSites.length === 0) return false;

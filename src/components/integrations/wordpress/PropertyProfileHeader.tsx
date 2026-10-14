@@ -5,7 +5,7 @@ import { PROFILE_META_BAND, PROFILE_TITLE_BAND } from "@/components/hosting/site
 import { wordpressSiteDisplayName } from "@/lib/wordpress-site-display-name";
 import { getPublicSiteUrl } from "@/lib/wordpress-site-public-url";
 import type { WordPressSite } from "../types";
-import { formatLastTested, propertyConnectionTone } from "./property-profile-view-model";
+import { formatLastTested, propertyConnectionTone, propertyWpAdminUrl } from "./property-profile-view-model";
 import { wordpressSiteDomainLabel } from "./wordpress-site-domain-label";
 
 const META_SEP = <span className="text-white/20" aria-hidden>·</span>;
@@ -20,7 +20,7 @@ export function PropertyProfileHeader({ site, onBack, onOpenTags }: PropertyProf
   const tone = propertyConnectionTone(site);
   const publicUrl = getPublicSiteUrl(site);
   const domain = publicUrl ? wordpressSiteDomainLabel(publicUrl) : "";
-  const wpAdminUrl = site.siteUrl?.trim() ? `${site.siteUrl.trim().replace(/\/$/, "")}/wp-admin/` : "";
+  const wpAdminUrl = propertyWpAdminUrl(site);
   const tagCount = site.profileTags?.length ?? 0;
 
   return (

@@ -84,6 +84,10 @@ export interface WordPressSite {
   semrushPositionTrackingProjectId?: string;
   /** Semrush Position Tracking campaign ID (URL fid= or full {project}_{campaign}). */
   semrushPositionTrackingCampaignId?: string;
+  /** WP Engine install name (my.wpengine.com/installs/{install}). */
+  wpEngineInstall?: string;
+  /** WP Engine account UUID that owns the install (launch_wp_admin?account_id=...). */
+  wpEngineAccountId?: string;
   /**
    * Optional local `YYYY-MM-DD` anchor for editorial post/entity counts: each period is three calendar months
    * from this date. When unset, counts use the calendar quarter (Q1–Q4).
