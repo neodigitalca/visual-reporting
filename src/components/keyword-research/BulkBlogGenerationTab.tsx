@@ -10,6 +10,8 @@ import { BulkPromptWorkspaceHeader } from "@/components/keyword-research/bulk/Bu
 import { BulkGeneratorScheduleMenu } from "@/components/keyword-research/bulk/BulkGeneratorScheduleMenu";
 import { BulkGeneratorSitemapMenu } from "@/components/keyword-research/bulk/BulkGeneratorSitemapMenu";
 import { generatorTitleRowPrimarySelectSlotProps } from "@/components/blog-generator/generator-title-row-select-width";
+import { GENERATOR_TOOLBAR_SLOT_RESERVE } from "@/components/blog-generator/generator-toolbar-theme";
+import { BULK_HEADER_ICON_TOOL_BTN } from "@/components/keyword-research/bulk/bulk-workspace-header-styles";
 import type { BulkGeneratorWorkspaceBindings } from "@/components/keyword-research/bulk/bulk-generator-workspace-bindings";
 import type { BulkGeneratedFile } from "@/lib/bulk-file-manager";
 import type { BlogGeneratorSectionId } from "@/components/blog-generator/blog-generator-sections";
@@ -327,7 +329,9 @@ export function BulkBlogGenerationTab({
   }, [bulkBindings, workspaceBusy]);
 
   const scheduleMenu = useMemo(() => {
-    if (!bulkBindings) return null;
+    if (!bulkBindings) {
+      return <div className={cn(BULK_HEADER_ICON_TOOL_BTN, GENERATOR_TOOLBAR_SLOT_RESERVE)} aria-hidden />;
+    }
     const useGapScheduling =
       bulkBindings.startDateOption === "immediate" &&
       postDestination !== "local" &&
@@ -336,7 +340,6 @@ export function BulkBlogGenerationTab({
     return (
       <BulkGeneratorScheduleMenu
         postDestination={postDestination}
-        inventoryDownloadFileName={null}
         scheduleFrequency={bulkBindings.scheduleFrequency}
         setScheduleFrequency={bulkBindings.setScheduleFrequency}
         customInterval={bulkBindings.customInterval}

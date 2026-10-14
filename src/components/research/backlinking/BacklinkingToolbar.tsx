@@ -1,4 +1,5 @@
-import { Loader2, Sparkles } from "lucide-react";
+import type { ReactNode } from "react";
+import { Loader2, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GeneratorToolbarFrame } from "@/components/blog-generator/GeneratorToolbarFrame";
 import {
@@ -11,26 +12,31 @@ export type BacklinkingToolbarProps = {
   canRun: boolean;
   onFromGbp: () => void;
   onRun: () => void;
+  /** Research mode switch (Proposal / Citation / Backlinking), first in the row. */
+  modeMenu?: ReactNode;
 };
 
-export function BacklinkingToolbar({ busy, canRun, onFromGbp, onRun }: BacklinkingToolbarProps) {
+export function BacklinkingToolbar({ busy, canRun, onFromGbp, onRun, modeMenu }: BacklinkingToolbarProps) {
   return (
     <GeneratorToolbarFrame
       primary={
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className={BULK_HEADER_TOOL_BTN}
-          disabled={busy || !canRun}
-          title="GBP, then pick a niche to run SERP"
-          onClick={onFromGbp}
-        >
-          {busy ? (
-            <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-          ) : null}
-          From GBP
-        </Button>
+        <>
+          {modeMenu}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={BULK_HEADER_TOOL_BTN}
+            disabled={busy || !canRun}
+            title="GBP, then pick a niche to run SERP"
+            onClick={onFromGbp}
+          >
+            {busy ? (
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+            ) : null}
+            From GBP
+          </Button>
+        </>
       }
       actions={
         <Button
@@ -45,7 +51,7 @@ export function BacklinkingToolbar({ busy, canRun, onFromGbp, onRun }: Backlinki
           {busy ? (
             <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
           ) : (
-            <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
+            <Play className="h-4 w-4 shrink-0" aria-hidden />
           )}
         </Button>
       }

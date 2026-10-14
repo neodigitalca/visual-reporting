@@ -87,9 +87,6 @@ export function blogGeneratorTitleLeadingSlotProps(): { reserveLabel: string } {
 
 export const BLOG_GENERATOR_SECTION_STORAGE_KEY = "neo-pulse-blog-generator-section";
 
-/** @deprecated Title band uses active section label via getBlogGeneratorSectionMeta. */
-export const GENERATOR_WORKSPACE_TITLE = "Generator";
-
 export function readStoredBlogGeneratorSection(): BlogGeneratorSectionId {
   try {
     const v = sessionStorage.getItem(BLOG_GENERATOR_SECTION_STORAGE_KEY);

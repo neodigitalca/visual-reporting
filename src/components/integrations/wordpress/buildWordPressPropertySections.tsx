@@ -16,6 +16,7 @@ import type { WordPressSiteAdminSection } from "./WordPressSiteAdminLayout";
 import { openDashboardMasterRulesSettings } from "@/lib/open-master-rules-settings";
 import { MasterInstructionsSection } from "./MasterInstructionsSection";
 import { FunctionsUpdaterPanel } from "./FunctionsUpdaterPanel";
+import { PropertyOverviewSection } from "./PropertyOverviewSection";
 export type BuildWordPressPropertySectionsParams = {
   site: WordPressSite;
   isTesting: boolean;
@@ -45,7 +46,7 @@ export type BuildWordPressPropertySectionsParams = {
   onExtractNAPAndGraph?: () => void;
   getScrapingKey: (siteId: string, sitemapUrl: string) => string;
   onPatchSite?: (siteId: string, patch: Partial<WordPressSite>) => void;
-  /** Modal profile or embedded expand panel. */
+  /** Full property profile page, embedded expand panel, or collapsed card. */
   shell: "modal" | "embedded" | "card";
   siteSettingsPanel?: React.ReactNode;
 };
@@ -92,7 +93,18 @@ export function buildWordPressPropertySections(
       id: "overview",
       label: "Overview",
       icon: LayoutDashboard,
-      content: (
+      content: isModal ? (
+        <PropertyOverviewSection
+          site={site}
+          isTesting={isTesting}
+          isDetecting={isDetecting}
+          isExtractingNAPAndGraph={isExtractingNAPAndGraph}
+          onTest={onTest}
+          onDetect={onDetect}
+          onExtractNAPAndGraph={onExtractNAPAndGraph}
+          onPatchSite={onPatchSite}
+        />
+      ) : (
         <>
           {showSitemapSummary && (
             <dl className="mt-2 grid grid-cols-2 items-baseline gap-x-2 gap-y-0.5 rounded-lg border border-border/40 bg-muted/40 px-2.5 py-1.5 text-sm text-foreground shadow-none ring-0 sm:px-3 sm:py-2">
@@ -143,8 +155,7 @@ export function buildWordPressPropertySections(
             onDetect={onDetect}
             onExtractNAPAndGraph={onExtractNAPAndGraph}
             onPatchSite={onPatchSite}
-            tone={isModal || isEmbedded ? "propertyBlack" : "card"}
-            layout={isModal ? "modalFlat" : "default"}
+            tone={isEmbedded ? "propertyBlack" : "card"}
           />
         </>
       ),

@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { Loader2, Trash2, Upload, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,8 @@ import {
   GENERATOR_SELECT,
 } from "@/components/blog-generator/generator-toolbar-theme";
 import {
+  BULK_HEADER_DANGER_ICON_BTN,
+  BULK_HEADER_ICON_TOOL_BTN,
   BULK_HEADER_RUN_BTN,
   BULK_HEADER_TOOL_BTN,
   BULK_HEADER_UPLOAD_READY_BTN,
@@ -84,15 +87,17 @@ export function SapGeneratorToolbar({
   onUseBlindMagicKeywordsChange,
   onApplyRemainingEntityCount,
 }: SapGeneratorToolbarProps) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const fieldsDisabled = workspaceBusy || runLoading;
   const focusSelectValue =
-    entityTypeFocus.find((t) => entityTypesForLevel(entityGeographicLevel).includes(t)) ?? "__none__";
+    entityTypeFocus.find((t) => entityTypesForLevel(entityGeographicLevel).includes(t)) ?? "";
 
   return (
     <GeneratorToolbarFrame
       primary={
         <>
           <input
-            id="sap-grid-csv-upload"
+            ref={fileRef}
             type="file"
             accept=".csv,text/csv"
             className="hidden"
@@ -119,8 +124,10 @@ export function SapGeneratorToolbar({
             className={cn(
               uploadLabel.trim() ? BULK_HEADER_UPLOAD_READY_BTN : BULK_HEADER_TOOL_BTN,
             )}
-            disabled={csvParsing}
-            onClick={() => document.getElementById("sap-grid-csv-upload")?.click()}
+            disabled={workspaceBusy || csvParsing}
+            onClick={() => fileRef.current?.click()}
+            aria-label={uploadLabel.trim() ? `Grid CSV: ${uploadLabel}` : "Upload grid CSV"}
+            title={uploadLabel.trim() || "Upload grid CSV"}
           >
             {csvParsing ? (
               <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
@@ -135,7 +142,7 @@ export function SapGeneratorToolbar({
             value={suggestFocusKeyword}
             onChange={(e) => onSuggestFocusKeywordChange(e.target.value)}
             className={GENERATOR_FIELD_KEYWORD}
-            disabled={runLoading}
+            disabled={fieldsDisabled}
             autoComplete="off"
             aria-label="Keyword"
           />
@@ -145,7 +152,7 @@ export function SapGeneratorToolbar({
             value={suggestFocusLocation}
             onChange={(e) => onSuggestFocusLocationChange(e.target.value)}
             className={GENERATOR_FIELD_KEYWORD}
-            disabled={runLoading}
+            disabled={fieldsDisabled}
             autoComplete="off"
             aria-label="Location"
           />
@@ -153,8 +160,8 @@ export function SapGeneratorToolbar({
             type="button"
             variant="ghost"
             size="sm"
-            className={cn(BULK_HEADER_TOOL_BTN, "h-8 w-8 shrink-0 p-0")}
-            disabled={workspaceBusy || runLoading}
+            className={BULK_HEADER_ICON_TOOL_BTN}
+            disabled={fieldsDisabled}
             aria-label="Apply remaining entity count for this period"
             title="Sets entity count to period target minus published this period (manual, no AI)."
             onClick={onApplyRemainingEntityCount}
@@ -170,9 +177,10 @@ export function SapGeneratorToolbar({
               onEntityTotalCountInputChange(normalizeEntityCountInputChange(e.target.value))
             }
             className={GENERATOR_FIELD_COUNT}
-            disabled={runLoading}
+            disabled={fieldsDisabled}
             autoComplete="off"
             aria-label="Entity count"
+            title="Entity count"
             maxLength={3}
           />
         </>
@@ -205,9 +213,10 @@ export function SapGeneratorToolbar({
             }
             onEntityTypeFocusChange([v]);
           }}
+          disabled={fieldsDisabled}
         >
-          <SelectTrigger className={GENERATOR_SELECT} aria-label="Entity type focus">
-            <SelectValue placeholder="None" />
+          <SelectTrigger className={GENERATOR_SELECT} aria-label="Entity type">
+            <SelectValue placeholder="Entity type" />
           </SelectTrigger>
           <SelectContent position="popper" className="max-h-[min(24rem,70vh)]">
             <SelectItem className="text-base" value="__none__">
@@ -228,7 +237,7 @@ export function SapGeneratorToolbar({
             type="button"
             size="sm"
             className={BULK_HEADER_RUN_BTN}
-            disabled={runLoading || workspaceBusy}
+            disabled={fieldsDisabled}
             aria-busy={runLoading}
             aria-label="Run clusters"
             title="Run clusters"
@@ -253,7 +262,7 @@ export function SapGeneratorToolbar({
             type="button"
             variant="outline"
             size="sm"
-            className="h-8 w-8 shrink-0 border border-red-600/70 bg-black p-0 text-red-500 hover:bg-red-950/50 hover:text-red-400"
+            className={BULK_HEADER_DANGER_ICON_BTN}
             disabled={workspaceBusy}
             aria-label="Clear"
             title="Clear"

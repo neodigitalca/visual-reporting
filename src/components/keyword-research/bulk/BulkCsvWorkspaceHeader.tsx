@@ -19,9 +19,7 @@ import {
   BULK_HEADER_ICON_RUN_BTN,
   BULK_HEADER_ICON_TOOL_BTN,
   BULK_HEADER_TOOL_BTN,
-  BULK_TOOLBAR_GROUP_DIVIDER,
 } from "@/components/keyword-research/bulk/bulk-workspace-header-styles";
-import { cn } from "@/lib/utils";
 import type { MetaBulkMicroSnapshot } from "@/components/overview/OverviewBulkMicroProgress";
 import type { WordPressPostDestination } from "@/lib/bulk-auto-generate";
 import { WORDPRESS_POST_DESTINATION_SHORT } from "@/lib/bulk-auto-generate";
@@ -106,14 +104,7 @@ export function BulkCsvWorkspaceHeader({
       activeSection={activeSection}
       onSectionChange={onSectionChange}
       sectionSwitchDisabled={isProcessing}
-      titleRowMenu={
-        sitemapScopeSlot !== undefined || scheduleMenu ? (
-          <div className="flex shrink-0 items-center gap-2">
-            {sitemapScopeSlot !== undefined ? sitemapScopeSlot : null}
-            {scheduleMenu}
-          </div>
-        ) : null
-      }
+      titleRowMenu={sitemapScopeSlot}
       workspaceBusy={workspaceBusy}
       progressSnapshot={progressSnapshot}
       canOpenDetails={canOpenDetails}
@@ -167,16 +158,16 @@ export function BulkCsvWorkspaceHeader({
                   Template
                 </a>
               </Button>
-              {rowCount > 0 ? (
-                <span className="shrink-0 text-base text-muted-foreground tabular-nums">
-                  {rowCount} row{rowCount !== 1 ? "s" : ""}
-                </span>
-              ) : null}
+              <span
+                className="inline-block min-w-[7ch] shrink-0 text-base text-muted-foreground tabular-nums"
+                aria-live="polite"
+              >
+                {rowCount > 0 ? `${rowCount} row${rowCount !== 1 ? "s" : ""}` : ""}
+              </span>
             </>
           }
           options={
             <>
-              <div className={BULK_TOOLBAR_GROUP_DIVIDER} aria-hidden />
               <Select
                 value={featuredImageMode}
                 onValueChange={(v) => handleFeaturedImageMode(v as "off" | "ai-generated" | "google-maps")}
@@ -202,7 +193,7 @@ export function BulkCsvWorkspaceHeader({
                 onValueChange={(v) => onPostDestinationChange(v as WordPressPostDestination)}
                 disabled={workspaceBusy}
               >
-                <SelectTrigger className={GENERATOR_SELECT} aria-label="Export destination">
+                <SelectTrigger className={GENERATOR_SELECT} aria-label="Destination">
                   <SelectValue placeholder="Destination" />
                 </SelectTrigger>
                 <SelectContent position="popper">
@@ -213,6 +204,7 @@ export function BulkCsvWorkspaceHeader({
                   ))}
                 </SelectContent>
               </Select>
+              {scheduleMenu}
             </>
           }
           actions={

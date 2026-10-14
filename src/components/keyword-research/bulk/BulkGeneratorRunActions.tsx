@@ -1,7 +1,10 @@
 import { Play, Square, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { BULK_HEADER_ICON_RUN_BTN } from "@/components/keyword-research/bulk/bulk-workspace-header-styles";
+import {
+  BULK_HEADER_DANGER_ICON_BTN,
+  BULK_HEADER_ICON_RUN_BTN,
+} from "@/components/keyword-research/bulk/bulk-workspace-header-styles";
 import { cn } from "@/lib/utils";
 
 export type BulkGeneratorRunActionsProps = {
@@ -9,7 +12,8 @@ export type BulkGeneratorRunActionsProps = {
   canRun: boolean;
   workspaceBusy: boolean;
   onRun: () => void;
-  onCancel: () => void;
+  /** Omit when the section has no cancellable run. */
+  onCancel?: () => void;
   onClear: () => void;
   runLabel?: string;
   /** Prompt tab: run lives on generated rows, not the header play icon. */
@@ -32,12 +36,12 @@ export function BulkGeneratorRunActions({
 }: BulkGeneratorRunActionsProps) {
   return (
     <div className={cn("flex shrink-0 flex-nowrap items-center gap-1.5", className)} role="group" aria-label="Run and clear">
-      {isProcessing ? (
+      {isProcessing && onCancel ? (
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="h-8 w-8 shrink-0 border border-red-600/70 bg-black p-0 text-red-500 hover:bg-red-950/50"
+          className={BULK_HEADER_DANGER_ICON_BTN}
           aria-label="Cancel"
           title="Cancel"
           onClick={onCancel}
@@ -62,7 +66,7 @@ export function BulkGeneratorRunActions({
         type="button"
         variant="outline"
         size="sm"
-        className="h-8 w-8 shrink-0 border border-red-600/70 bg-black p-0 text-red-500 hover:bg-red-950/50 hover:text-red-400"
+        className={BULK_HEADER_DANGER_ICON_BTN}
         disabled={workspaceBusy}
         aria-label="Clear"
         title="Clear"

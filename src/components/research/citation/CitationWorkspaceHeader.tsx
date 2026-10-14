@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { BlogGeneratorWorkspaceChrome } from "@/components/blog-generator/BlogGeneratorWorkspaceChrome";
 import type { GeneratorWorkspaceChromeBindings } from "@/components/blog-generator/generator-workspace-chrome-bindings";
 import { BulkGeneratorDetailsDrawer } from "@/components/keyword-research/bulk/BulkGeneratorDetailsDrawer";
-import { BULK_TOOLBAR_GROUP_DIVIDER } from "@/components/keyword-research/bulk/bulk-workspace-header-styles";
 import { CitationDetailsPanel, type CitationDetailsPanelProps } from "@/components/research/citation/CitationDetailsPanel";
 import { CitationToolbar, type CitationToolbarProps } from "@/components/research/citation/CitationToolbar";
 import { ResearchToolbarModeMenu } from "@/components/research/ResearchToolbarModeMenu";
@@ -47,18 +46,18 @@ export function CitationWorkspaceHeader({
       detailsPanelId={DETAILS_PANEL_ID}
       onDetailsOpenChange={onDetailsOpenChange}
       toolbar={
-        <>
-          {researchNav ? (
-            <ResearchToolbarModeMenu
-              activeSection={researchNav.activeSection}
-              onSectionChange={researchNav.onSectionChange}
-              disabled={busy}
-            />
-          ) : (
-            <div className={BULK_TOOLBAR_GROUP_DIVIDER} aria-hidden />
-          )}
-          <CitationToolbar {...toolbarProps} />
-        </>
+        <CitationToolbar
+          {...toolbarProps}
+          modeMenu={
+            researchNav ? (
+              <ResearchToolbarModeMenu
+                activeSection={researchNav.activeSection}
+                onSectionChange={researchNav.onSectionChange}
+                disabled={busy}
+              />
+            ) : null
+          }
+        />
       }
       detailsPanel={
         <BulkGeneratorDetailsDrawer

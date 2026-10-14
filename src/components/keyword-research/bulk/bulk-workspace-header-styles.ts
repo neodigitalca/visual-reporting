@@ -44,4 +44,8 @@ export const BULK_HEADER_UPLOAD_READY_BTN = cn(
   "gap-1.5 max-w-[min(100%,28rem)] whitespace-normal py-1 [&_svg]:text-black",
 );
 
+/** Red-outline icon control for destructive verbs (cancel, clear). */
+export const BULK_HEADER_DANGER_ICON_BTN =
+  "h-8 w-8 shrink-0 rounded-none border border-red-600/70 bg-black p-0 text-red-500 shadow-none hover:bg-red-950/50 hover:text-red-400 disabled:opacity-50";
+
 export const BULK_TOOLBAR_GROUP_DIVIDER = "mx-0.5 h-6 w-px shrink-0 bg-white/12";

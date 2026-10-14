@@ -22,12 +22,8 @@ import { loadApiKey } from "@/lib/api";
 import { resolveRecommendedAuthor } from "@/lib/wordpress-api/author-resolver";
 import { normalizeGa4PropertyIdForApi, resolveGa4PropertyIdForReporting } from "@/lib/ga4-property-id";
 import { cn } from "@/lib/utils";
-import {
-  TASK_FORM_FLAT_CONTROL_CLASS,
-  TaskFormFlatGrid,
-  TaskFormPlaceholderCell,
-  TaskFormSideSection,
-} from "@/components/manager/tasks/TaskFormLayout";
+import { HOST_DIVIDER } from "@/components/hosting/my-sites/my-sites-theme";
+import { PROFILE_CARD, PROFILE_CARD_HEAD, PROFILE_CARD_TITLE } from "@/components/hosting/site-profile/site-profile-theme";
 
 interface ACFTestResult {
   success: boolean;
@@ -48,7 +44,8 @@ interface WordPressCardActionsProps {
   onPatchSite?: (siteId: string, patch: Partial<WordPressSite>) => void;
   /** Embedded property panel on black: white labels, flat section chrome. */
   tone?: "card" | "propertyBlack";
-  layout?: "default" | "modalFlat";
+  /** `profileCard`: host-style Connections card for the property profile page. */
+  layout?: "default" | "profileCard";
 }
 
 export const WordPressCardActions: React.FC<WordPressCardActionsProps> = ({
@@ -64,7 +61,7 @@ export const WordPressCardActions: React.FC<WordPressCardActionsProps> = ({
   layout = "default",
 }) => {
   const isPropertyBlack = tone === "propertyBlack";
-  const isModalFlat = layout === "modalFlat";
+  const isProfileCard = layout === "profileCard";
   const isDisabled = site.enabled === false;
   const [isTestingACF, setIsTestingACF] = useState(false);
   const [isTestingGA, setIsTestingGA] = useState(false);
@@ -503,39 +500,39 @@ ${footnote}`;
     },
   ];
 
-  if (isModalFlat) {
+  if (isProfileCard) {
     return (
-      <div className="flex min-h-0 w-full max-w-full flex-col gap-1">
-        <TaskFormSideSection title="Connections">
-          <TaskFormFlatGrid className="grid-cols-2">
-            {connectionActions.map((action) => (
-              <TaskFormPlaceholderCell key={action.key}>
-                <button
-                  type="button"
-                  onClick={action.onClick}
-                  disabled={action.disabled}
-                  title={action.title}
-                  className={cn(
-                    "flex h-9 w-full items-center gap-2 px-2 text-left text-base text-white hover:bg-white/[0.08]",
-                    TASK_FORM_FLAT_CONTROL_CLASS,
-                    action.className,
-                    action.disabled && "cursor-not-allowed opacity-70",
-                  )}
-                >
-                  <span className="flex h-4 w-4 shrink-0 items-center justify-center [&>svg]:h-4 [&>svg]:w-4">
-                    {action.icon}
-                  </span>
-                  <span className="min-w-0 truncate">{action.label}</span>
-                </button>
-              </TaskFormPlaceholderCell>
-            ))}
-          </TaskFormFlatGrid>
-        </TaskFormSideSection>
+      <section className={PROFILE_CARD} aria-label="Connections">
+        <div className={PROFILE_CARD_HEAD}>
+          <h2 className={PROFILE_CARD_TITLE}>Connections</h2>
+        </div>
+        <div className="grid grid-cols-2">
+          {connectionActions.map((action) => (
+            <button
+              key={action.key}
+              type="button"
+              onClick={action.onClick}
+              disabled={action.disabled}
+              title={action.title}
+              className={cn(
+                "flex h-12 min-w-0 items-center gap-2 border-b px-5 text-left text-base text-white hover:bg-white/[0.04] odd:border-r",
+                HOST_DIVIDER,
+                action.className,
+                action.disabled && "cursor-not-allowed opacity-70",
+              )}
+            >
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground [&>svg]:h-4 [&>svg]:w-4">
+                {action.icon}
+              </span>
+              <span className="min-w-0 truncate">{action.label}</span>
+            </button>
+          ))}
+        </div>
 
         {acfTestResult ? (
           <div
             className={cn(
-              "rounded-none p-3 text-base",
+              "px-5 py-3 text-base",
               acfTestResult.success ? "bg-green-500/12" : "bg-red-500/12",
             )}
           >
@@ -564,7 +561,7 @@ ${footnote}`;
             )}
           </div>
         ) : null}
-      </div>
+      </section>
     );
   }
 

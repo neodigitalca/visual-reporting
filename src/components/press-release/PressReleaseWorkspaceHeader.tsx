@@ -1,10 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { BlogGeneratorWorkspaceChrome } from "@/components/blog-generator/BlogGeneratorWorkspaceChrome";
 import { GeneratorToolbarFrame } from "@/components/blog-generator/GeneratorToolbarFrame";
-import {
-  GENERATOR_FIELD_KEYWORD,
-  GENERATOR_FIELD_TITLE,
-} from "@/components/blog-generator/generator-toolbar-theme";
+import { GENERATOR_FIELD_KEYWORD } from "@/components/blog-generator/generator-toolbar-theme";
 import type { BlogGeneratorSectionId } from "@/components/blog-generator/blog-generator-sections";
 import { BulkGeneratorRunActions } from "@/components/keyword-research/bulk/BulkGeneratorRunActions";
 import type { MetaBulkMicroSnapshot } from "@/components/overview/OverviewBulkMicroProgress";
@@ -76,7 +73,7 @@ export function PressReleaseWorkspaceHeader({
                 placeholder="Title (optional)"
                 value={title}
                 onChange={(e) => onTitleChange(e.target.value)}
-                className={GENERATOR_FIELD_TITLE}
+                className={GENERATOR_FIELD_KEYWORD}
                 disabled={workspaceBusy}
                 autoComplete="off"
                 aria-label="Title override"
@@ -89,7 +86,6 @@ export function PressReleaseWorkspaceHeader({
               canRun={canRun}
               workspaceBusy={workspaceBusy}
               onRun={onRun}
-              onCancel={() => {}}
               onClear={onClear}
               runLabel="Generate"
             />

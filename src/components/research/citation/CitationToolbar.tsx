@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Copy, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,8 @@ export type CitationToolbarProps = {
   onSeedKeywordChange: (value: string) => void;
   onGenerate: () => void;
   onCopy: () => void;
+  /** Research mode switch (Proposal / Citation / Backlinking), first in the row. */
+  modeMenu?: ReactNode;
 };
 
 export function CitationToolbar({
@@ -26,22 +29,38 @@ export function CitationToolbar({
   onSeedKeywordChange,
   onGenerate,
   onCopy,
+  modeMenu,
 }: CitationToolbarProps) {
   return (
     <GeneratorToolbarFrame
       primary={
-        <Input
-          id="citation-keyword"
-          aria-label="Keyword"
-          value={seedKeyword}
-          onChange={(e) => onSeedKeywordChange(e.target.value)}
-          placeholder="Keyword"
-          disabled={busy}
-          className={GENERATOR_FIELD_KEYWORD}
-        />
+        <>
+          {modeMenu}
+          <Input
+            id="citation-keyword"
+            aria-label="Keyword"
+            value={seedKeyword}
+            onChange={(e) => onSeedKeywordChange(e.target.value)}
+            placeholder="Keyword"
+            disabled={busy}
+            className={GENERATOR_FIELD_KEYWORD}
+          />
+        </>
       }
       actions={
         <>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={BULK_HEADER_ICON_TOOL_BTN}
+            disabled={!canCopy || busy}
+            aria-label="Copy citation"
+            title="Copy citation"
+            onClick={onCopy}
+          >
+            <Copy className="h-4 w-4 shrink-0" aria-hidden />
+          </Button>
           <Button
             type="button"
             size="sm"
@@ -57,18 +76,6 @@ export function CitationToolbar({
               <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
             )}
             Citation
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className={BULK_HEADER_ICON_TOOL_BTN}
-            disabled={!canCopy || busy}
-            aria-label="Copy citation"
-            title="Copy citation"
-            onClick={onCopy}
-          >
-            <Copy className="h-4 w-4 shrink-0" aria-hidden />
           </Button>
         </>
       }

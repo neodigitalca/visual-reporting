@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { BlogGeneratorWorkspaceChrome } from "@/components/blog-generator/BlogGeneratorWorkspaceChrome";
 import type { GeneratorWorkspaceChromeBindings } from "@/components/blog-generator/generator-workspace-chrome-bindings";
 import { BulkGeneratorDetailsDrawer } from "@/components/keyword-research/bulk/BulkGeneratorDetailsDrawer";
-import { BULK_TOOLBAR_GROUP_DIVIDER } from "@/components/keyword-research/bulk/bulk-workspace-header-styles";
 import {
   type ProposalDetailsPanelProps,
 } from "@/components/research/proposal/ProposalDetailsPanel";
@@ -92,18 +91,18 @@ export function ProposalWorkspaceHeader({
       detailsPanelId={DETAILS_PANEL_ID}
       onDetailsOpenChange={onDetailsOpenChange}
       toolbar={
-        <>
-          {researchNav ? (
-            <ResearchToolbarModeMenu
-              activeSection={researchNav.activeSection}
-              onSectionChange={researchNav.onSectionChange}
-              disabled={busy}
-            />
-          ) : (
-            <div className={BULK_TOOLBAR_GROUP_DIVIDER} aria-hidden />
-          )}
-          <ProposalToolbar {...toolbarProps} />
-        </>
+        <ProposalToolbar
+          {...toolbarProps}
+          modeMenu={
+            researchNav ? (
+              <ResearchToolbarModeMenu
+                activeSection={researchNav.activeSection}
+                onSectionChange={researchNav.onSectionChange}
+                disabled={busy}
+              />
+            ) : null
+          }
+        />
       }
       detailsPanel={
         <BulkGeneratorDetailsDrawer

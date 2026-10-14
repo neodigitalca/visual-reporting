@@ -161,7 +161,12 @@ export function MultiSiteContentOptimizerWorkspaceHeader({
         onSectionChange={generatorChrome.onSectionChange}
         sectionSwitchDisabled={generatorChrome.sectionSwitchDisabled}
         showOpt={generatorChrome.showOpt}
-        titleRowMenu={sourceModePills}
+        titleRowMenu={
+          <>
+            {sourceModePills}
+            {optimizerSectionPills}
+          </>
+        }
         {...sharedProps}
       />
     );

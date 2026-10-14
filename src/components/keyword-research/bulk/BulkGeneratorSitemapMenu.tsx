@@ -9,6 +9,7 @@ import {
   type BulkSitemapScopeTag,
 } from "@/lib/bulk/bulk-sitemap-mode";
 import { SitemapScopeDropdown } from "@/components/shared/SitemapScopeDropdown";
+import { generatorTitleRowPrimarySelectSlotProps } from "@/components/blog-generator/generator-title-row-select-width";
 import { listSitemapScopeOptions } from "@/lib/sitemap-child-tags";
 
 export type BulkSiteSitemapConfig = {
@@ -51,22 +52,25 @@ export function BulkGeneratorSitemapMenu({
   showWhenLocal = false,
 }: BulkGeneratorSitemapMenuProps) {
   const targetSite = resolveTargetSite(connectedSite);
+  const options = useMemo(
+    () =>
+      targetSite
+        ? listSitemapScopeOptions(targetSite).map((o) => ({
+            id: o.id,
+            label: o.label,
+            disabled: !o.enabled,
+          }))
+        : [],
+    [targetSite],
+  );
+
   if ((postDestination === "local" && !showWhenLocal) || !targetSite) {
-    return null;
+    const reserve = generatorTitleRowPrimarySelectSlotProps();
+    return <div className={reserve.className} style={reserve.style} aria-hidden />;
   }
 
   const selectedId = Array.from(selectedWordPressSites)[0] ?? targetSite.id;
   const scopeTags = normalizeBulkSitemapScopeTags(siteConfigs[selectedId]?.scopeTags);
-  const options = useMemo(
-    () =>
-      listSitemapScopeOptions(targetSite).map((o) => ({
-        id: o.id,
-        label: o.label,
-        disabled: !o.enabled,
-      })),
-    [targetSite],
-  );
-
   const activeScope = scopeTags[0] ?? "pages";
 
   const setScope = (tag: string) => {

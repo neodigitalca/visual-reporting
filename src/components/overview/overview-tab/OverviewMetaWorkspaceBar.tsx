@@ -199,20 +199,16 @@ export function OverviewContentHeader({
         onClear={c.clearErrorFilters}
         disabled={bulkWorkspaceBusy}
       />
-      {c.rows.length > 0 ? (
-        <>
-          <div className={BULK_TOOLBAR_GROUP_DIVIDER} aria-hidden />
-          <div className="ml-auto flex shrink-0 flex-nowrap items-center">
-            <OverviewContentSortControls
-              sortColumn={c.sortColumn}
-              sortDir={c.sortDir}
-              setSortColumn={c.setSortColumn}
-              setSortDir={c.setSortDir}
-              disabled={bulkWorkspaceBusy}
-            />
-          </div>
-        </>
-      ) : null}
+      <div className={BULK_TOOLBAR_GROUP_DIVIDER} aria-hidden />
+      <div className="ml-auto flex shrink-0 flex-nowrap items-center">
+        <OverviewContentSortControls
+          sortColumn={c.sortColumn}
+          sortDir={c.sortDir}
+          setSortColumn={c.setSortColumn}
+          setSortDir={c.setSortDir}
+          disabled={bulkWorkspaceBusy || c.rows.length === 0}
+        />
+      </div>
     </>
   );
 
@@ -273,7 +269,12 @@ export function OverviewContentHeader({
         onSectionChange={generatorChrome.onSectionChange}
         sectionSwitchDisabled={generatorChrome.sectionSwitchDisabled}
         showOpt={generatorChrome.showOpt}
-        titleRowMenu={sitemapMenu}
+        titleRowMenu={
+          <>
+            {sitemapMenu}
+            {optimizerSectionPills}
+          </>
+        }
         {...sharedProgressProps}
       />
     );

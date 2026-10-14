@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { Loader2, Trash2, Upload, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import {
   GENERATOR_FIELD_URL,
 } from "@/components/blog-generator/generator-toolbar-theme";
 import {
+  BULK_HEADER_DANGER_ICON_BTN,
   BULK_HEADER_RUN_BTN,
   BULK_HEADER_TOOL_BTN,
   BULK_HEADER_UPLOAD_READY_BTN,
@@ -56,12 +58,14 @@ export function CompetitorGeneratorToolbar({
   tempSeedUrl = "",
   onTempSeedUrlChange,
 }: CompetitorGeneratorToolbarProps) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const fieldsDisabled = workspaceBusy || runLoading;
   return (
     <GeneratorToolbarFrame
       primary={
         <>
           <input
-            id="competitor-grid-csv-upload"
+            ref={fileRef}
             type="file"
             accept=".csv,text/csv"
             className="hidden"
@@ -88,8 +92,10 @@ export function CompetitorGeneratorToolbar({
             className={cn(
               uploadLabel.trim() ? BULK_HEADER_UPLOAD_READY_BTN : BULK_HEADER_TOOL_BTN,
             )}
-            disabled={csvParsing}
-            onClick={() => document.getElementById("competitor-grid-csv-upload")?.click()}
+            disabled={workspaceBusy || csvParsing}
+            onClick={() => fileRef.current?.click()}
+            aria-label={uploadLabel.trim() ? `Grid CSV: ${uploadLabel}` : "Upload grid CSV"}
+            title={uploadLabel.trim() || "Upload grid CSV"}
           >
             {csvParsing ? (
               <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
@@ -98,6 +104,16 @@ export function CompetitorGeneratorToolbar({
             )}
             Grid
           </Button>
+          <Input
+            type="text"
+            placeholder="Keyword"
+            value={suggestFocusKeyword}
+            onChange={(e) => onSuggestFocusKeywordChange(e.target.value)}
+            className={GENERATOR_FIELD_KEYWORD}
+            disabled={fieldsDisabled}
+            autoComplete="off"
+            aria-label="Keyword"
+          />
           <Input
             type="text"
             inputMode="numeric"
@@ -115,19 +131,9 @@ export function CompetitorGeneratorToolbar({
               onSapPageBudgetInputChange(next);
             }}
             className={GENERATOR_FIELD_COUNT}
-            disabled={runLoading}
+            disabled={fieldsDisabled}
             aria-label="Competitor count"
-            title="Number of competitors to generate"
-          />
-          <Input
-            type="text"
-            placeholder="Keyword"
-            value={suggestFocusKeyword}
-            onChange={(e) => onSuggestFocusKeywordChange(e.target.value)}
-            className={GENERATOR_FIELD_KEYWORD}
-            disabled={runLoading}
-            autoComplete="off"
-            aria-label="Keyword"
+            title="Competitor count"
           />
         </>
       }
@@ -137,7 +143,8 @@ export function CompetitorGeneratorToolbar({
             type="button"
             size="sm"
             className={BULK_HEADER_RUN_BTN}
-            disabled={workspaceBusy}
+            disabled={fieldsDisabled}
+            aria-busy={runLoading}
             aria-label="Run clusters"
             title="Run clusters"
             onClick={() => void onRunClusters()}
@@ -161,7 +168,7 @@ export function CompetitorGeneratorToolbar({
             type="button"
             variant="outline"
             size="sm"
-            className="h-8 w-8 shrink-0 border border-red-600/70 bg-black p-0 text-red-500 hover:bg-red-950/50 hover:text-red-400"
+            className={BULK_HEADER_DANGER_ICON_BTN}
             disabled={workspaceBusy}
             aria-label="Clear"
             title="Clear"

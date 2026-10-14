@@ -29,7 +29,7 @@ import { useWordPressSites } from "@/hooks/use-wordpress-sites";
 import { WordPressSiteList } from "./wordpress/WordPressSiteList";
 import { WordPressDialogs } from "./wordpress/WordPressDialogs";
 import { SitePropertyEditPanel } from "./wordpress/SitePropertyEditPanel";
-import { PropertyProfileDialog } from "./wordpress/PropertyProfileDialog";
+import { PropertyProfilePage } from "./wordpress/PropertyProfilePage";
 import type { WordPressSiteAdminSectionId } from "./wordpress/WordPressSiteAdminLayout";
 import type { PropertySettingsSubSectionId } from "./wordpress/property-settings-types";
 import { BulkImportClientsDialog } from "./wordpress/BulkImportClientsDialog";
@@ -199,7 +199,7 @@ export const WordPressFeature: React.FC<WordPressFeatureProps> = ({
   const [isExtractingNAPAndGraph, setIsExtractingNAPAndGraph] = useState<Record<string, boolean>>({});
   
   /**
-   * Centered property profile modal (replaces inline accordion expand).
+   * Full property profile page (replaces the list while a property is open).
    */
   const [profileSiteId, setProfileSiteId] = useState<string | null>(null);
   const [profileSectionId, setProfileSectionId] =
@@ -773,6 +773,44 @@ export const WordPressFeature: React.FC<WordPressFeatureProps> = ({
 
   return (
     <div className={cn(PROPERTIES_SHELL, "flex min-h-0 flex-1 flex-col")}>
+      {profileSite ? (
+        <PropertyProfilePage
+          site={profileSite}
+          onBack={closeProfile}
+          activeSectionId={profileSectionId}
+          onActiveSectionChange={setProfileSectionId}
+          settingsSubSectionId={settingsSubSectionId}
+          onSettingsSubSectionChange={setSettingsSubSectionId}
+          siteSettingsPanel={profileSettingsPanel}
+          isTesting={isTesting === profileSite.id}
+          isDetecting={isDetecting === profileSite.id}
+          isFetchingScheduled={isFetchingScheduled === profileSite.id}
+          isScrapingSitemap={isScrapingSitemap}
+          isGeneratingEntities={isGeneratingEntities}
+          isIndexingSitemap={isIndexingSitemap}
+          isLoadingCalendar={isLoadingCalendar}
+          isExtractingNAPAndGraph={Boolean(isExtractingNAPAndGraph[profileSite.id])}
+          onTest={() => handleTestConnection(profileSite)}
+          onDetect={() => handleDetectSitemaps(profileSite)}
+          onScrapeChildSitemap={(url) => handleScrapeChildSitemap(profileSite, url)}
+          onEntityGeneration={
+            onEntityGeneration ? (sitemapUrl) => onEntityGeneration(profileSite, sitemapUrl) : undefined
+          }
+          onSetEntitySitemap={(sitemapUrl) => handleSetEntitySitemap(profileSite, sitemapUrl)}
+          onSetCompetitorEntitySitemap={(sitemapUrl) => handleSetCompetitorEntitySitemap(profileSite, sitemapUrl)}
+          onToggleChildSitemapDisabled={(childSitemapUrl) => handleToggleChildSitemapDisabled(profileSite, childSitemapUrl)}
+          onAppendManualChildSitemap={(url) => handleAppendManualChildSitemap(profileSite, url)}
+          onAddCustomSitemapTagLabel={(label) => handleAddCustomSitemapTagLabel(profileSite, label)}
+          onToggleChildSystemRole={(childUrl, role) => handleToggleChildSystemRole(profileSite, childUrl, role)}
+          onToggleChildCustomTag={(childUrl, label) => handleToggleChildCustomTag(profileSite, childUrl, label)}
+          onIndexSitemap={(url) => handleIndexSitemap(profileSite, url)}
+          onLoadCalendarPosts={(sitemapUrl) => handleLoadCalendarPosts(profileSite, sitemapUrl)}
+          onExtractNAPAndGraph={() => void handleExtractNAPAndLinkGraph(profileSite)}
+          getScrapingKey={getScrapingKey}
+          onPatchSite={handlePatchSite}
+          onSaveProperty={handleSaveSiteClick}
+        />
+      ) : (
       <div className="flex min-h-0 flex-1 flex-col">
       <WordPressSiteList
         sites={sites}
@@ -817,76 +855,7 @@ export const WordPressFeature: React.FC<WordPressFeatureProps> = ({
         propertyRowDisplay="compact"
       />
       </div>
-
-      <PropertyProfileDialog
-        open={profileSiteId != null}
-        onOpenChange={(open) => {
-          if (!open) closeProfile();
-        }}
-        site={profileSite}
-        activeSectionId={profileSectionId}
-        onActiveSectionChange={setProfileSectionId}
-        settingsSubSectionId={settingsSubSectionId}
-        onSettingsSubSectionChange={setSettingsSubSectionId}
-        siteSettingsPanel={profileSettingsPanel}
-        isTesting={profileSite != null && isTesting === profileSite.id}
-        isDetecting={profileSite != null && isDetecting === profileSite.id}
-        isFetchingScheduled={profileSite != null && isFetchingScheduled === profileSite.id}
-        isScrapingSitemap={isScrapingSitemap}
-        isGeneratingEntities={isGeneratingEntities}
-        isIndexingSitemap={isIndexingSitemap}
-        isLoadingCalendar={isLoadingCalendar}
-        isExtractingNAPAndGraph={
-          profileSite != null && Boolean(isExtractingNAPAndGraph[profileSite.id])
-        }
-        onTest={() => {
-          if (profileSite) handleTestConnection(profileSite);
-        }}
-        onDetect={() => {
-          if (profileSite) handleDetectSitemaps(profileSite);
-        }}
-        onScrapeChildSitemap={(url) => {
-          if (profileSite) handleScrapeChildSitemap(profileSite, url);
-        }}
-        onEntityGeneration={
-          onEntityGeneration && profileSite
-            ? (sitemapUrl) => onEntityGeneration(profileSite, sitemapUrl)
-            : undefined
-        }
-        onSetEntitySitemap={(sitemapUrl) => {
-          if (profileSite) handleSetEntitySitemap(profileSite, sitemapUrl);
-        }}
-        onSetCompetitorEntitySitemap={(sitemapUrl) => {
-          if (profileSite) handleSetCompetitorEntitySitemap(profileSite, sitemapUrl);
-        }}
-        onToggleChildSitemapDisabled={(childSitemapUrl) => {
-          if (profileSite) handleToggleChildSitemapDisabled(profileSite, childSitemapUrl);
-        }}
-        onAppendManualChildSitemap={(url) => {
-          if (profileSite) handleAppendManualChildSitemap(profileSite, url);
-        }}
-        onAddCustomSitemapTagLabel={(label) => {
-          if (profileSite) handleAddCustomSitemapTagLabel(profileSite, label);
-        }}
-        onToggleChildSystemRole={(childUrl, role) => {
-          if (profileSite) handleToggleChildSystemRole(profileSite, childUrl, role);
-        }}
-        onToggleChildCustomTag={(childUrl, label) => {
-          if (profileSite) handleToggleChildCustomTag(profileSite, childUrl, label);
-        }}
-        onIndexSitemap={(url) => {
-          if (profileSite) handleIndexSitemap(profileSite, url);
-        }}
-        onLoadCalendarPosts={(sitemapUrl) => {
-          if (profileSite) handleLoadCalendarPosts(profileSite, sitemapUrl);
-        }}
-        onExtractNAPAndGraph={() => {
-          if (profileSite) void handleExtractNAPAndLinkGraph(profileSite);
-        }}
-        getScrapingKey={getScrapingKey}
-        onPatchSite={handlePatchSite}
-        onSaveProperty={handleSaveSiteClick}
-      />
+      )}
 
       {/* Bulk Import Clients Dialog */}
       <BulkImportClientsDialog

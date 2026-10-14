@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import {
+  BookMarked,
   ClipboardList,
   Copy,
   Download,
@@ -8,13 +9,13 @@ import {
   MessageCircleQuestion,
   RotateCcw,
   Sparkles,
-  X,
+  Square,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KB_FILES_STORAGE_KEY, type StoredFile } from "@/components/integrations/types";
 import { GeneratorToolbarFrame } from "@/components/blog-generator/GeneratorToolbarFrame";
-import { GeneratorToolbarOptionsFlyout } from "@/components/blog-generator/GeneratorToolbarOptionsFlyout";
 import {
+  BULK_HEADER_DANGER_ICON_BTN,
   BULK_HEADER_ICON_TOOL_BTN,
   BULK_HEADER_RUN_BTN,
   BULK_HEADER_TOOL_BTN,
@@ -139,6 +140,62 @@ export function FlowFreeformToolbar({
           </Button>
           <Button
             type="button"
+            variant="ghost"
+            size="sm"
+            className={BULK_HEADER_TOOL_BTN}
+            disabled={pipelineBusy || sectionsCount === 0}
+            title="Write or rewrite all sections from the current outline"
+            onClick={() => void onRunAllSections()}
+          >
+            {pipelineBusy ? (
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+            ) : (
+              <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
+            )}
+            Sections
+          </Button>
+        </>
+      }
+      actions={
+        <>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={BULK_HEADER_ICON_TOOL_BTN}
+            disabled={!hasReport}
+            aria-label="Copy Markdown"
+            title="Copy Markdown"
+            onClick={() => void copyMarkdown()}
+          >
+            <Copy className="h-4 w-4 shrink-0" aria-hidden />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={BULK_HEADER_ICON_TOOL_BTN}
+            disabled={!hasReport}
+            aria-label="Download Markdown"
+            title="Download Markdown"
+            onClick={downloadMarkdown}
+          >
+            <Download className="h-4 w-4 shrink-0" aria-hidden />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={BULK_HEADER_ICON_TOOL_BTN}
+            disabled={!hasReport}
+            aria-label="Add to knowledge base"
+            title="Add to knowledge base"
+            onClick={addReportToKb}
+          >
+            <BookMarked className="h-4 w-4 shrink-0" aria-hidden />
+          </Button>
+          <Button
+            type="button"
             size="sm"
             className={BULK_HEADER_RUN_BTN}
             disabled={pipelineBusy || !hasGoalPrompt}
@@ -154,83 +211,27 @@ export function FlowFreeformToolbar({
           </Button>
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className={BULK_HEADER_TOOL_BTN}
-            disabled={pipelineBusy || sectionsCount === 0}
-            title="Write or rewrite all sections from the current outline"
-            onClick={() => void onRunAllSections()}
+            className={BULK_HEADER_DANGER_ICON_BTN}
+            disabled={!pipelineBusy}
+            aria-label="Cancel"
+            title="Cancel"
+            onClick={onAbort}
           >
-            {pipelineBusy ? (
-              <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-            ) : (
-              <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
-            )}
-            Sections
+            <Square className="h-4 w-4" aria-hidden />
           </Button>
-          <GeneratorToolbarOptionsFlyout disabled={pipelineBusy} label="Export">
-            <div className="flex flex-col gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className={BULK_HEADER_TOOL_BTN}
-                disabled={!hasReport}
-                onClick={() => void copyMarkdown()}
-              >
-                <Copy className="h-4 w-4 shrink-0" aria-hidden />
-                Copy Markdown
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className={BULK_HEADER_TOOL_BTN}
-                disabled={!hasReport}
-                onClick={downloadMarkdown}
-              >
-                <Download className="h-4 w-4 shrink-0" aria-hidden />
-                Download Markdown
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className={BULK_HEADER_TOOL_BTN}
-                disabled={!hasReport}
-                onClick={addReportToKb}
-              >
-                Knowledge base
-              </Button>
-            </div>
-          </GeneratorToolbarOptionsFlyout>
-        </>
-      }
-      actions={
-        <>
-          {pipelineBusy ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className={BULK_HEADER_ICON_TOOL_BTN}
-              aria-label="Cancel"
-              title="Cancel"
-              onClick={onAbort}
-            >
-              <X className="h-4 w-4 shrink-0" aria-hidden />
-            </Button>
-          ) : null}
           {onResetBlueprint ? (
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className={BULK_HEADER_TOOL_BTN}
+              className={BULK_HEADER_ICON_TOOL_BTN}
+              aria-label="Reset blueprint"
+              title="Reset blueprint"
               onClick={onResetBlueprint}
             >
               <RotateCcw className="h-4 w-4 shrink-0" aria-hidden />
-              Reset blueprint
             </Button>
           ) : null}
         </>

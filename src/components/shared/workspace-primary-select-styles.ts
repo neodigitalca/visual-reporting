@@ -4,9 +4,6 @@ import { cn } from "@/lib/utils";
 /** Slot height only; width comes from {@link workspacePrimarySelectWidthStyle}. */
 export const WORKSPACE_PRIMARY_SELECT_SLOT_CLASS = "h-8 shrink-0";
 
-/** @deprecated Width is computed from labels; use {@link workspacePrimarySelectWidthStyle}. */
-export const WORKSPACE_PRIMARY_SELECT_WIDTH_CLASS = "min-w-[10rem]";
-
 export const WORKSPACE_PRIMARY_SELECT_TRIGGER_CLASS = cn(
   "h-8 w-full min-w-0 justify-between rounded-none border-0 bg-primary px-3 text-base text-black shadow-none",
   "focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-0",

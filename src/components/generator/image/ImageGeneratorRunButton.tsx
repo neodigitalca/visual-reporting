@@ -29,7 +29,7 @@ export function ImageGeneratorRunButton({
 }: ImageGeneratorRunButtonProps) {
   const busy = isGeneratingChecklist || isGenerating;
   const disabled = workspaceBusy || busy || !hasApiKey;
-  const btnClass = cn(BULK_HEADER_RUN_BTN, "min-w-0 flex-1 justify-center", className);
+  const btnClass = cn(BULK_HEADER_RUN_BTN, className);
 
   if (!skipChecklist && !hasGeneratedChecklist) {
     return (

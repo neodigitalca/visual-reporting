@@ -1,3 +1,4 @@
+import { Copy, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -8,7 +9,7 @@ import {
 } from "@/components/ui/select";
 import { GeneratorToolbarFrame } from "@/components/blog-generator/GeneratorToolbarFrame";
 import { GENERATOR_SELECT, GENERATOR_TOOLBAR_SLOT_RESERVE } from "@/components/blog-generator/generator-toolbar-theme";
-import { BULK_HEADER_TOOL_BTN } from "@/components/keyword-research/bulk/bulk-workspace-header-styles";
+import { BULK_HEADER_ICON_TOOL_BTN } from "@/components/keyword-research/bulk/bulk-workspace-header-styles";
 import { IMAGE_MODEL_PRESETS } from "@/lib/image-model-defaults";
 import { ImageGeneratorRunButton } from "@/components/generator/image/ImageGeneratorRunButton";
 import type { UseImageGeneratorResult } from "@/components/generator/image/image-generator-types";
@@ -72,8 +73,8 @@ export function ImageGeneratorToolbar({
             onValueChange={(v) => setImageSourceMode(v as UseImageGeneratorResult["imageSourceMode"])}
             disabled={controlsDisabled}
           >
-            <SelectTrigger className={GENERATOR_SELECT} aria-label="Image source">
-              <SelectValue />
+            <SelectTrigger className={GENERATOR_SELECT} aria-label="Source">
+              <SelectValue placeholder="Source" />
             </SelectTrigger>
             <SelectContent position="popper">
               <SelectItem className="text-base" value="featured">
@@ -88,32 +89,27 @@ export function ImageGeneratorToolbar({
             </SelectContent>
           </Select>
 
-          <div className={cn(!showSectionSelect && GENERATOR_TOOLBAR_SLOT_RESERVE, GENERATOR_SELECT)}>
-            {showSectionSelect ? (
-              <Select
-                value={selectedSection ?? ""}
-                onValueChange={(v) => setSelectedSection(v || null)}
-                disabled={controlsDisabled || availableSections.length === 0}
-              >
-                <SelectTrigger className={GENERATOR_SELECT} aria-label="Section">
-                  <SelectValue placeholder={availableSections.length === 0 ? "No sections" : "Choose section"} />
-                </SelectTrigger>
-                <SelectContent position="popper">
-                  {availableSections.map((section, index) => (
-                    <SelectItem key={index} className="text-base" value={section.header}>
-                      {section.header}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Select disabled>
-                <SelectTrigger className={cn(GENERATOR_SELECT, "invisible pointer-events-none")} aria-hidden tabIndex={-1}>
-                  <SelectValue placeholder="Section" />
-                </SelectTrigger>
-              </Select>
-            )}
-          </div>
+          <Select
+            value={showSectionSelect ? (selectedSection ?? "") : ""}
+            onValueChange={(v) => setSelectedSection(v || null)}
+            disabled={!showSectionSelect || controlsDisabled || availableSections.length === 0}
+          >
+            <SelectTrigger
+              className={cn(GENERATOR_SELECT, !showSectionSelect && GENERATOR_TOOLBAR_SLOT_RESERVE)}
+              aria-label="Section"
+              aria-hidden={!showSectionSelect}
+              tabIndex={showSectionSelect ? 0 : -1}
+            >
+              <SelectValue placeholder={showSectionSelect && availableSections.length === 0 ? "No sections" : "Section"} />
+            </SelectTrigger>
+            <SelectContent position="popper">
+              {availableSections.map((section, index) => (
+                <SelectItem key={index} className="text-base" value={section.header}>
+                  {section.header}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           <Select
             value={isCustomModel ? "custom" : imageModel}
@@ -127,7 +123,7 @@ export function ImageGeneratorToolbar({
             }}
             disabled={controlsDisabled}
           >
-            <SelectTrigger className={GENERATOR_SELECT} aria-label="Image model">
+            <SelectTrigger className={cn(GENERATOR_SELECT, "w-auto min-w-[9rem]")} aria-label="Image model">
               <SelectValue placeholder="Image model" />
             </SelectTrigger>
             <SelectContent position="popper">
@@ -145,36 +141,30 @@ export function ImageGeneratorToolbar({
       }
       actions={
         <>
-          {imageDisplayUrl ? (
-            <>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className={BULK_HEADER_TOOL_BTN}
-                disabled={workspaceBusy || isGenerating}
-                aria-label="Download image"
-                title="Download image"
-                onClick={() => void handleDownload()}
-              >
-                <Download className="h-4 w-4 shrink-0" aria-hidden />
-                Download
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className={BULK_HEADER_TOOL_BTN}
-                disabled={workspaceBusy || isGenerating}
-                aria-label="Copy image"
-                title="Copy image"
-                onClick={() => void handleCopy()}
-              >
-                <Copy className="h-4 w-4 shrink-0" aria-hidden />
-                Copy
-              </Button>
-            </>
-          ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={BULK_HEADER_ICON_TOOL_BTN}
+            disabled={!imageDisplayUrl || workspaceBusy || isGenerating}
+            aria-label="Download image"
+            title="Download image"
+            onClick={() => void handleDownload()}
+          >
+            <Download className="h-4 w-4 shrink-0" aria-hidden />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={BULK_HEADER_ICON_TOOL_BTN}
+            disabled={!imageDisplayUrl || workspaceBusy || isGenerating}
+            aria-label="Copy image"
+            title="Copy image"
+            onClick={() => void handleCopy()}
+          >
+            <Copy className="h-4 w-4 shrink-0" aria-hidden />
+          </Button>
           <ImageGeneratorRunButton
             hasApiKey={hasApiKey}
             hasGeneratedChecklist={hasGeneratedChecklist}
