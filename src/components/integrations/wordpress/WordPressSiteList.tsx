@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { FileText, MapPin, Sparkles } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { CompactWordPressTile } from "./CompactWordPressTile";
@@ -30,10 +29,6 @@ import {
   propertiesRowOuterClass,
 } from "./wordpress-properties-surfaces";
 import { isEntitySitemapDisabled } from "@/lib/entity-endpoint-extractor";
-import { useActiveWordPressSite } from "@/contexts/active-wordpress-site-context";
-import { openOrganicReporting } from "@/lib/organic-dashboard/organic-reporting-nav";
-import { PropertyOrganicDashboardShortcutPill } from "./PropertyOrganicDashboardShortcutPill";
-import { PropertyReportingShortcutPill } from "./PropertyReportingShortcutPill";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getPropertyListRowBlackMetricFrameClass } from "./cyberpunk-theme";
 
@@ -169,7 +164,6 @@ function QuarterEditorialCountsStrip({
   selectedMonthKey,
   monthOptions,
   onMonthChange,
-  onOpenReporting,
 }: {
   site: WordPressSite;
   stats: QuarterEditorialTileStats | undefined;
@@ -177,7 +171,6 @@ function QuarterEditorialCountsStrip({
   selectedMonthKey?: string;
   monthOptions?: Array<{ key: string; label: string }>;
   onMonthChange?: (monthKey: string) => void;
-  onOpenReporting?: (site: WordPressSite) => void;
 }) {
   if (!siteHasWpCredentials(site) || !stats) return null;
 
@@ -313,13 +306,6 @@ function QuarterEditorialCountsStrip({
 
   return (
     <>
-      {onOpenReporting ? (
-        <PropertyReportingShortcutPill
-          site={site}
-          rowDisplay={rowDisplay}
-          onOpenReporting={onOpenReporting}
-        />
-      ) : null}
       <div
         className={cn(metricCell, mw.q, "text-green-400", showMonthSelect && "!p-0")}
         title={stripSummaryTitle}
@@ -498,16 +484,7 @@ export const WordPressSiteList: React.FC<WordPressSiteListProps> = ({
   onEditorialMonthChange,
   propertyRowDisplay = "compact",
 }) => {
-  const { setActiveWordPressSiteId } = useActiveWordPressSite();
-  const navigate = useNavigate();
-  const location = useLocation();
   const [canonicalRenameSite, setCanonicalRenameSite] = useState<WordPressSite | null>(null);
-
-  const openGscReportingForSite = (site: WordPressSite) => {
-    onConnectSite(site);
-    setActiveWordPressSiteId(site.id);
-    openOrganicReporting(navigate, location.pathname, site.id);
-  };
 
   const renderPropertyRowTrailingControls = (site: WordPressSite) => {
     const compact = propertyRowDisplay === "compact";
@@ -516,16 +493,6 @@ export const WordPressSiteList: React.FC<WordPressSiteListProps> = ({
     const stop = (e: React.SyntheticEvent) => e.stopPropagation();
     return (
     <div className="flex min-w-0 shrink-0 items-stretch">
-      {siteHasWpCredentials(site) ? (
-        <PropertyOrganicDashboardShortcutPill
-          site={site}
-          rowDisplay={propertyRowDisplay}
-          onBeforeNavigate={(s) => {
-            onConnectSite(s);
-            setActiveWordPressSiteId(s.id);
-          }}
-        />
-      ) : null}
       <div
         className={cn(PROPERTY_METRICS_CLUSTER_CLASS, "min-w-0")}
         onClick={stop}
@@ -551,7 +518,6 @@ export const WordPressSiteList: React.FC<WordPressSiteListProps> = ({
           selectedMonthKey={editorialSelectedMonthKey}
           monthOptions={editorialMonthOptions}
           onMonthChange={onEditorialMonthChange}
-          onOpenReporting={openGscReportingForSite}
         />
       </div>
     </div>

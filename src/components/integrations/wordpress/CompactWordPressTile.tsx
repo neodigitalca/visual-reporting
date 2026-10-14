@@ -1,6 +1,13 @@
 import React, { useCallback, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { XCircle, Loader2, Copy, Power, Wand2, UserCircle, Trash2, Pencil } from "lucide-react";
+import { XCircle, Loader2, Copy, Power, Wand2, Trash2, Pencil, MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { notify, notifyHeaderError } from "@/lib/app-notifications";
 import { loadApiKey } from "@/lib/api";
@@ -85,71 +92,78 @@ function copySiteUrlButton(
   );
 }
 
-function listRowDeleteButton(onDelete: () => void) {
-  return (
-    <button
-      type="button"
-      aria-label="Delete property"
-      title="Delete property"
-      onClick={(e) => {
-        e.stopPropagation();
-        onDelete();
-      }}
-      className={cn(
-        getPropertyListRowBlackIconButtonClass(true),
-        getPropertyListRowIconButtonHoverGlowClass("destructive"),
-        "text-red-300 [&_svg]:!text-red-300",
-      )}
-    >
-      <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
-    </button>
-  );
-}
+type ListRowActions = {
+  onDelete?: () => void;
+  onEditCanonicalName?: () => void;
+  onToggleEnabled?: () => void;
+  onApplyGmbName?: () => void;
+  isResolvingGmbName?: boolean;
+  isTesting?: boolean;
+};
 
-function listRowPowerButton(site: WordPressSite, isTesting: boolean, onToggle: () => void) {
+const ROW_MENU_ITEM = "gap-2 text-base";
+
+/** Properties list: one labeled actions menu per row (copy URL, GBP name, edit name, enable/disable, delete). */
+function listRowActionsMenu(site: WordPressSite, actions: ListRowActions) {
   const isEnabled = site.enabled !== false;
-  const statusText =
-    isTesting ? "Testing..."
-    : site.connectionStatus === "success" ? "Connected"
-    : site.connectionStatus === "failed" ? "Failed"
-    : "Not tested";
-  const switchAriaLabel = `${statusText}. ${isEnabled ? "Enabled for API calls" : "Disabled"}.`;
-  const powerClass = cn(
-    getPropertyListRowBlackIconButtonClass(true),
-    isEnabled && !isTesting
-      ? cn(
-          "!bg-[#84bd00] text-black [&_svg]:!text-black hover:!bg-[#84bd00]",
-          getPropertyListRowIconButtonHoverGlowClass("powerOn"),
-        )
-      : !isTesting &&
-          cn(
-            "text-white [&_svg]:!text-white hover:!bg-[#000]",
-            getPropertyListRowIconButtonHoverGlowClass("powerOff"),
-          ),
-  );
-
+  const busy = Boolean(actions.isTesting || actions.isResolvingGmbName);
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation();
   return (
-    <button
-      type="button"
-      disabled={isTesting}
-      title={statusText}
-      aria-label={switchAriaLabel}
-      className={cn(powerClass, isTesting && "cursor-not-allowed opacity-70")}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (!isTesting) onToggle();
-      }}
-    >
-      {isTesting ? (
-        <Loader2 className="h-4 w-4 shrink-0 animate-spin text-white" aria-hidden />
-      ) : (
-        <Power className="h-4 w-4 shrink-0" aria-hidden />
-      )}
-    </button>
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label="Property actions"
+        title="Property actions"
+        onClick={stop}
+        onPointerDown={stop}
+        className={cn(
+          getPropertyListRowBlackIconButtonClass(true),
+          getPropertyListRowIconButtonHoverGlowClass("powerOff"),
+        )}
+      >
+        {busy ? (
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+        ) : (
+          <MoreHorizontal className="h-4 w-4 shrink-0" aria-hidden />
+        )}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" onClick={stop} onPointerDown={stop}>
+        <DropdownMenuItem className={ROW_MENU_ITEM} onSelect={() => void navigator.clipboard.writeText(site.siteUrl)}>
+          <Copy className="h-4 w-4" aria-hidden />
+          Copy site URL
+        </DropdownMenuItem>
+        {actions.onApplyGmbName ? (
+          <DropdownMenuItem className={ROW_MENU_ITEM} disabled={actions.isResolvingGmbName} onSelect={actions.onApplyGmbName}>
+            <Wand2 className="h-4 w-4" aria-hidden />
+            Set name from Google Business Profile
+          </DropdownMenuItem>
+        ) : null}
+        {actions.onEditCanonicalName ? (
+          <DropdownMenuItem className={ROW_MENU_ITEM} onSelect={actions.onEditCanonicalName}>
+            <Pencil className="h-4 w-4" aria-hidden />
+            Edit property name
+          </DropdownMenuItem>
+        ) : null}
+        {actions.onToggleEnabled ? (
+          <DropdownMenuItem className={ROW_MENU_ITEM} disabled={actions.isTesting} onSelect={actions.onToggleEnabled}>
+            <Power className="h-4 w-4" aria-hidden />
+            {isEnabled ? "Disable property" : "Enable property"}
+          </DropdownMenuItem>
+        ) : null}
+        {actions.onDelete ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className={cn(ROW_MENU_ITEM, "text-red-300 focus:text-red-300")} onSelect={actions.onDelete}>
+              <Trash2 className="h-4 w-4" aria-hidden />
+              Delete property
+            </DropdownMenuItem>
+          </>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
-/** Single row: copy URL, optional GBP name wand, title. Quarter counts live in the toolbar strip by the gap dropdown. */
+/** Single row: actions menu (list rows) or copy URL + GBP wand (other variants), then title. */
 function menuInnerSummary(
   site: WordPressSite,
   rowDisplay: WordPressPropertyRowDisplay,
@@ -160,10 +174,7 @@ function menuInnerSummary(
     hideCopyUrl?: boolean;
     linkTitleToSite?: boolean;
     onOpenProfile?: () => void;
-    onDelete?: () => void;
-    onEditCanonicalName?: () => void;
-    onToggleEnabled?: () => void;
-    isTesting?: boolean;
+    listRowActions?: ListRowActions;
   },
 ) {
   const compact = rowDisplay === "compact";
@@ -185,47 +196,27 @@ function menuInnerSummary(
         compact ? "gap-2" : "gap-3",
       )}
     >
-      {!options?.hideCopyUrl ? copySiteUrlButton(site, compact, copyControlTone, listRowBlackChrome) : null}
-      {gmbDisplayNameWand}
+      {options?.listRowActions ? (
+        listRowActionsMenu(site, options.listRowActions)
+      ) : (
+        <>
+          {!options?.hideCopyUrl ? copySiteUrlButton(site, compact, copyControlTone, listRowBlackChrome) : null}
+          {gmbDisplayNameWand}
+        </>
+      )}
       {options?.onOpenProfile ? (
         <button
           type="button"
-          aria-label={`Open profile for ${displayName}`}
           title="Open profile"
+          className={cn(titleClass, "hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45")}
           onClick={(e) => {
             e.stopPropagation();
             options.onOpenProfile?.();
           }}
-          className={cn(
-            "inline-flex shrink-0 items-center justify-center text-[#77AA00] hover:text-[#77AA00]/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#77AA00]/45",
-            compact ? "h-8 w-8" : "h-9 w-9",
-          )}
         >
-          <UserCircle className={cn("shrink-0", compact ? "h-5 w-5" : "h-6 w-6")} aria-hidden />
+          {displayName}
         </button>
-      ) : null}
-      {options?.onDelete ? listRowDeleteButton(options.onDelete) : null}
-      {options?.onToggleEnabled
-        ? listRowPowerButton(site, Boolean(options.isTesting), options.onToggleEnabled)
-        : null}
-      {options?.onEditCanonicalName ? (
-        <button
-          type="button"
-          aria-label={`Edit property name for ${displayName}`}
-          title="Edit property name"
-          onClick={(e) => {
-            e.stopPropagation();
-            options.onEditCanonicalName?.();
-          }}
-          className={cn(
-            getPropertyListRowBlackIconButtonClass(true),
-            getPropertyListRowIconButtonHoverGlowClass("powerOff"),
-          )}
-        >
-          <Pencil className="h-4 w-4 shrink-0" aria-hidden />
-        </button>
-      ) : null}
-      {options?.linkTitleToSite && siteHref ? (
+      ) : options?.linkTitleToSite && siteHref ? (
         <a
           href={siteHref}
           target="_blank"
@@ -265,9 +256,8 @@ export const CompactWordPressTile: React.FC<CompactWordPressTileProps> = ({
 }) => {
   const [isResolvingGmbDisplayName, setIsResolvingGmbDisplayName] = useState(false);
 
-  const handleGmbDisplayNameWand = useCallback(
-    async (e: React.MouseEvent) => {
-      e.stopPropagation();
+  const resolveGmbDisplayName = useCallback(
+    async () => {
       if (!onApplyDisplayNameFromGmb || isResolvingGmbDisplayName) return;
       setIsResolvingGmbDisplayName(true);
       try {
@@ -300,7 +290,10 @@ export const CompactWordPressTile: React.FC<CompactWordPressTileProps> = ({
         aria-label="Set site name from Google Business Profile (DataForSEO)"
         title="Set site name from Google Business Profile (DataForSEO)"
         disabled={isResolvingGmbDisplayName}
-        onClick={(e) => void handleGmbDisplayNameWand(e)}
+        onClick={(e) => {
+          e.stopPropagation();
+          void resolveGmbDisplayName();
+        }}
         className={cn(
           listRowBlackChrome
             ? getPropertyListRowBlackIconButtonClass(rowCompact)
@@ -387,10 +380,17 @@ export const CompactWordPressTile: React.FC<CompactWordPressTileProps> = ({
     hideCopyUrl,
     linkTitleToSite,
     onOpenProfile,
-    onDelete: variant === "listRow" ? onDelete : undefined,
-    onEditCanonicalName: variant === "listRow" ? onEditCanonicalName : undefined,
-    onToggleEnabled: variant === "listRow" ? onToggleEnabled : undefined,
-    isTesting: variant === "listRow" ? isTesting : undefined,
+    listRowActions:
+      variant === "listRow"
+        ? {
+            onDelete,
+            onEditCanonicalName,
+            onToggleEnabled,
+            onApplyGmbName: onApplyDisplayNameFromGmb ? () => void resolveGmbDisplayName() : undefined,
+            isResolvingGmbName: isResolvingGmbDisplayName,
+            isTesting,
+          }
+        : undefined,
   };
 
   const content = (
