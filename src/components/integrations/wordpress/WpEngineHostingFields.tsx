@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { TASK_FORM_FLAT_CONTROL_CLASS, TaskFormFlatField } from "@/components/manager/tasks/TaskFormLayout";
 import type { WordPressSite } from "../types";
+import { propertyWpEngineInstall } from "./property-profile-view-model";
 
 export type WpEngineHostingFieldsProps = {
   site: WordPressSite | null | undefined;
@@ -33,7 +34,7 @@ export function WpEngineHostingFields({ site, onPatchSite }: WpEngineHostingFiel
           value={install}
           onChange={(e) => setInstall(e.target.value)}
           onBlur={persist}
-          placeholder="e.g. blindmagic"
+          placeholder={site ? `WP Engine install (default: ${propertyWpEngineInstall({ ...site, wpEngineInstall: "" }) || "from site URL"})` : "WP Engine install"}
           aria-label="WP Engine install"
           autoComplete="off"
           disabled={!site}

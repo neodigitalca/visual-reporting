@@ -20,8 +20,11 @@ describe("property-profile-view-model", () => {
 
   it("builds the WP Admin url", () => {
     expect(propertyWpAdminUrl(base)).toBe("https://blindmagic.com/wp-admin/");
-    expect(propertyWpAdminUrl({ ...base, wpEngineInstall: "blindmagic", wpEngineAccountId: "ed80c554" })).toBe(
+    expect(propertyWpAdminUrl({ ...base, wpEngineAccountId: "ed80c554" })).toBe(
       "https://my.wpengine.com/installs/blindmagic/launch_wp_admin?account_id=ed80c554",
+    );
+    expect(propertyWpAdminUrl({ ...base, wpEngineInstall: "blindmagic1stg", wpEngineAccountId: "ed80c554" })).toBe(
+      "https://my.wpengine.com/installs/blindmagic1stg/launch_wp_admin?account_id=ed80c554",
     );
   });
 

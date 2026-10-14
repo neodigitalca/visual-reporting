@@ -30,10 +30,21 @@ export function formatLastTested(ts: number | undefined): string {
   return ts ? formatDateTime(new Date(ts).toISOString()) : "Not tested";
 }
 
-/** WP Engine portal "Launch WP Admin" URL when install + account id are set; otherwise the site's own /wp-admin/. */
+/** WP Engine install name: explicit field, else the first label of the site hostname (blindmagic.com -> blindmagic). */
+export function propertyWpEngineInstall(site: WordPressSite): string {
+  const explicit = site.wpEngineInstall?.trim() ?? "";
+  if (explicit) return explicit;
+  try {
+    return new URL(site.siteUrl?.trim() ?? "").hostname.replace(/^www\./, "").split(".")[0] ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/** WP Engine portal "Launch WP Admin" URL when an account id is set; otherwise the site's own /wp-admin/. */
 export function propertyWpAdminUrl(site: WordPressSite): string {
-  const install = site.wpEngineInstall?.trim() ?? "";
   const accountId = site.wpEngineAccountId?.trim() ?? "";
+  const install = accountId ? propertyWpEngineInstall(site) : "";
   if (install && accountId) {
     return `https://my.wpengine.com/installs/${encodeURIComponent(install)}/launch_wp_admin?account_id=${encodeURIComponent(accountId)}`;
   }

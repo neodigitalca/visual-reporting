@@ -1,7 +1,7 @@
 import { StatCell } from "@/components/hosting/site-profile/SiteOverviewSection";
 import { PROFILE_CARD, PROFILE_CARD_HEAD, PROFILE_CARD_TITLE, PROFILE_STAT_GRID } from "@/components/hosting/site-profile/site-profile-theme";
 import type { WordPressSite } from "../types";
-import { propertyConnectionStatusTone, propertyHostingLabel } from "./property-profile-view-model";
+import { propertyConnectionStatusTone, propertyHostingLabel, propertyWpEngineInstall } from "./property-profile-view-model";
 import { WordPressCardActions } from "./WordPressCardActions";
 
 export type PropertyOverviewSectionProps = {
@@ -38,9 +38,9 @@ export function PropertyOverviewSection({ site, isTesting, isDetecting, isExtrac
   const ads = integrationStat(site.googleAdsCustomerId);
   const gbp = integrationStat(site.gbpLocationId);
   const semrush = integrationStat(site.semrushSiteAuditProjectId ?? site.semrushPositionTrackingProjectId);
-  const wpEngineInstall = site.wpEngineInstall?.trim() ?? "";
-  const wpEngine = wpEngineInstall
-    ? { value: wpEngineInstall, note: site.wpEngineAccountId?.trim() || "No account ID" }
+  const wpEngineAccountId = site.wpEngineAccountId?.trim() ?? "";
+  const wpEngine = wpEngineAccountId
+    ? { value: propertyWpEngineInstall(site) || "Configured", note: wpEngineAccountId }
     : { value: "Not set", note: "" };
 
   return (
