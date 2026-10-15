@@ -173,6 +173,8 @@ export function useOverviewTabController(props: OverviewTabContentProps) {
     deriveEntityKeyword: base.deriveEntityKeyword,
     bulkScopeUrlKeys: base.bulkScopeUrlKeys,
     opt: base.opt,
+    uploadAfterRowWrite: aiseoUploadAfterRowWrite,
+    getInventoryMatchForUrl: base.getInventoryMatchForUrl,
   });
 
   const aiUrlHarness = useOverviewTabAiUrlHarness({
@@ -248,6 +250,7 @@ export function useOverviewTabController(props: OverviewTabContentProps) {
     handleAiFaqRowAll: faq.handleAiFaqRowAll,
     bulkScopeUrlKeys: base.bulkScopeUrlKeys,
     bulkScopeUrlKeysRef: base.bulkScopeUrlKeysRef,
+    uploadAfterRowWrite: aiseoUploadAfterRowWrite,
   });
 
   const bulkSeoWp = useOverviewTabBulkSeoWp({

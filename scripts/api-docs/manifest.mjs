@@ -62,6 +62,16 @@ export function buildManifest(routes, docsDir) {
         { slug: "god-mode/endpoints", title: "Endpoints", order: 40 },
       ],
     },
+    {
+      id: "aiseo",
+      label: "AISEO & Details Contract",
+      items: [
+        { slug: "aiseo/overview", title: "Architecture & Contracts", order: 0 },
+        { slug: "aiseo/element-library", title: "AISEO Element Library", order: 10 },
+        { slug: "aiseo/agent-models", title: "Pipeline Agents & Models", order: 20 },
+        { slug: "aiseo/generated-files", title: "Generated Files & Upload JSONs", order: 30 },
+      ],
+    },
   ];
 
   const apiSections = Object.keys(sections)

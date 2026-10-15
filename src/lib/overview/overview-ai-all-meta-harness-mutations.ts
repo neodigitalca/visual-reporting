@@ -11,6 +11,7 @@ import {
   metaHarnessPlannedSectionCount,
   type MetaHarnessPrepSummaries,
 } from "@/lib/overview/overview-ai-all-meta-harness-sections";
+import { buildAiseoElementJsonFile } from "@/lib/overview/overview-aiseo-row-artifacts";
 import {
   mergeHarnessProgressSiteAndBatch,
 } from "@/hooks/content-optimization/optimization-helpers-a";
@@ -155,7 +156,16 @@ export function finishMetaRowHarness(
     emitMetaHarnessPayloads(url, metaDonePayloads, setters);
 
     const sections = buildDoneMetaHarnessSections(entry, patch, prep);
-    const files = metaHarnessGeneratedFiles(sections, url);
+    const elementFile = buildAiseoElementJsonFile("ai-all-meta.json", {
+      url,
+      focusKeyword: entry.focusKeyword,
+      title: patch.title ?? patch.aiTitle ?? entry.existingTitle,
+      metaDescription: patch.metaDescription ?? patch.aiMeta ?? entry.existingMeta,
+    });
+    const files = [
+      ...(elementFile ? [elementFile] : []),
+      ...metaHarnessGeneratedFiles(sections, url),
+    ];
     const rowPatch: Partial<OverviewRow> = { ...patch };
     delete rowPatch.faq;
 

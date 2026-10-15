@@ -5,23 +5,45 @@ import {
   buildAiseoRowDisplaySections,
   filterAiseoRowDisplayFiles,
   isAiseoFileSlotRunKind,
+  listAiseoElementLibrary,
   mergeAiseoRowFinishFiles,
   resolveAiseoPipelineDownloadFile,
 } from "@/lib/overview/overview-aiseo-row-artifacts";
 
 describe("isAiseoFileSlotRunKind", () => {
-  it("includes body harness runs but not research, aiAllMeta, or content optimize", () => {
+  it("includes all modular AISEO elements and wpUpload, but excludes research and full content optimize", () => {
     expect(isAiseoFileSlotRunKind("aiTitle")).toBe(true);
     expect(isAiseoFileSlotRunKind("aiMeta")).toBe(true);
+    expect(isAiseoFileSlotRunKind("aiAllMeta")).toBe(true);
     expect(isAiseoFileSlotRunKind("aiFaq")).toBe(true);
     expect(isAiseoFileSlotRunKind("aiAnswer")).toBe(true);
+    expect(isAiseoFileSlotRunKind("aiOverview")).toBe(true);
+    expect(isAiseoFileSlotRunKind("aiScenario")).toBe(true);
+    expect(isAiseoFileSlotRunKind("aiHeaders")).toBe(true);
+    expect(isAiseoFileSlotRunKind("aiLinks")).toBe(true);
+    expect(isAiseoFileSlotRunKind("aiWikipediaLink")).toBe(true);
+    expect(isAiseoFileSlotRunKind("contentCleanup")).toBe(true);
+    expect(isAiseoFileSlotRunKind("aiInContentImage")).toBe(true);
+    expect(isAiseoFileSlotRunKind("contentKw")).toBe(true);
+    expect(isAiseoFileSlotRunKind("entityKw")).toBe(true);
+    expect(isAiseoFileSlotRunKind("extraText")).toBe(true);
     expect(isAiseoFileSlotRunKind("wpUpload")).toBe(true);
-    expect(isAiseoFileSlotRunKind("research")).toBe(false);
-    expect(isAiseoFileSlotRunKind("aiAllMeta")).toBe(false);
-    expect(isAiseoFileSlotRunKind("content")).toBe(false);
-    expect(isAiseoFileSlotRunKind("contentKw")).toBe(false);
-    expect(isAiseoFileSlotRunKind("entityKw")).toBe(false);
     expect(isAiseoFileSlotRunKind("aiFeaturedImage")).toBe(false);
+    expect(isAiseoFileSlotRunKind("research")).toBe(false);
+    expect(isAiseoFileSlotRunKind("content")).toBe(false);
+  });
+});
+
+describe("listAiseoElementLibrary", () => {
+  it("documents category, agentKind, label, and reason for every AISEO entry", () => {
+    const entries = listAiseoElementLibrary();
+    expect(entries.length).toBeGreaterThanOrEqual(18);
+    for (const entry of entries) {
+      expect(entry.category).toBeTruthy();
+      expect(entry.agentKind).toBeTruthy();
+      expect(entry.label.trim().length).toBeGreaterThan(0);
+      expect(entry.reason.trim().length).toBeGreaterThan(10);
+    }
   });
 });
 
@@ -48,14 +70,14 @@ describe("filterAiseoRowDisplayFiles", () => {
     ).toEqual(["answer.html", "content-page.html", "wordpress.json"]);
   });
 
-  it("keeps two slots for wpUpload", () => {
+  it("keeps post content, upload-payload JSON, and wordpress.json for wpUpload", () => {
     expect(
       filterAiseoRowDisplayFiles("wpUpload", [
         { name: "content-page.html", content: "<full>" },
         { name: "upload-payload-page.json", content: "{}" },
         { name: "wordpress.json", content: "{}" },
       ]).map((file) => file.name),
-    ).toEqual(["content-page.html", "wordpress.json"]);
+    ).toEqual(["content-page.html", "upload-payload-page.json", "wordpress.json"]);
   });
 });
 
@@ -76,12 +98,20 @@ describe("buildAiseoRowDisplaySections", () => {
     ).toEqual(["AI meta", "Post content", "WordPress upload"]);
   });
 
-  it("exposes one keyword row for contentKw", () => {
+  it("exposes three fixed rows for contentKw", () => {
     expect(
       buildAiseoRowDisplaySections("contentKw", [{ status: "generating" }], []).map(
         (section) => section.title,
       ),
-    ).toEqual(["AI keywords (content)"]);
+    ).toEqual(["AI keywords (content)", "Post content", "WordPress upload"]);
+  });
+
+  it("exposes three fixed rows for aiAllMeta", () => {
+    expect(
+      buildAiseoRowDisplaySections("aiAllMeta", [{ status: "generating" }], []).map(
+        (section) => section.title,
+      ),
+    ).toEqual(["All Meta", "Post content", "WordPress upload"]);
   });
 
   it("exposes three fixed rows for aiScenario", () => {

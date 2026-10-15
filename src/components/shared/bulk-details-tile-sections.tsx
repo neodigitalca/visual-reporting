@@ -50,6 +50,9 @@ export type BulkDetailsDownloadable = { name: string; content: string; mimeType:
 
 const ARTIFACT_ONLY_PIPELINE_TITLES = new Set<string>([
   GOOGLE_IMAGE_PIPELINE_TITLE,
+  "Keyword research",
+  "Selected keyword",
+  "SERP research brief",
   ...CONTENT_OPTIMIZE_PIPELINE_PREFIX,
   "Post content",
   "Content Markdown",

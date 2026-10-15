@@ -25,6 +25,7 @@ import { mergeOptimizationProgress } from "@/hooks/content-optimization/optimiza
 import type { BulkOptimizationState } from "@/hooks/content-optimization/use-optimization-state";
 import { initOverviewBulkHarnessPagination } from "@/lib/overview/overview-bulk-page-state";
 import type { OverviewSitemapSource } from "@/lib/overview/overview-sitemap-source";
+import type { AiseoAfterRowWriteFn } from "@/lib/overview/overview-aiseo-after-upload";
 
 type SetBulkState = Dispatch<SetStateAction<Record<string, BulkOptimizationState>>>;
 type SetOptProgress = Dispatch<SetStateAction<Record<string, unknown>>>;
@@ -53,6 +54,7 @@ export type RunOverviewAiAllMetaHarnessParams = {
   skipInit?: boolean;
   bulkAiFaqSeedCount: number;
   faqDeps: FaqHarnessOptimizeDeps;
+  uploadAfterRowWrite?: AiseoAfterRowWriteFn;
 };
 
 export type PrimeOverviewAiAllMetaHarnessParams = Pick<
@@ -186,6 +188,7 @@ export async function runOverviewAiAllMetaHarness(
     skipInit,
     bulkAiFaqSeedCount,
     faqDeps,
+    uploadAfterRowWrite,
   } = params;
 
   const batchKey = `${site.id}-batch`;
@@ -228,6 +231,7 @@ export async function runOverviewAiAllMetaHarness(
       faqDeps,
       runAiAllMetaBatchForCatalog,
       updateRow,
+      uploadAfterRowWrite,
       isCancelled: () => isOverviewAiAllMetaBatchCancelled(batchKey, setBulkOptimizationState),
       onRowStart: (index, row) => {
         const url = row.url?.trim();

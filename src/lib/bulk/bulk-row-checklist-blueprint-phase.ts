@@ -133,7 +133,6 @@ export async function runBulkRowChecklistAndBlueprintPhase(input: {
   } = input;
 
     // Generate checklist (after SERP + LLM brief)
-    options.onProgress?.(rowIndex, 0, 'Reading blacklist...');
     options.onProgress?.(rowIndex, 0, 'Generating checklist...');
     const prosePrimaryKeyword = resolveBulkPrimaryKeyword(row, enrichedRow, keywordData, enrichedRow.title);
 

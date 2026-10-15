@@ -40,14 +40,11 @@ function processSseDataLine(
     const delta = json.choices[0]?.delta;
     const contentChunk =
       typeof delta?.content === "string" && delta.content.length > 0 ? delta.content : "";
-    const reasoningChunk =
-      typeof delta?.reasoning === "string" && delta.reasoning.length > 0 ? delta.reasoning : "";
     const finishReason = json.choices[0]?.finish_reason;
 
-    const textChunk = contentChunk || reasoningChunk;
-    if (textChunk) {
-      acc.fullContent += textChunk;
-      onContentChunk(textChunk);
+    if (contentChunk) {
+      acc.fullContent += contentChunk;
+      onContentChunk(contentChunk);
     }
 
     if (finishReason) {

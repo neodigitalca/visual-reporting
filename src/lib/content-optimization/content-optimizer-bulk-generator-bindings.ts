@@ -221,7 +221,7 @@ function buildFilesByRow(input: ContentOptimizerBulkGeneratorBindingsInput): Map
   }
 
   const fm = optimizationFileManagers[siteId];
-  if (fm && fm.getFileCount() > 0 && activeUrl) {
+  if (isContentOptimizerBulkRun(bulkState) && fm && fm.getFileCount() > 0 && activeUrl) {
     const activeIndex = urls.findIndex((u) => normalizePageUrlKey(u) === activeKey);
     if (activeIndex >= 0) {
       const overviewRow = rowByUrl.get(normalizePageUrlKey(urls[activeIndex]!));
@@ -393,7 +393,7 @@ function buildHarnessByRow(
       );
     if (researchBatch) {
       map.set(index, mergeResearchHarnessSections(stored));
-    } else if (bulkState.runKind === "aiFaq" || bulkState.runKind === "aiScenario") {
+    } else if (isAiseoFileSlotRunKind(bulkState.runKind)) {
       map.set(index, (stored ?? []) as BulkHarnessSectionUi[]);
     } else {
       map.set(index, mergeContentOptimizeHarnessSections(

@@ -34,6 +34,9 @@ import type { FaqHarnessSetters } from "@/lib/overview/overview-faq-harness-muta
 import { overviewBulkPageRanges } from "@/lib/overview/overview-bulk-page-size";
 import { setOverviewBulkHarnessPageState } from "@/lib/overview/overview-bulk-page-state";
 import type { OverviewSitemapSource } from "@/lib/overview/overview-sitemap-source";
+import type { AiseoAfterRowWriteFn } from "@/lib/overview/overview-aiseo-after-upload";
+import { aiseoRowFilesForUpload, buildAiseoElementJsonFile } from "@/lib/overview/overview-aiseo-row-artifacts";
+import { resolveAiseoHarnessSourceHtml } from "@/lib/overview/overview-aiseo-source-html";
 
 export type AiAllMetaEligibleRow = {
   index: number;
@@ -65,6 +68,7 @@ export type RunOverviewAiAllMetaBatchParams = {
   ) => Promise<Map<string, AiAllMetaRowPatch>>;
   updateRow: (index: number, patch: Partial<OverviewRow>) => void;
   isCancelled: () => boolean;
+  uploadAfterRowWrite?: AiseoAfterRowWriteFn;
   onRowStart?: (index: number, row: OverviewRow) => void;
   onRowComplete?: (result: AiAllMetaRowResult) => void;
 };
@@ -137,6 +141,7 @@ export async function runOverviewAiAllMetaBatch(
     runAiAllMetaBatchForCatalog,
     updateRow,
     isCancelled,
+    uploadAfterRowWrite,
     onRowStart,
     onRowComplete,
   } = params;
@@ -264,6 +269,34 @@ export async function runOverviewAiAllMetaBatch(
         if (item.runEntry.faqMode !== "none") {
           faqQueue.push({ ...item, patch });
         } else {
+          if (uploadAfterRowWrite) {
+            const { html: postHtml } = await resolveAiseoHarnessSourceHtml({
+              row: { ...row, ...patch },
+              site,
+              sitemapSource,
+              getInventoryMatchForUrl,
+            });
+            const bodyForFiles =
+              postHtml.trim() || row.postContentOptimized?.trim() || row.postContent?.trim() || "";
+            const elementFile = buildAiseoElementJsonFile("ai-all-meta.json", {
+              url,
+              focusKeyword: item.runEntry.focusKeyword,
+              title: patch.title ?? patch.aiTitle ?? item.runEntry.existingTitle,
+              metaDescription: patch.metaDescription ?? patch.aiMeta ?? item.runEntry.existingMeta,
+            });
+            const rowFiles = aiseoRowFilesForUpload({
+              runKind: "aiAllMeta",
+              url,
+              elementFiles: elementFile ? [elementFile] : [],
+              postHtml: bodyForFiles || undefined,
+            });
+            await uploadAfterRowWrite({
+              index,
+              url,
+              html: bodyForFiles,
+              rowFiles,
+            });
+          }
           applied += 1;
           pushRowResult(results, { index, url, ok: true }, onRowComplete);
         }
@@ -290,6 +323,7 @@ export async function runOverviewAiAllMetaBatch(
               deps: faqDeps,
               harnessSetters: faqHarnessSetters,
               updateRow,
+              uploadAfterRowWrite,
               sectionIndexOffset: metaHarnessNonFaqSectionCount(item.runEntry),
               totalHarnessSections: metaHarnessPlannedSectionCount(item.runEntry),
               skipLoadingState: true,

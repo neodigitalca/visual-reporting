@@ -35,8 +35,9 @@ import {
   insertFigureAfterH2,
 } from "@/lib/overview/overview-blog-in-content-image-insert";
 import { applyAiGeneratedImageDisclaimer } from "@/lib/images/ai-generated-image-disclaimer";
+import { getImageModel, getResearchModel } from "@/lib/optimization-settings-storage";
 
-/** OpenRouter model for in-content image generation. */
+/** Default OpenRouter model constant kept for backward compatibility; runtime calls resolve getImageModel(siteId). */
 export const IN_CONTENT_IMAGE_MODEL = "google/gemini-3.1-flash-lite-image";
 
 export interface InContentImageResult {
@@ -170,6 +171,7 @@ type SelectedSection = {
 async function buildChecklistAndGenerate(params: {
   apiKey: string;
   researchModel: string;
+  siteId?: string;
   flowTitle: string;
   flowPurpose: string;
   selectedSection: SelectedSection;
@@ -282,7 +284,7 @@ async function buildChecklistAndGenerate(params: {
   const imageResult = await generateImage({
     apiKey: params.apiKey,
     prompt,
-    model: IN_CONTENT_IMAGE_MODEL,
+    model: getImageModel(params.siteId),
     aspectRatio: imageTypeInfo.aspectRatio,
     referenceImageDataUrls: collectReferenceDataUrls(research.references),
   });
@@ -308,7 +310,7 @@ export async function generateInContentImage(
     throw new Error("OpenRouter API key not found. Please set it in settings.");
   }
 
-  const researchModel = options.model || getResearchModel();
+  const researchModel = options.model || getResearchModel(options.site?.id);
   const sectionHeader = await analyzeBestSectionForImage(
     options.markdownContent,
     options.imageType,
@@ -330,6 +332,7 @@ export async function generateInContentImage(
   const { imageBase64 } = await buildChecklistAndGenerate({
     apiKey,
     researchModel,
+    siteId: options.site?.id,
     flowTitle: options.flowTitle,
     flowPurpose: options.flowPurpose,
     selectedSection: {
@@ -397,7 +400,7 @@ export async function generateInContentImageFromHtml(
   const flowPurpose =
     options.flowPurpose ||
     buildFocusedArticlePurpose(options.focusKeyword || options.flowTitle || "this topic");
-  const researchModel = options.model || getResearchModel();
+  const researchModel = options.model || getResearchModel(options.site?.id);
   const sections = parseMarkdownSections(markdownProjection);
   const forced = (options.forcedSectionHeader ?? "").trim();
 
@@ -433,6 +436,7 @@ export async function generateInContentImageFromHtml(
   const { imageBase64 } = await buildChecklistAndGenerate({
     apiKey,
     researchModel,
+    siteId: options.site?.id,
     flowTitle: options.flowTitle,
     flowPurpose,
     selectedSection,

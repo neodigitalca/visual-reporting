@@ -20,6 +20,7 @@ import { loadBlogLinksLinkInventory } from "@/lib/overview/overview-blog-links-i
 import { cacheRowHtmlByIndex } from "@/lib/overview/overview-harness-page-catalog";
 import type { OverviewInventoryUrlMatch } from "@/lib/overview/overview-row-scrape";
 import { setOptimizingState } from "@/hooks/content-optimization/optimization-helpers-a";
+import { getBlogModel } from "@/lib/optimization-settings-storage";
 import type { AiseoAfterRowWriteFn } from "@/lib/overview/overview-aiseo-after-upload";
 import { createAiseoCacheWriteAccumulator, finalizeAiseoCacheWriteForUpload } from "@/lib/overview/overview-aiseo-cache-write";
 
@@ -164,7 +165,7 @@ export function useOverviewTabBlogLinks({
           linkPool,
           agentOptions: {
             apiKey,
-            model: selectedModel || "google/gemini-2.5-flash",
+            model: getBlogModel(site.id) || selectedModel,
             siteId: site.id,
             siteUrl: site.siteUrl,
           },

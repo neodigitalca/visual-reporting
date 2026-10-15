@@ -12,9 +12,8 @@ import {
   collectReferenceDataUrls,
   researchGoogleImageReferences,
 } from "@/lib/image-reference-research";
-import { getResearchModel } from "@/lib/optimization-settings-storage";
+import { getImageModel, getResearchModel } from "@/lib/optimization-settings-storage";
 import { dataUrlToBase64, fetchImageDataUrlViaApi } from "@/lib/proxy-fetch-text";
-import { DEFAULT_IMAGE_MODEL } from "@/lib/image-model-defaults";
 import type { WordPressSite } from "@/components/integrations/types";
 import type { BulkHarnessSectionPayload } from "@/lib/bulk-auto-generate";
 import {
@@ -366,7 +365,7 @@ export async function generateExtraImageForPage(
     const imageResult = await generateImage({
       apiKey,
       prompt: groundedPrompt,
-      model: DEFAULT_IMAGE_MODEL,
+      model: getImageModel(siteId),
       aspectRatio: '1:1',
       referenceImageDataUrls: collectReferenceDataUrls(research.references),
     });

@@ -32,6 +32,7 @@ import {
 } from "@/lib/overview/overview-blog-links-apply-local";
 import { extractAllSectionLinkRowsFromHtml } from "@/lib/overview/overview-blog-links-extract";
 import { updateOptimizationProgress } from "@/hooks/content-optimization/optimization-helpers-a";
+import { getBlogModel } from "@/lib/optimization-settings-storage";
 import type { OverviewTabBase } from "@/hooks/overview/use-overview-tab-base";
 
 type Args = Pick<OverviewTabBase, "updateRow" | "opt"> & {
@@ -210,7 +211,7 @@ export function useOverviewTabElementorHarness({
           index,
           kind,
           apiKey,
-          model: selectedModel,
+          model: getBlogModel(site.id) || selectedModel,
           targetSectionId,
           targetSectionTitle,
           updateRow,
@@ -286,7 +287,7 @@ export function useOverviewTabElementorHarness({
           sectionId,
           linkIndex,
           apiKey,
-          model: selectedModel,
+          model: getBlogModel(site.id) || selectedModel,
         });
         if (!result) return;
 

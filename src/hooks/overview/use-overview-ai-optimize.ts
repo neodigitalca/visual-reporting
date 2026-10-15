@@ -143,7 +143,10 @@ function faqPrimaryLocalPromptBlock(
  */
 export function useOverviewAiOptimize(options: UseOverviewAiOptions): UseOverviewAiResult {
   const { apiKey, model, temperature, maxTokens, topP, napSummary, wordPressSiteId, wordPressSite } = options;
-  const metaModel = getMetaModel(wordPressSiteId) || model;
+  const resolveMetaModel = useCallback(
+    () => getMetaModel(wordPressSiteId) || model,
+    [wordPressSiteId, model],
+  );
   const [loading, setLoading] = useState(false);
   const [focusKeywordLoading, setFocusKeywordLoading] = useState(false);
   const [auditChecklistLoading, setAuditChecklistLoading] = useState(false);
@@ -168,7 +171,7 @@ export function useOverviewAiOptimize(options: UseOverviewAiOptions): UseOvervie
       let result = "";
       await streamChatCompletion({
         apiKey,
-        model: metaModel,
+        model: resolveMetaModel(),
         messages,
         temperature,
         maxTokens,
@@ -181,7 +184,7 @@ export function useOverviewAiOptimize(options: UseOverviewAiOptions): UseOvervie
 
       return result.trim();
     },
-    [apiKey, metaModel, temperature, maxTokens, topP, wordPressSiteId],
+    [apiKey, resolveMetaModel, temperature, maxTokens, topP, wordPressSiteId],
   );
 
   const optimizeTitle = useCallback(
@@ -1063,36 +1066,36 @@ Rules:
     async (catalog: OverviewKeywordCatalogRow[]): Promise<Map<string, string>> => {
       return runContentKeywordsBatch(catalog, {
         apiKey,
-        model,
+        model: resolveMetaModel(),
         siteId: wordPressSiteId,
         napSummary,
       });
     },
-    [apiKey, model, wordPressSiteId, napSummary],
+    [apiKey, resolveMetaModel, wordPressSiteId, napSummary],
   );
 
   const deriveEntityKeywordsBatch = useCallback(
     async (catalog: OverviewKeywordCatalogRow[]): Promise<Map<string, string>> => {
       return runEntityKeywordsBatch(catalog, {
         apiKey,
-        model,
+        model: resolveMetaModel(),
         siteId: wordPressSiteId,
         napSummary,
       });
     },
-    [apiKey, model, wordPressSiteId, napSummary],
+    [apiKey, resolveMetaModel, wordPressSiteId, napSummary],
   );
 
   const runAiAllMetaBatchForCatalog = useCallback(
     async (catalog: AiAllMetaCatalogRow[]): Promise<Map<string, AiAllMetaRowPatch>> => {
       return runAiAllMetaBatch(catalog, {
         apiKey,
-        model: metaModel,
+        model: resolveMetaModel(),
         siteId: wordPressSiteId,
         napSummary,
       });
     },
-    [apiKey, metaModel, wordPressSiteId, napSummary],
+    [apiKey, resolveMetaModel, wordPressSiteId, napSummary],
   );
 
   return {

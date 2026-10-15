@@ -5,14 +5,13 @@
 
 import { loadApiKey } from "@/lib/api";
 import { generateImage } from "@/lib/image-api";
-import { IN_CONTENT_IMAGE_MODEL } from "@/lib/in-content-image-generator";
 import { applyAiGeneratedImageDisclaimer } from "@/lib/images/ai-generated-image-disclaimer";
 import {
   openRouterVisionChatCompletion,
   parseJsonObjectFromModelText,
   type OpenRouterVisionContentPart,
 } from "@/lib/openrouter-vision-chat";
-import { getResearchModel } from "@/lib/optimization-settings-storage";
+import { getImageModel, getResearchModel } from "@/lib/optimization-settings-storage";
 import {
   buildInContentImageFigureHtml,
   inContentImageAltFromFocusKeyword,
@@ -860,7 +859,7 @@ export async function generateLocalInContentImageFromHtml(
   const imageResult = await generateImage({
     apiKey,
     prompt,
-    model: IN_CONTENT_IMAGE_MODEL,
+    model: getImageModel(options.site?.id),
     aspectRatio: "16:9",
     referenceImageDataUrl: referenceDataUrl,
   });

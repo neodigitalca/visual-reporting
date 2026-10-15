@@ -8,7 +8,11 @@ import { isProductionBackendMisconfigured } from "@/lib/mcp-tools";
 import { runOverviewResearchBatch, resolveResearchBatchEligibleRows, type OverviewResearchRowResult } from "@/lib/overview/overview-research-batch";
 import { overviewDateModifierTodayIso } from "@/lib/overview/overview-bulk-seo-payload";
 import { uploadOverviewResearchedRowToWordPress } from "@/lib/overview/overview-research-row-wp-upload";
-import { attachAiseoUploadGeneratedFiles } from "@/lib/overview/overview-aiseo-after-upload";
+import {
+  attachAiseoUploadGeneratedFiles,
+  type AiseoAfterRowWriteFn,
+} from "@/lib/overview/overview-aiseo-after-upload";
+import { buildAiseoPostContentHtmlFile } from "@/lib/overview/overview-aiseo-row-artifacts";
 import {
   clearBulkActionSlice,
   initBulkSliceWithStatus,
@@ -125,6 +129,7 @@ type Args = Pick<
   ) => Promise<void>;
   bulkScopeUrlKeys: Set<string>;
   bulkScopeUrlKeysRef: MutableRefObject<Set<string>>;
+  uploadAfterRowWrite?: AiseoAfterRowWriteFn;
 };
 
 async function runResearchRefreshForRows(
@@ -173,6 +178,7 @@ export function useOverviewTabResearchPipelines({
   handleAiFaqRowAll,
   bulkScopeUrlKeys,
   bulkScopeUrlKeysRef,
+  uploadAfterRowWrite,
 }: Args) {
   const runResearchAll = useCallback(
     async () => {
@@ -892,7 +898,9 @@ export function useOverviewTabResearchPipelines({
         if (!updated.success) {
           throw new Error(updated.error || `Featured image apply failed: ${row.url}`);
         }
+        const postContentFile = buildAiseoPostContentHtmlFile(row.url, content);
         attachRowFiles(row.url, [
+          ...(postContentFile ? [postContentFile] : []),
           {
             name: "wordpress.json",
             content: JSON.stringify(
@@ -900,6 +908,7 @@ export function useOverviewTabResearchPipelines({
                 url: imageUrl,
                 mediaId: uploaded.mediaId,
                 link: uploaded.link ?? imageUrl,
+                postId,
               },
               null,
               2,
@@ -1128,6 +1137,7 @@ export function useOverviewTabResearchPipelines({
           skippedNoBrief: [],
           runAiAllMetaBatchForCatalog,
           updateRow,
+          uploadAfterRowWrite,
           setBulkOptimizationState: opt.setBulkOptimizationState,
           setOptimizationProgress: opt.setOptimizationProgress,
           setIsOptimizingContent: opt.setIsOptimizingContent,
@@ -1214,6 +1224,7 @@ export function useOverviewTabResearchPipelines({
         skippedNoKeyword,
         runAiAllMetaBatchForCatalog,
         updateRow,
+        uploadAfterRowWrite,
         setBulkOptimizationState: opt.setBulkOptimizationState,
         setOptimizationProgress: opt.setOptimizationProgress,
         setIsOptimizingContent: opt.setIsOptimizingContent,

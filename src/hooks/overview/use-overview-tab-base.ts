@@ -47,6 +47,7 @@ import {
 } from "@/lib/overview/overview-bulk-seo-payload";
 import { normalizePageUrlKey } from "@/lib/sitemap-optimizer/normalize-page-url";
 import { deferHarnessUiUpdate } from "@/lib/overview/overview-harness-ui-update";
+import { getBlogModel } from "@/lib/optimization-settings-storage";
 
 export function useOverviewTabBase({
   site,
@@ -398,7 +399,7 @@ export function useOverviewTabBase({
     deriveShortTailFocusKeywordFromResearch,
   } = useOverviewAiOptimize({
     apiKey,
-    model: selectedModel || "google/gemini-2.5-flash",
+    model: getBlogModel(site?.id) || selectedModel,
     temperature,
     maxTokens,
     topP,

@@ -362,7 +362,7 @@ export async function runFaqPairsForRow(params: RunFaqPairsForRowParams): Promis
     }
     const introParagraph = await generateFaqIntroParagraph({
       apiKey,
-      model: getMetaModel(),
+      model: getMetaModel(site.id),
       focusKeyword: row.focusKeyword,
       pageTitle: row.title,
       entries: merged,

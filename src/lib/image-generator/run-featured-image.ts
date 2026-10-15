@@ -150,7 +150,7 @@ async function resolveReferenceResearch(
 
   return researchGoogleImageReferences({
     apiKey: context.apiKey,
-    model: getResearchModel(),
+    model: context.selectedModel || getResearchModel(),
     context: researchContext,
     enablePlaceQueryFanOut: opts.enablePlaceQueryFanOut,
     groundingProfile: opts.featured ? "featured" : "default",

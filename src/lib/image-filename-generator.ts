@@ -47,7 +47,7 @@ function looksLikeFilenamePromptLeak(filename: string): boolean {
 export async function generateSEOImageFilename(
   sourceText: string,
   apiKey: string,
-  _model?: string,
+  model?: string,
   imageType: "featured" | "section" = "featured"
 ): Promise<string> {
   if (!sourceText || !sourceText.trim()) {
@@ -65,7 +65,7 @@ Featured images should end with -featured when it fits.`;
 
     const { content } = await callOpenRouterChatCompletion({
       apiKey,
-      model: getMetaModel(),
+      model: model?.trim() || getMetaModel(),
       system: systemPrompt,
       user: userPrompt,
       temperature: 0.2,

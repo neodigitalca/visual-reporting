@@ -17,6 +17,7 @@ import {
   notifyImageGenerationFailedX2,
 } from "@/lib/notify-messages";
 import { DEFAULT_IMAGE_MODEL } from "@/lib/image-model-defaults";
+import { getImageModel } from "@/lib/optimization-settings-storage";
 import { parseMarkdownSections } from "@/lib/section-parser";
 import { generateSEOImageFilename, sanitizeImageFilename } from "@/lib/image-filename-generator";
 import { runImageChecklist } from "@/lib/image-generator/run-image-checklist";
@@ -69,7 +70,7 @@ export function useImageGenerator({
   const [referenceResearch, setReferenceResearch] = useState<
     UseImageGeneratorResult["referenceResearch"]
   >(null);
-  const [imageModel, setImageModel] = useState(DEFAULT_IMAGE_MODEL);
+  const [imageModel, setImageModel] = useState(() => getImageModel() || DEFAULT_IMAGE_MODEL);
   const [isCustomModel, setIsCustomModel] = useState(false);
   const [savedPrompts, setSavedPrompts] = useState<SavedPrompt[]>([]);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);

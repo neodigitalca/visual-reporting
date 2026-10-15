@@ -38,9 +38,6 @@ export function sanitizeHarnessArticleTitle(
 }
 
 export const CONTENT_OPTIMIZE_PIPELINE_PREFIX = [
-  "Keyword research",
-  "Selected keyword",
-  "SERP research brief",
   "Checklist",
   "Blueprint",
   "Link targets",
@@ -116,8 +113,8 @@ export function flushUrlGeneratedFilesToBulkState(args: {
   });
 }
 
-export function contentOptimizeHarnessSectionIndex(title: (typeof CONTENT_OPTIMIZE_PIPELINE_TITLES)[number]): number {
-  return CONTENT_OPTIMIZE_PIPELINE_TITLES.indexOf(title);
+export function contentOptimizeHarnessSectionIndex(title: string): number {
+  return (CONTENT_OPTIMIZE_PIPELINE_TITLES as readonly string[]).indexOf(title);
 }
 
 export function buildContentOptimizeHarnessPayload(
@@ -158,8 +155,6 @@ export function expandContentOptimizeHarnessWithBodySections(
 export const CONTENT_OPTIMIZE_ARTIFACT_SLUGS: Partial<
   Record<(typeof CONTENT_OPTIMIZE_PIPELINE_TITLES)[number], string>
 > = {
-  "Keyword research": "keyword-research",
-  "Selected keyword": "selected-keyword",
   Checklist: "checklist",
   Blueprint: "blueprint",
   "Link targets": "link-targets",
@@ -229,12 +224,20 @@ export function buildPredeterminedBlogBodyHarnessTitlesFromOutline(
 
 type HarnessTitleSection = { title?: string | null };
 
+const LEGACY_RESEARCH_PREP_TITLES = [
+  "Keyword research",
+  "Selected keyword",
+  "SERP research brief",
+] as const;
+
 /** Body harness step titles between Blueprint and Post content. */
 export function extractBodyHarnessTitlesFromSections(
   sections: readonly HarnessTitleSection[] | undefined,
 ): string[] {
   if (!sections?.length) return [];
-  const titles = sections.map((s) => s.title?.trim()).filter(Boolean) as string[];
+  const titles = sections
+    .map((s) => s.title?.trim())
+    .filter((t): t is string => Boolean(t) && !(LEGACY_RESEARCH_PREP_TITLES as readonly string[]).includes(t));
   const blueprintIndex = titles.indexOf("Blueprint");
   const contentHtmlIndex = titles.indexOf(AISEO_POST_CONTENT_SLOT_TITLE);
   if (blueprintIndex >= 0 && contentHtmlIndex > blueprintIndex) {
@@ -261,6 +264,7 @@ export function extractBodyHarnessTitlesFromSections(
   const fixedTitles = new Set<string>([
     ...CONTENT_OPTIMIZE_PIPELINE_PREFIX,
     ...CONTENT_OPTIMIZE_PIPELINE_SUFFIX,
+    ...LEGACY_RESEARCH_PREP_TITLES,
   ]);
   return titles.filter((title) => !fixedTitles.has(title));
 }

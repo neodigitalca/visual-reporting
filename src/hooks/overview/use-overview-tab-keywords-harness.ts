@@ -18,6 +18,10 @@ import {
 } from "@/lib/overview/overview-keywords-harness-run";
 import { initBulkSliceWithStatus } from "@/lib/overview/overview-bulk-inline-status";
 import type { useWordPressOptimization } from "@/contexts/wordpress-optimization-context";
+import type { AiseoAfterRowWriteFn } from "@/lib/overview/overview-aiseo-after-upload";
+import type { OverviewInventoryUrlMatch } from "@/lib/overview/overview-row-scrape";
+import { aiseoRowFilesForUpload, buildAiseoElementJsonFile } from "@/lib/overview/overview-aiseo-row-artifacts";
+import { resolveAiseoHarnessSourceHtml } from "@/lib/overview/overview-aiseo-source-html";
 
 type Opt = ReturnType<typeof useWordPressOptimization>;
 
@@ -33,6 +37,11 @@ type Args = Pick<
   sitemapSource: OverviewSitemapSource;
   bulkScopeUrlKeys: Set<string>;
   opt: Pick<Opt, "setIsOptimizingContent" | "setBulkOptimizationState">;
+  uploadAfterRowWrite?: AiseoAfterRowWriteFn;
+  getInventoryMatchForUrl?: (
+    site: WordPressSite | null,
+    url: string,
+  ) => OverviewInventoryUrlMatch | undefined;
 };
 
 function clearStaleKeywordHarness(
@@ -65,6 +74,8 @@ export function useOverviewTabKeywordsHarness({
   deriveEntityKeyword,
   bulkScopeUrlKeys,
   opt,
+  uploadAfterRowWrite,
+  getInventoryMatchForUrl,
 }: Args) {
   const keywordMode = keywordHarnessModeForSource(sitemapSource);
   const progressKey = keywordMode === "entity" ? "entityKw" : "contentKw";
@@ -102,6 +113,23 @@ export function useOverviewTabKeywordsHarness({
       clearStaleKeywordHarness(opt, site.id);
 
       const total = scoped.length;
+      const batchKey = `${site.id}-batch`;
+      const scopedUrls = scoped
+        .map((i) => rowsRef.current[i]?.url?.trim())
+        .filter((u): u is string => Boolean(u));
+      opt.setBulkOptimizationState((prev) => ({
+        ...prev,
+        [batchKey]: {
+          urls: scopedUrls,
+          currentIndex: 0,
+          urlStatuses: {},
+          currentStep: keywordMode === "entity" ? "Entity keywords" : "AI keywords (content)",
+          currentUrl: scopedUrls[0] ?? "",
+          runKind: progressKey,
+          urlHarnessSections: {},
+          urlGeneratedFiles: {},
+        },
+      }));
       setBulkActionProgress((p) => ({
         ...p,
         [progressKey]: initBulkSliceWithStatus(progressKey, total, 0),
@@ -114,6 +142,43 @@ export function useOverviewTabKeywordsHarness({
           rowsRef,
           deriveKeyword,
           updateRow,
+          onRowKeyword: async (index, updatedRow, keyword) => {
+            const url = updatedRow.url.trim();
+            let postHtml = "";
+            if (getInventoryMatchForUrl) {
+              const resolved = await resolveAiseoHarnessSourceHtml({
+                row: updatedRow,
+                site,
+                sitemapSource,
+                getInventoryMatchForUrl,
+              });
+              postHtml = resolved.html;
+            }
+            const bodyForFiles =
+              postHtml.trim() ||
+              updatedRow.postContentOptimized?.trim() ||
+              updatedRow.postContent?.trim() ||
+              "";
+            const elementFile = buildAiseoElementJsonFile("focus-keyword.json", {
+              url,
+              focusKeyword: keyword,
+              mode: keywordMode,
+            });
+            const rowFiles = aiseoRowFilesForUpload({
+              runKind: progressKey,
+              url,
+              elementFiles: elementFile ? [elementFile] : [],
+              postHtml: bodyForFiles || undefined,
+            });
+            if (uploadAfterRowWrite) {
+              await uploadAfterRowWrite({
+                index,
+                url,
+                html: bodyForFiles,
+                rowFiles,
+              });
+            }
+          },
           onRowDone: (done, rowTotal) => {
             setBulkActionProgress((p) => ({
               ...p,

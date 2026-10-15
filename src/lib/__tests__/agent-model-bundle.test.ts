@@ -43,6 +43,16 @@ describe("resolveAgentModelsForSite", () => {
     expect(bundle.ads).toBe("openai/gpt-5-mini");
   });
 
+  it("returns global models when siteId is passed but no per-site override exists in localStorage", () => {
+    const bundle = resolveAgentModelsForSite("site-without-stored-overrides");
+    expect(bundle.blog).toBe("google/gemini-2.5-flash");
+    expect(bundle.research).toBe("deepseek/deepseek-v4.1-flash");
+    expect(bundle.image).toBe("google/gemini-2.5-flash-image-preview");
+    expect(bundle.meta).toBe("google/gemini-2.5-flash");
+    expect(bundle.report).toBe("deepseek/deepseek-v4.1-flash");
+    expect(bundle.ads).toBe("deepseek/deepseek-v4.1-flash");
+  });
+
   it("returns global defaults when no site id", () => {
     const bundle = resolveAgentModelsForSite();
     expect(bundle.blog).toBe("google/gemini-2.5-flash");

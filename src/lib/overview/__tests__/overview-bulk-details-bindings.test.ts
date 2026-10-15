@@ -221,8 +221,8 @@ describe("buildOverviewBulkGeneratorDetailsProps", () => {
     expect(props?.runKind).not.toBe("research");
     expect(props?.pipelineSectionTitles?.length).toBe(INIT_OPTIMIZE_PIPELINE_TITLES.length);
     expect(props?.harnessByRow?.get(0)).toHaveLength(INIT_OPTIMIZE_PIPELINE_TITLES.length);
-    expect(props?.harnessByRow?.get(0)?.[0]?.title).toBe("Keyword research");
-    expect(props?.harnessByRow?.get(0)?.[2]?.title).toBe("SERP research brief");
+    expect(props?.harnessByRow?.get(0)?.[0]?.title).toBe("Checklist");
+    expect(props?.harnessByRow?.get(0)?.[1]?.title).toBe("Blueprint");
     expect(props?.researchRowIndices?.has(0)).toBe(true);
   });
 
@@ -616,16 +616,16 @@ describe("buildOverviewMicroActionDetailsProps", () => {
       true,
     );
 
-    expect(props?.pipelineSectionTitles?.[0]).toBe("Keyword research");
+    expect(props?.pipelineSectionTitles?.[0]).toBe("Checklist");
     expect(props?.pipelineSectionTitles).toEqual(expect.arrayContaining([
-      "Selected keyword",
-      "SERP research brief",
       "Checklist",
+      "Blueprint",
+      "Link targets",
       "Post content",
     ]));
     expect(props?.pipelineSectionTitles).not.toEqual(["Content"]);
     expect(props?.harnessByRow?.get(0)?.map((section) => section.title)).toEqual(
-      expect.arrayContaining(["Keyword research", "SERP research brief", "Checklist"]),
+      expect.arrayContaining(["Checklist", "Blueprint", "Link targets"]),
     );
     expect(props?.harnessByRow?.get(0)?.some((section) => section.title.startsWith("keyword-research-"))).toBe(false);
   });

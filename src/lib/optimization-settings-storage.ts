@@ -16,13 +16,28 @@ import { coerceOpenRouterModelId } from "@/lib/openrouter-model-id";
 const SETTINGS_STORAGE_KEY_PREFIX = "optimization_settings_";
 const MODE_STORAGE_KEY_PREFIX = "optimization_mode_";
 
-export function getOptimizationSettings(siteId: string): OptimizationSettings {
+function globalDefaultSettings(): OptimizationSettings {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
+  return {
+    ...DEFAULT_SETTINGS,
+    model: readGlobalBlogAgentModel(),
+    researchModel: readGlobalResearchAgentModel(),
+    metaModel: readGlobalMetaAgentModel(),
+    reportModel: readGlobalReportAgentModel(),
+    adsModel: readGlobalAdsAgentModel(),
+    imageModel: readGlobalImageAgentModel(),
+    videoModel: readGlobalVideoAgentModel(),
+  };
+}
+
+export function getOptimizationSettings(siteId: string): OptimizationSettings {
+  const defaults = globalDefaultSettings();
+  if (typeof window === "undefined") return defaults;
   try {
     const stored = localStorage.getItem(`${SETTINGS_STORAGE_KEY_PREFIX}${siteId}`);
     if (stored) {
       const parsed = JSON.parse(stored) as Partial<OptimizationSettings>;
-      const merged = sanitizeOptimizationSettings({ ...DEFAULT_SETTINGS, ...parsed });
+      const merged = sanitizeOptimizationSettings({ ...defaults, ...parsed }, defaults);
       const hadLegacyModel = SITE_MODEL_FIELDS.some((field) => {
         const raw = typeof parsed[field] === "string" ? parsed[field]!.trim() : "";
         return raw.length > 0 && raw !== merged[field];
@@ -35,7 +50,7 @@ export function getOptimizationSettings(siteId: string): OptimizationSettings {
   } catch (e) {
     console.error("[OptimizationSettings] Failed to parse stored settings:", e);
   }
-  return DEFAULT_SETTINGS;
+  return defaults;
 }
 
 export function saveOptimizationSettings(siteId: string, settings: OptimizationSettings): void {
@@ -82,33 +97,50 @@ const SITE_MODEL_FIELDS = [
   "videoModel",
 ] as const;
 
-function sanitizeOptimizationSettings(settings: OptimizationSettings): OptimizationSettings {
+type SiteModelField = (typeof SITE_MODEL_FIELDS)[number];
+
+function sanitizeOptimizationSettings(
+  settings: OptimizationSettings,
+  defaults: OptimizationSettings = DEFAULT_SETTINGS,
+): OptimizationSettings {
   return {
     ...settings,
-    model: coerceOpenRouterModelId(settings.model, DEFAULT_SETTINGS.model),
-    researchModel: coerceOpenRouterModelId(settings.researchModel, DEFAULT_SETTINGS.researchModel),
-    metaModel: coerceOpenRouterModelId(settings.metaModel, DEFAULT_SETTINGS.metaModel),
-    reportModel: coerceOpenRouterModelId(settings.reportModel, DEFAULT_SETTINGS.reportModel),
-    adsModel: coerceOpenRouterModelId(settings.adsModel, DEFAULT_SETTINGS.adsModel),
-    imageModel: coerceOpenRouterModelId(settings.imageModel, DEFAULT_SETTINGS.imageModel),
-    videoModel: coerceOpenRouterModelId(settings.videoModel, DEFAULT_SETTINGS.videoModel),
+    model: coerceOpenRouterModelId(settings.model, defaults.model),
+    researchModel: coerceOpenRouterModelId(settings.researchModel, defaults.researchModel),
+    metaModel: coerceOpenRouterModelId(settings.metaModel, defaults.metaModel),
+    reportModel: coerceOpenRouterModelId(settings.reportModel, defaults.reportModel),
+    adsModel: coerceOpenRouterModelId(settings.adsModel, defaults.adsModel),
+    imageModel: coerceOpenRouterModelId(settings.imageModel, defaults.imageModel),
+    videoModel: coerceOpenRouterModelId(settings.videoModel, defaults.videoModel),
   };
+}
+
+function readStoredSiteModelOverride(
+  siteId: string | null | undefined,
+  field: SiteModelField,
+): string | undefined {
+  if (!siteId || typeof window === "undefined") return undefined;
+  try {
+    const stored = localStorage.getItem(`${SETTINGS_STORAGE_KEY_PREFIX}${siteId}`);
+    if (!stored) return undefined;
+    const parsed = JSON.parse(stored) as Partial<Record<SiteModelField, unknown>>;
+    const raw = typeof parsed[field] === "string" ? parsed[field]!.trim() : "";
+    if (!raw) return undefined;
+    const coerced = coerceOpenRouterModelId(raw, "");
+    return coerced || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function modelFromSiteSettings(
   siteId: string | null | undefined,
-  field: keyof Pick<
-    OptimizationSettings,
-    "researchModel" | "model" | "metaModel" | "reportModel" | "adsModel" | "imageModel"
-  >,
+  field: SiteModelField,
   readGlobal: () => string,
   hardcodedDefault: string,
 ): string {
-  if (siteId) {
-    const siteSettings = getOptimizationSettings(siteId);
-    const v = coerceOpenRouterModelId(siteSettings[field], hardcodedDefault);
-    if (v) return v;
-  }
+  const siteOverride = readStoredSiteModelOverride(siteId, field);
+  if (siteOverride) return siteOverride;
   if (typeof window !== "undefined") {
     return readGlobal();
   }
@@ -116,15 +148,8 @@ function modelFromSiteSettings(
 }
 
 export function getResearchModel(siteId?: string): string {
-  if (siteId) {
-    const siteSettings = getOptimizationSettings(siteId);
-    if (siteSettings.researchModel) {
-      return coerceOpenRouterModelId(siteSettings.researchModel, DEFAULT_SETTINGS.researchModel);
-    }
-    if (siteSettings.model) {
-      return coerceOpenRouterModelId(siteSettings.model, DEFAULT_SETTINGS.model);
-    }
-  }
+  const siteResearch = readStoredSiteModelOverride(siteId, "researchModel");
+  if (siteResearch) return siteResearch;
   if (typeof window !== "undefined") {
     return readGlobalResearchAgentModel();
   }
@@ -140,29 +165,11 @@ export function getProductionModel(siteId?: string | null): string {
 }
 
 export function getImageModel(siteId?: string | null): string {
-  if (siteId) {
-    const siteSettings = getOptimizationSettings(siteId);
-    if (siteSettings.imageModel) {
-      return coerceOpenRouterModelId(siteSettings.imageModel, DEFAULT_SETTINGS.imageModel);
-    }
-  }
-  if (typeof window !== "undefined") {
-    return readGlobalImageAgentModel();
-  }
-  return DEFAULT_IMAGE_MODEL;
+  return modelFromSiteSettings(siteId, "imageModel", readGlobalImageAgentModel, DEFAULT_IMAGE_MODEL);
 }
 
 export function getVideoModel(siteId?: string | null): string {
-  if (siteId) {
-    const siteSettings = getOptimizationSettings(siteId);
-    if (siteSettings.videoModel) {
-      return coerceOpenRouterModelId(siteSettings.videoModel, DEFAULT_SETTINGS.videoModel);
-    }
-  }
-  if (typeof window !== "undefined") {
-    return readGlobalVideoAgentModel();
-  }
-  return DEFAULT_VIDEO_MODEL;
+  return modelFromSiteSettings(siteId, "videoModel", readGlobalVideoAgentModel, DEFAULT_VIDEO_MODEL);
 }
 
 export function getMetaModel(siteId?: string | null): string {

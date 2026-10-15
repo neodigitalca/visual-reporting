@@ -410,12 +410,37 @@ const Index = () => {
   const [flowFreeformSections, setFlowFreeformSections] = useState<FlowFreeformSectionPlan[]>([]);
   const [flowFreeformClarifyQuestions, setFlowFreeformClarifyQuestions] = useState<FlowFreeformClarifyQuestion[] | null>(null);
   const [flowSectionBodies, setFlowSectionBodies] = useState<Record<string, string>>({});
-  const [agentResearchModel, setAgentResearchModel] = useState(() => readGlobalResearchAgentModel());
-  const [agentImageModel, setAgentImageModel] = useState(() => readGlobalImageAgentModel());
-  const [agentMetaModel, setAgentMetaModel] = useState(() => readGlobalMetaAgentModel());
-  const [agentReportModel, setAgentReportModel] = useState(() => readGlobalReportAgentModel());
-  const [agentAdsModel, setAgentAdsModel] = useState(() => readGlobalAdsAgentModel());
-  const [selectedModel, setSelectedModel] = useState(() => readGlobalBlogAgentModel());
+  const [agentResearchModel, setAgentResearchModelState] = useState(() => readGlobalResearchAgentModel());
+  const [agentImageModel, setAgentImageModelState] = useState(() => readGlobalImageAgentModel());
+  const [agentMetaModel, setAgentMetaModelState] = useState(() => readGlobalMetaAgentModel());
+  const [agentReportModel, setAgentReportModelState] = useState(() => readGlobalReportAgentModel());
+  const [agentAdsModel, setAgentAdsModelState] = useState(() => readGlobalAdsAgentModel());
+  const [selectedModel, setSelectedModelState] = useState(() => readGlobalBlogAgentModel());
+
+  const setAgentResearchModel = useCallback((model: string) => {
+    writeGlobalResearchAgentModel(model);
+    setAgentResearchModelState(model);
+  }, []);
+  const setAgentImageModel = useCallback((model: string) => {
+    writeGlobalImageAgentModel(model);
+    setAgentImageModelState(model);
+  }, []);
+  const setAgentMetaModel = useCallback((model: string) => {
+    writeGlobalMetaAgentModel(model);
+    setAgentMetaModelState(model);
+  }, []);
+  const setAgentReportModel = useCallback((model: string) => {
+    writeGlobalReportAgentModel(model);
+    setAgentReportModelState(model);
+  }, []);
+  const setAgentAdsModel = useCallback((model: string) => {
+    writeGlobalAdsAgentModel(model);
+    setAgentAdsModelState(model);
+  }, []);
+  const setSelectedModel = useCallback((model: string) => {
+    writeGlobalBlogAgentModel(model);
+    setSelectedModelState(model);
+  }, []);
   const [temperature, setTemperature] = useState(() =>
     readStoredLlmNumberForIndex(NEO_PULSE_LLM_TEMPERATURE_KEY, DEFAULT_TEMPERATURE),
   );

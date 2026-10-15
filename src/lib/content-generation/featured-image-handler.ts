@@ -23,7 +23,7 @@ import { buildImageChecklistSystemPrompt, buildImageChecklistUserPrompt, parseIm
 import { OptimizationFileManager } from "@/lib/optimization-file-manager";
 import type { WordPressSite } from "@/components/integrations/types";
 import { fetchGoogleMapsImageForEntity } from "@/lib/content-generation/google-maps-image-api";
-import { getResearchModel } from "@/lib/optimization-settings-storage";
+import { getImageModel, getResearchModel } from "@/lib/optimization-settings-storage";
 
 export interface FeaturedImageHandlerOptions {
   blueprintResult: any;
@@ -92,7 +92,7 @@ export async function handleFeaturedImage(
         const imageFileName = await generateSEOImageFilename(
           `${entity.trim()} Google Maps`,
           apiKey,
-          getResearchModel(),
+          getResearchModel(site.id),
           'featured'
         );
         
@@ -148,7 +148,7 @@ export async function handleFeaturedImage(
       let imageChecklistContent = '';
       const checklistResult = await streamChatCompletion({
         apiKey: apiKey,
-        model: getResearchModel(),
+        model: getResearchModel(site.id),
         messages: [
           { role: 'system', content: buildImageChecklistSystemPrompt(flowTitle, flowPurpose, contentForImage) },
           { role: 'user', content: buildImageChecklistUserPrompt({
@@ -243,7 +243,7 @@ export async function handleFeaturedImage(
 
       const research = await researchGoogleImageReferences({
         apiKey,
-        model: getResearchModel(),
+        model: getResearchModel(site.id),
         context: {
           title: blueprintResult.title || existingTitle || primaryKeyword,
           purpose: blueprintResult.purpose || buildFocusedArticlePurpose(primaryKeyword),
@@ -257,6 +257,7 @@ export async function handleFeaturedImage(
       const imageResult = await generateImage({
         apiKey: apiKey,
         prompt: groundedPrompt,
+        model: getImageModel(site.id),
         aspectRatio: '16:9',
         referenceImageDataUrls: collectReferenceDataUrls(research.references),
       });
@@ -284,7 +285,7 @@ export async function handleFeaturedImage(
       const imageFileName = await generateSEOImageFilename(
         blueprintResult.title || existingTitle || primaryKeyword,
         apiKey,
-        getResearchModel(),
+        getResearchModel(site.id),
         'featured'
       );
       

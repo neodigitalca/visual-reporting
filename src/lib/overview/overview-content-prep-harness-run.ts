@@ -263,6 +263,7 @@ export function markContentPrepHarnessSection(
   markdownSlice?: string,
   pipelineTitles?: readonly string[],
 ): void {
+  if (sectionIndex < 0) return;
   applyContentOptimizeHarnessToUrl(
     url,
     buildContentOptimizeHarnessPayload(rowIndex, sectionIndex, phase, markdownSlice, pipelineTitles),

@@ -14,6 +14,7 @@ import type { OverviewInventoryUrlMatch } from "@/lib/overview/overview-row-scra
 import type { OverviewRow } from "@/components/overview/overview-meta-row-types";
 import type { OverviewSitemapSource } from "@/lib/overview/overview-sitemap-source";
 import type { AiseoAfterRowWriteFn } from "@/lib/overview/overview-aiseo-after-upload";
+import { getBlogModel } from "@/lib/optimization-settings-storage";
 import { createAiseoCacheWriteAccumulator, finalizeAiseoCacheWriteForUpload } from "@/lib/overview/overview-aiseo-cache-write";
 
 type Args = Pick<OverviewTabBase, "opt" | "syncOpt" | "rowsRef" | "updateRow"> & {
@@ -88,7 +89,7 @@ export function useOverviewTabBlogScenario({
           rowIndex,
           sitemapSource,
           apiKey,
-          model: selectedModel || "google/gemini-2.5-flash",
+          model: getBlogModel(site.id) || selectedModel,
           harnessSetters,
           cacheWrite,
           updateRow,
@@ -151,7 +152,7 @@ export function useOverviewTabBlogScenario({
         rowIndices,
         sitemapSource,
         apiKey,
-        model: selectedModel || "google/gemini-2.5-flash",
+        model: getBlogModel(site.id) || selectedModel,
         harnessSetters,
         cacheWrite,
         updateRow,

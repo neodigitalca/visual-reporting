@@ -13,6 +13,7 @@ import { buildOverviewAnswerCatalogFromCache } from "@/lib/overview/overview-har
 import type { OverviewInventoryUrlMatch } from "@/lib/overview/overview-row-scrape";
 import type { OverviewSitemapSource } from "@/lib/overview/overview-sitemap-source";
 import type { AiseoAfterRowWriteFn } from "@/lib/overview/overview-aiseo-after-upload";
+import { getBlogModel } from "@/lib/optimization-settings-storage";
 import { createAiseoCacheWriteAccumulator, finalizeAiseoCacheWriteForUpload } from "@/lib/overview/overview-aiseo-cache-write";
 
 type Args = Pick<OverviewTabBase, "rows" | "opt" | "rowsRef"> & {
@@ -106,7 +107,7 @@ export function useOverviewTabBlogAnswer({
           catalog,
           site,
           apiKey,
-          model: selectedModel || "google/gemini-2.5-flash",
+          model: getBlogModel(site.id) || selectedModel,
           harnessSetters,
           cacheWrite,
           uploadAfterRowWrite,

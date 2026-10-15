@@ -27,6 +27,7 @@ import {
 import type { OverviewInventoryUrlMatch } from "@/lib/overview/overview-row-scrape";
 import type { OverviewSitemapSource } from "@/lib/overview/overview-sitemap-source";
 import { setOptimizingState } from "@/hooks/content-optimization/optimization-helpers-a";
+import { getResearchModel } from "@/lib/optimization-settings-storage";
 import { getEntitySiteWarmCacheIfReady } from "@/lib/local-analysis/entity-site-warm-cache";
 import type { AiseoAfterRowWriteFn } from "@/lib/overview/overview-aiseo-after-upload";
 import { createAiseoCacheWriteAccumulator, finalizeAiseoCacheWriteForUpload } from "@/lib/overview/overview-aiseo-cache-write";
@@ -300,7 +301,7 @@ export function useOverviewTabBlogInContentImage({
           catalog,
           site,
           apiKey,
-          model: selectedModel || "google/gemini-2.5-flash",
+          model: getResearchModel(site.id) || selectedModel,
           allowLocalImage: canUseLocalInContentImage(sitemapSource),
           peerSites,
           harnessSetters,

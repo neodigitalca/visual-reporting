@@ -10,10 +10,15 @@ import {
 } from "@/lib/overview/overview-content-optimize-pipeline";
 
 describe("overview-content-optimize-pipeline", () => {
-  it("uses nine fixed slots without body harness titles", () => {
+  it("uses six fixed blog-optimization slots without research steps", () => {
     expect(buildContentOptimizePipelineTitles()).toEqual([...CONTENT_OPTIMIZE_PIPELINE_TITLES]);
-    expect(CONTENT_OPTIMIZE_PIPELINE_TITLES).toHaveLength(9);
+    expect(CONTENT_OPTIMIZE_PIPELINE_TITLES).toHaveLength(6);
     expect(isContentOptimizePipelineTitles([...CONTENT_OPTIMIZE_PIPELINE_TITLES])).toBe(true);
+    expect(CONTENT_OPTIMIZE_PIPELINE_TITLES).not.toContain("Keyword research");
+    expect(CONTENT_OPTIMIZE_PIPELINE_TITLES).not.toContain("Selected keyword");
+    expect(CONTENT_OPTIMIZE_PIPELINE_TITLES).not.toContain("SERP research brief");
+    expect(CONTENT_OPTIMIZE_PIPELINE_TITLES).toContain("Checklist");
+    expect(CONTENT_OPTIMIZE_PIPELINE_TITLES).toContain("Blueprint");
     expect(CONTENT_OPTIMIZE_PIPELINE_TITLES).toContain("Link targets");
     expect(CONTENT_OPTIMIZE_PIPELINE_TITLES[CONTENT_OPTIMIZE_PIPELINE_TITLES.length - 1]).toBe(
       "WordPress upload",
@@ -22,12 +27,10 @@ describe("overview-content-optimize-pipeline", () => {
 
   it("inserts dynamic body harness titles between link targets and content files", () => {
     const titles = buildContentOptimizePipelineTitles(["Overview", "Answer", "Motorization Compared"]);
-    expect(titles[0]).toBe("Keyword research");
-    expect(titles[1]).toBe("Selected keyword");
-    expect(titles[2]).toBe("SERP research brief");
-    expect(titles[4]).toBe("Blueprint");
-    expect(titles[5]).toBe("Link targets");
-    expect(titles.slice(6, 9)).toEqual(["Overview", "Answer", "Motorization Compared"]);
+    expect(titles[0]).toBe("Checklist");
+    expect(titles[1]).toBe("Blueprint");
+    expect(titles[2]).toBe("Link targets");
+    expect(titles.slice(3, 6)).toEqual(["Overview", "Answer", "Motorization Compared"]);
     expect(titles[titles.length - 3]).toBe("Post content");
     expect(titles[titles.length - 2]).toBe("Content Markdown");
     expect(titles[titles.length - 1]).toBe("WordPress upload");
@@ -36,9 +39,6 @@ describe("overview-content-optimize-pipeline", () => {
 
   it("extracts body titles between Link targets and Post content", () => {
     const sections = [
-      { title: "Keyword research" },
-      { title: "Selected keyword" },
-      { title: "SERP research brief" },
       { title: "Checklist" },
       { title: "Blueprint" },
       { title: "Link targets" },
@@ -55,9 +55,6 @@ describe("overview-content-optimize-pipeline", () => {
       "Motorization Compared",
     ]);
     expect(resolveContentOptimizePipelineTitlesFromHarness(sections)).toEqual([
-      "Keyword research",
-      "Selected keyword",
-      "SERP research brief",
       "Checklist",
       "Blueprint",
       "Link targets",
@@ -70,9 +67,8 @@ describe("overview-content-optimize-pipeline", () => {
     ]);
   });
 
-  it("expands pipeline titles from blueprint row files when harness is still five slots", () => {
+  it("expands pipeline titles from blueprint row files", () => {
     const harness = [
-      { title: "SERP research brief" },
       { title: "Checklist" },
       { title: "Blueprint" },
       { title: "Post content" },
@@ -87,9 +83,6 @@ describe("overview-content-optimize-pipeline", () => {
       },
     ];
     expect(resolveContentOptimizePipelineTitlesForRow(harness, rowFiles, "Smart Blinds")).toEqual([
-      "Keyword research",
-      "Selected keyword",
-      "SERP research brief",
       "Checklist",
       "Blueprint",
       "Link targets",
@@ -117,12 +110,5 @@ describe("overview-content-optimize-pipeline", () => {
     expect(titles).not.toContain("Next Steps");
     expect(titles).not.toContain("Sunlight And Privacy Challenges");
     expect(titles).not.toContain("Our Recommendation for Homeowners in 112 Avenue, Edmonton");
-  });
-
-  it("uses SERP outline titles only for posts", () => {
-    const titles = buildPredeterminedBlogBodyHarnessTitles("Smart Blinds", ["Choose Motorized Shades", "Cost Factors", "When To Skip"]);
-    expect(titles).toEqual(["Choose Motorized Shades", "Cost Factors", "When To Skip"]);
-    expect(titles).not.toContain("How Smart Blinds works");
-    expect(titles).not.toContain("Section 1");
   });
 });

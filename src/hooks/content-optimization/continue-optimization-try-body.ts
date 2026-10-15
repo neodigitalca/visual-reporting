@@ -576,6 +576,7 @@ async function runContinueOptimizationTryBodyInner(input: ContinueOptimizationTr
   const pipelineTitlesForContent = pipelineTitlesAfterBlueprint;
   const contentHtmlIndex = pipelineTitlesForContent.indexOf("Post content");
   const contentMdIndex = pipelineTitlesForContent.indexOf("Content Markdown");
+  const wpUploadIndex = pipelineTitlesForContent.indexOf("WordPress upload");
 
   const { changes } = await generateAndUploadFlow(
     blueprintResult,
@@ -634,6 +635,17 @@ async function runContinueOptimizationTryBodyInner(input: ContinueOptimizationTr
       markContentPrepHarnessSection(
         url,
         contentMdIndex,
+        "done",
+        contentPrepHarnessSetters,
+        0,
+        undefined,
+        pipelineTitlesForContent,
+      );
+    }
+    if (wpUploadIndex >= 0) {
+      markContentPrepHarnessSection(
+        url,
+        wpUploadIndex,
         "done",
         contentPrepHarnessSetters,
         0,

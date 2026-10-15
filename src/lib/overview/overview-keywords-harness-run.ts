@@ -18,13 +18,14 @@ export type WriteOverviewKeywordsOneAtATimeParams = {
   rowsRef: { current: OverviewRow[] };
   deriveKeyword: (index: number, row: OverviewRow) => Promise<string | null>;
   updateRow: (index: number, patch: Partial<OverviewRow>) => void;
+  onRowKeyword?: (index: number, row: OverviewRow, keyword: string) => Promise<void>;
   onRowDone?: (done: number, total: number) => void;
 };
 
 export async function writeOverviewKeywordsOneAtATime(
   params: WriteOverviewKeywordsOneAtATimeParams,
 ): Promise<{ ok: number; failed: number }> {
-  const { indices, rowsRef, deriveKeyword, updateRow, onRowDone } = params;
+  const { indices, rowsRef, deriveKeyword, updateRow, onRowKeyword, onRowDone } = params;
   const total = indices.length;
   let ok = 0;
   let failed = 0;
@@ -46,6 +47,7 @@ export async function writeOverviewKeywordsOneAtATime(
         failed += 1;
       } else {
         updateRow(index, { focusKeyword: keyword, status: "idle" });
+        await onRowKeyword?.(index, { ...row, focusKeyword: keyword }, keyword);
         ok += 1;
       }
     } catch {

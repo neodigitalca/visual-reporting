@@ -254,9 +254,6 @@ describe("SAP content optimize downloads", () => {
     ]);
     const enabled = ready.filter((file) => file != null);
     expect(enabled.map((file) => file!.name)).toEqual([
-      "keyword-research-edmonton.json",
-      "selected-keyword-edmonton.json",
-      "serp-research-brief-edmonton.json",
       "checklist-edmonton.json",
       "blueprint-edmonton.json",
       "link-targets-edmonton.json",

@@ -101,11 +101,39 @@ export function readGlobalVideoAgentModel(): string {
   return resolved;
 }
 
+const SITE_SETTINGS_STORAGE_KEY_PREFIX = "optimization_settings_";
+
+function syncStoredSiteSettingsField(field: string, modelId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    const len = typeof localStorage.length === "number" ? localStorage.length : 0;
+    const keys: string[] = [];
+    for (let i = 0; i < len; i += 1) {
+      const k = localStorage.key?.(i);
+      if (k && k.startsWith(SITE_SETTINGS_STORAGE_KEY_PREFIX)) {
+        keys.push(k);
+      }
+    }
+    for (const k of keys) {
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        parsed[field] = modelId;
+        localStorage.setItem(k, JSON.stringify(parsed));
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 export function writeGlobalVideoAgentModel(model: string): void {
   if (typeof window === "undefined") return;
   const id = model.trim();
   if (!id) return;
   persistStorageKey(NEO_PULSE_AGENT_VIDEO_MODEL_KEY, id);
+  syncStoredSiteSettingsField("videoModel", id);
 }
 
 export function writeGlobalResearchAgentModel(model: string): void {
@@ -118,6 +146,7 @@ export function writeGlobalResearchAgentModel(model: string): void {
   } catch {
     /* ignore */
   }
+  syncStoredSiteSettingsField("researchModel", id);
 }
 
 export function writeGlobalBlogAgentModel(model: string): void {
@@ -130,6 +159,7 @@ export function writeGlobalBlogAgentModel(model: string): void {
   } catch {
     /* ignore */
   }
+  syncStoredSiteSettingsField("model", id);
 }
 
 export function writeGlobalImageAgentModel(model: string): void {
@@ -141,6 +171,7 @@ export function writeGlobalImageAgentModel(model: string): void {
   } catch {
     /* ignore */
   }
+  syncStoredSiteSettingsField("imageModel", id);
 }
 
 export function readGlobalMetaAgentModel(): string {
@@ -164,6 +195,7 @@ export function writeGlobalMetaAgentModel(model: string): void {
   } catch {
     /* ignore */
   }
+  syncStoredSiteSettingsField("metaModel", id);
 }
 
 export function writeGlobalReportAgentModel(model: string): void {
@@ -175,6 +207,7 @@ export function writeGlobalReportAgentModel(model: string): void {
   } catch {
     /* ignore */
   }
+  syncStoredSiteSettingsField("reportModel", id);
 }
 
 export function writeGlobalAdsAgentModel(model: string): void {
@@ -186,4 +219,5 @@ export function writeGlobalAdsAgentModel(model: string): void {
   } catch {
     /* ignore */
   }
+  syncStoredSiteSettingsField("adsModel", id);
 }

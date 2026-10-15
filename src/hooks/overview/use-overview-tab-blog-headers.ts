@@ -24,6 +24,7 @@ import type { OverviewInventoryRow } from "@/lib/overview/overview-inventory-csv
 import { resolveHarnessRowHtmlFromSources } from "@/lib/overview/overview-harness-page-catalog";
 import { normalizePageUrlKey } from "@/lib/sitemap-optimizer/normalize-page-url";
 import { setOptimizingState } from "@/hooks/content-optimization/optimization-helpers-a";
+import { getBlogModel } from "@/lib/optimization-settings-storage";
 import type { AiseoAfterRowWriteFn } from "@/lib/overview/overview-aiseo-after-upload";
 import { createAiseoCacheWriteAccumulator, finalizeAiseoCacheWriteForUpload } from "@/lib/overview/overview-aiseo-cache-write";
 
@@ -149,7 +150,7 @@ export function useOverviewTabBlogHeaders({
           catalog: stubCatalog,
           agentOptions: {
             apiKey,
-            model: selectedModel || "google/gemini-2.5-flash",
+            model: getBlogModel(site.id) || selectedModel,
             siteId: site.id,
             siteUrl: site.siteUrl,
           },

@@ -58,27 +58,27 @@ describe("overview-content-prep-harness-run batch vs post harness", () => {
     );
   });
 
-  it("post harness updates urlHarnessSections for SERP and checklist steps", () => {
+  it("post harness updates urlHarnessSections for checklist and blueprint steps", () => {
     const harness = makeSetters();
     harness.seedBatch(["https://example.com/a/"]);
     const url = "https://example.com/a/";
 
+    const checklistIndex = contentOptimizeHarnessSectionIndex("Checklist");
+    const blueprintIndex = contentOptimizeHarnessSectionIndex("Blueprint");
     markContentPrepHarnessSection(
       url,
-      contentOptimizeHarnessSectionIndex("SERP research brief"),
+      checklistIndex,
       "start",
       harness.setters,
     );
-    const serpIndex = contentOptimizeHarnessSectionIndex("SERP research brief");
-    const checklistIndex = contentOptimizeHarnessSectionIndex("Checklist");
-    expect(harness.getBatch()?.urlHarnessSections?.[url]?.[serpIndex]?.status).toBe("generating");
-    expect(harness.getBatch()?.urlHarnessSections?.[url]?.[serpIndex]?.title).toBe("SERP research brief");
-    expect(harness.getBatch()?.batchPrepHarnessSections?.[0]?.status).toBe("waiting");
-
-    markContentPrepHarnessSection(url, serpIndex, "done", harness.setters);
-    markContentPrepHarnessSection(url, checklistIndex, "start", harness.setters);
     expect(harness.getBatch()?.urlHarnessSections?.[url]?.[checklistIndex]?.status).toBe("generating");
     expect(harness.getBatch()?.urlHarnessSections?.[url]?.[checklistIndex]?.title).toBe("Checklist");
+    expect(harness.getBatch()?.batchPrepHarnessSections?.[0]?.status).toBe("waiting");
+
+    markContentPrepHarnessSection(url, checklistIndex, "done", harness.setters);
+    markContentPrepHarnessSection(url, blueprintIndex, "start", harness.setters);
+    expect(harness.getBatch()?.urlHarnessSections?.[url]?.[blueprintIndex]?.status).toBe("generating");
+    expect(harness.getBatch()?.urlHarnessSections?.[url]?.[blueprintIndex]?.title).toBe("Blueprint");
   });
 
   it("computeContentPrepBatchProgress counts batch inventory + per-post steps", () => {

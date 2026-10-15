@@ -196,9 +196,6 @@ describe("resolveBulkRowPipelineTitles", () => {
       { sectionIndex: 6, title: "Content Markdown", status: "waiting" as const },
     ];
     expect(resolveBulkRowPipelineTitles(undefined, harness, [])).toEqual([
-      "Keyword research",
-      "Selected keyword",
-      "SERP research brief",
       "Checklist",
       "Blueprint",
       "Link targets",
