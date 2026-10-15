@@ -7,6 +7,7 @@ import { DashboardAgentModelSelect } from "@/components/manager/DashboardAgentMo
 import {
   IMAGE_MODEL_PRESETS,
   TEXT_AGENT_MODEL_PRESETS,
+  VIDEO_MODEL_PRESETS,
 } from "@/lib/global-agent-models";
 import type { OpenRouterModelCatalogEntry } from "@/lib/openrouter-app-api";
 import { fetchOpenRouterModelsCatalog } from "@/lib/openrouter-models-catalog";
@@ -29,6 +30,8 @@ export interface LLMSettingsTabContentProps {
   onReportModelChange: (model: string) => void;
   adsModel: string;
   onAdsModelChange: (model: string) => void;
+  videoModel: string;
+  onVideoModelChange: (model: string) => void;
   temperature: number;
   onTemperatureChange: (value: number) => void;
   maxTokens: number;
@@ -156,6 +159,8 @@ export const LLMSettingsTabContent: React.FC<LLMSettingsTabContentProps> = ({
   onReportModelChange,
   adsModel,
   onAdsModelChange,
+  videoModel,
+  onVideoModelChange,
   temperature,
   onTemperatureChange,
   maxTokens,
@@ -240,6 +245,16 @@ export const LLMSettingsTabContent: React.FC<LLMSettingsTabContentProps> = ({
         catalog,
       }).label,
     [catalog, adsModel],
+  );
+
+  const videoWorkloadHint = useMemo(
+    () =>
+      estimateAgentRunCostUsd({
+        agent: "video",
+        modelId: videoModel,
+        catalog,
+      }).label,
+    [catalog, videoModel],
   );
 
   return (
@@ -328,6 +343,18 @@ export const LLMSettingsTabContent: React.FC<LLMSettingsTabContentProps> = ({
             catalog={catalog}
             catalogLoading={catalogLoading}
             workloadHint={adsWorkloadHint}
+          />
+          <DashboardAgentModelSelect
+            tile
+            label="Video agent"
+            description="Storyboard-to-video clips and narration (HeyGen Video + Voice) in the Video Generator."
+            value={videoModel}
+            presets={VIDEO_MODEL_PRESETS}
+            onChange={onVideoModelChange}
+            agentKind="video"
+            catalog={catalog}
+            catalogLoading={catalogLoading}
+            workloadHint={videoWorkloadHint}
           />
         </div>
       </div>

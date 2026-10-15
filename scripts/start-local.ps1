@@ -367,6 +367,13 @@ if (-not $SkipDocker) {
         Pop-Location
     }
 
+    Write-Step "Ensuring ffmpeg in the PHP container (Video Generator stitch)..."
+    & docker exec -u root wpstg-neopulse-local-php sh -c "command -v ffmpeg >/dev/null 2>&1 || apk add --no-cache ffmpeg"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "ffmpeg install in wpstg-neopulse-local-php failed." -ForegroundColor Red
+        exit 1
+    }
+
     Write-Step "Waiting for $siteUrl/ ..."
     if (-not (Wait-HttpOk "$siteUrl/" $timeoutSec)) {
         Write-Host "$siteUrl did not respond." -ForegroundColor Red

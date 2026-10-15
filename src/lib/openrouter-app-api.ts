@@ -18,6 +18,11 @@ export type OpenRouterAppResponseFormat =
       };
     };
 
+/** OpenRouter `reasoning` request field; effort bounds how many output tokens a reasoning model spends thinking. */
+export type OpenRouterAppReasoning = { effort: "low" | "medium" | "high" };
+/** OpenRouter chat-completions image output options; `aspect_ratio` is the only way to fix the frame shape for Gemini image models. */
+export type OpenRouterAppImageConfig = { aspect_ratio: string };
+
 export function openRouterChatCompletionUrl(): string {
   return backendApiUrl("/openrouter/chat-completion");
 }
@@ -35,6 +40,7 @@ export type OpenRouterModelCatalogEntry = {
   contextLength: number | null;
   textOutput: boolean;
   imageOutput: boolean;
+  videoOutput: boolean;
   /** Legacy: local Ollama rows from API; stripped client-side and never used. */
   local?: boolean;
 };
@@ -154,10 +160,11 @@ export function buildOpenRouterAppChatRequestBody(args: {
   topP?: number;
   responseFormat?: OpenRouterAppResponseFormat;
   modalities?: string[];
-  size?: string;
+  imageConfig?: OpenRouterAppImageConfig;
   tools?: unknown[];
   toolChoice?: unknown;
   webSearchOptions?: Record<string, unknown>;
+  reasoning?: OpenRouterAppReasoning;
 }): Record<string, unknown> {
   const apiKey = (args.apiKey ?? getOpenRouterApiKeyForApp()).trim();
   const system = openRouterPromptText(args.system);
@@ -173,10 +180,11 @@ export function buildOpenRouterAppChatRequestBody(args: {
     stream: false,
     responseFormat: args.responseFormat,
     modalities: args.modalities,
-    size: args.size,
+    image_config: args.imageConfig,
     tools: args.tools,
     tool_choice: args.toolChoice,
     webSearchOptions: args.webSearchOptions,
+    reasoning: args.reasoning,
   };
 
   if (filteredMessages.length > 0) {
@@ -206,10 +214,11 @@ export async function postOpenRouterAppChat(args: {
   topP?: number;
   responseFormat?: OpenRouterAppResponseFormat;
   modalities?: string[];
-  size?: string;
+  imageConfig?: OpenRouterAppImageConfig;
   tools?: unknown[];
   toolChoice?: unknown;
   webSearchOptions?: Record<string, unknown>;
+  reasoning?: OpenRouterAppReasoning;
   signal?: AbortSignal;
 }): Promise<{
   raw: unknown;
@@ -303,6 +312,103 @@ export async function postOpenRouterAppChat(args: {
   };
 }
 
+export type OpenRouterAppStreamDelta = { reasoning: string; content: string };
+
+/** SSE chat via app API: every reasoning and content delta is reported as it arrives; resolves with the full text. */
+export async function streamOpenRouterAppChat(args: {
+  apiKey?: string;
+  model: string;
+  messages: OpenRouterAppMessage[];
+  temperature?: number;
+  maxTokens?: number;
+  responseFormat?: OpenRouterAppResponseFormat;
+  reasoning?: OpenRouterAppReasoning;
+  signal?: AbortSignal;
+  onDelta: (delta: OpenRouterAppStreamDelta) => void;
+}): Promise<{ content: string; reasoning: string; finishReason?: string }> {
+  const apiKey = (args.apiKey ?? getOpenRouterApiKeyForApp()).trim();
+  const requestBody = { ...buildOpenRouterAppChatRequestBody({ ...args, apiKey }), stream: true };
+  const startedAt = Date.now();
+  const log = (event: string, data?: unknown) => console.log(`[video:openrouter-stream] ${event}`, data ?? "");
+  log("request sent", { model: args.model, maxTokens: args.maxTokens, messages: args.messages.length, reasoning: args.reasoning?.effort });
+  const response = await fetch(openRouterChatCompletionUrl(), {
+    method: "POST",
+    credentials: "include",
+    cache: "no-store",
+    signal: args.signal,
+    headers: openRouterAppApiHeaders(apiKey),
+    body: JSON.stringify(requestBody),
+  });
+  log("response headers", { status: response.status, contentType: response.headers.get("content-type"), ms: Date.now() - startedAt });
+  if (!response.ok || !response.body) {
+    const text = (await response.text()).trim();
+    console.error("[video:openrouter-stream] request failed", { status: response.status, body: text.slice(0, 500) });
+    throw new Error(text || `OpenRouter error (${response.status})`);
+  }
+  const acc = { content: "", reasoning: "", finishReason: undefined as string | undefined, lines: 0 };
+  const handleLine = (line: string) => {
+    if (!line.startsWith("data: ")) return;
+    const data = line.slice(6).trim();
+    if (data === "[DONE]") return log("[DONE]");
+    let json: {
+      error?: { message?: string };
+      choices?: { delta?: { content?: string; reasoning?: string }; finish_reason?: string | null }[];
+    };
+    try {
+      json = JSON.parse(data);
+    } catch (e) {
+      console.error("[video:openrouter-stream] unparseable line", data.slice(0, 300));
+      throw e;
+    }
+    if (json.error) {
+      console.error("[video:openrouter-stream] error event", json.error);
+      throw new Error(json.error.message?.trim() || "OpenRouter stream error");
+    }
+    const choice = json.choices?.[0];
+    const content = typeof choice?.delta?.content === "string" ? choice.delta.content : "";
+    const reasoning = typeof choice?.delta?.reasoning === "string" ? choice.delta.reasoning : "";
+    acc.lines += 1;
+    if (content || reasoning) {
+      acc.content += content;
+      acc.reasoning += reasoning;
+      log(`delta #${acc.lines}`, { reasoning, content });
+      args.onDelta({ reasoning, content });
+    } else {
+      log(`delta #${acc.lines} (no text)`, choice ?? json);
+    }
+    if (choice?.finish_reason) {
+      acc.finishReason = choice.finish_reason;
+      log("finish_reason", choice.finish_reason);
+    }
+  };
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let buffer = "";
+  let firstByte = false;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!firstByte) {
+      firstByte = true;
+      log("first bytes", { bytes: value.byteLength, ms: Date.now() - startedAt });
+    }
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    lines.forEach(handleLine);
+  }
+  buffer += decoder.decode();
+  buffer.split("\n").forEach(handleLine);
+  log("stream closed", {
+    seconds: Math.round((Date.now() - startedAt) / 1000),
+    lines: acc.lines,
+    reasoningChars: acc.reasoning.length,
+    contentChars: acc.content.length,
+    finishReason: acc.finishReason,
+  });
+  return { content: acc.content.trim(), reasoning: acc.reasoning.trim(), finishReason: acc.finishReason };
+}
+
 /** Non-stream chat via app API; same call shape as the old OpenRouter fetch. */
 export async function postOpenRouterAppChatFetch(init: RequestInit): Promise<{
   ok: boolean;
@@ -324,7 +430,7 @@ export async function postOpenRouterAppChatFetch(init: RequestInit): Promise<{
     response_format?: OpenRouterAppResponseFormat;
     responseFormat?: OpenRouterAppResponseFormat;
     modalities?: string[];
-    size?: string;
+    image_config?: OpenRouterAppImageConfig;
     tools?: unknown[];
     tool_choice?: unknown;
     toolChoice?: unknown;
@@ -343,7 +449,7 @@ export async function postOpenRouterAppChatFetch(init: RequestInit): Promise<{
       topP: parsed.topP ?? parsed.top_p,
       responseFormat: parsed.responseFormat ?? parsed.response_format,
       modalities: parsed.modalities,
-      size: parsed.size,
+      imageConfig: parsed.image_config,
       tools: parsed.tools,
       toolChoice: parsed.toolChoice ?? parsed.tool_choice,
       webSearchOptions: parsed.webSearchOptions ?? parsed.web_search_options,

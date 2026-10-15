@@ -18,11 +18,13 @@ import {
   readGlobalMetaAgentModel,
   readGlobalReportAgentModel,
   readGlobalResearchAgentModel,
+  readGlobalVideoAgentModel,
   writeGlobalAdsAgentModel,
   writeGlobalImageAgentModel,
   writeGlobalMetaAgentModel,
   writeGlobalReportAgentModel,
   writeGlobalResearchAgentModel,
+  writeGlobalVideoAgentModel,
 } from "@/lib/global-agent-models";
 import { dashboardClusterToArea, useTeamPermission } from "@/hooks/use-team-permission";
 import { DASHBOARD_SECTION_ORDER } from "@/components/manager/dashboard/dashboard-section-labels";
@@ -95,6 +97,11 @@ export function ManagerSettingsContent({
   const [fallbackMeta, setFallbackMeta] = useState(readGlobalMetaAgentModel);
   const [fallbackReport, setFallbackReport] = useState(readGlobalReportAgentModel);
   const [fallbackAds, setFallbackAds] = useState(readGlobalAdsAgentModel);
+  const [agentVideoModel, setVideoModelState] = useState(readGlobalVideoAgentModel);
+  const setAgentVideoModel = (model: string) => {
+    setVideoModelState(model);
+    writeGlobalVideoAgentModel(model);
+  };
   const agentResearchModel = agentResearchModelProp ?? fallbackResearch;
   const agentImageModel = agentImageModelProp ?? fallbackImage;
   const agentMetaModel = agentMetaModelProp ?? fallbackMeta;
@@ -232,6 +239,8 @@ export function ManagerSettingsContent({
           setReportModel={setAgentReportModel}
           adsModel={agentAdsModel}
           setAdsModel={setAgentAdsModel}
+          videoModel={agentVideoModel}
+          setVideoModel={setAgentVideoModel}
           temperature={temperature}
           setTemperature={setTemperature}
           maxTokens={maxTokens}

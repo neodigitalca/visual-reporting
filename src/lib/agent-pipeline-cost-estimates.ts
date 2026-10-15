@@ -1,8 +1,13 @@
 import type { OpenRouterModelCatalogEntry } from "@/lib/openrouter-app-api";
 import { catalogEntryById } from "@/lib/openrouter-models-catalog";
 import { estimateImageOutputCostUsd } from "@/lib/image-model-defaults";
+import { estimateVideoCostUsd } from "@/lib/video-generator/video-model-defaults";
 
-export type PipelineAgentKind = "research" | "blog" | "image" | "meta" | "report" | "ads";
+export type PipelineAgentKind = "research" | "blog" | "image" | "meta" | "report" | "ads" | "video";
+
+/** Reference video workload for the Video agent estimate. */
+export const VIDEO_REFERENCE_SECONDS = 30;
+const VIDEO_REFERENCE_RESOLUTION = "480p" as const;
 
 /** Competitor/overview-style research pass (context + multi-step report write). */
 export const RESEARCH_REFERENCE_INPUT_TOKENS = 120_000;
@@ -57,6 +62,20 @@ export function estimateAgentRunCostUsd(args: {
     return {
       usd,
       label: `Est. ~${formatEstimateUsd(usd)} per typical 16:9 featured image (image output tier)`,
+    };
+  }
+
+  if (agent === "video") {
+    const usd = estimateVideoCostUsd(modelId, VIDEO_REFERENCE_RESOLUTION, VIDEO_REFERENCE_SECONDS);
+    if (usd == null) {
+      return {
+        usd: null,
+        label: "Pricing unavailable for this model (OpenRouter video SKUs)",
+      };
+    }
+    return {
+      usd,
+      label: `Est. ~${formatEstimateUsd(usd)} per ${VIDEO_REFERENCE_SECONDS} s video at ${VIDEO_REFERENCE_RESOLUTION}`,
     };
   }
 

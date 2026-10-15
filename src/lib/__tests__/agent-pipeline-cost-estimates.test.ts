@@ -30,6 +30,7 @@ describe("agent-pipeline-cost-estimates", () => {
           contextLength: null,
           textOutput: true,
           imageOutput: false,
+          videoOutput: false,
         },
       ],
     });

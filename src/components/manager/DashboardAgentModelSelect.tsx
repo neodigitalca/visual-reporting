@@ -12,6 +12,7 @@ import {
 import type { PipelineAgentKind } from "@/lib/agent-pipeline-cost-estimates";
 import { formatEstimateUsd } from "@/lib/agent-pipeline-cost-estimates";
 import { estimateImageOutputCostUsd } from "@/lib/image-model-defaults";
+import { estimateVideoCostUsd } from "@/lib/video-generator/video-model-defaults";
 import { cn } from "@/lib/utils";
 
 type Preset = { value: string; label: string; priceHint?: string };
@@ -49,6 +50,11 @@ function optionLabel(
     const base = presetLabel || entry?.name || modelId;
     const usd = estimateImageOutputCostUsd(modelId, "16:9");
     return appendLocalTag(`${base} · ~${formatEstimateUsd(usd)}/16:9 image`, entry);
+  }
+  if (agentKind === "video") {
+    const base = presetLabel || entry?.name || modelId;
+    const usd = estimateVideoCostUsd(modelId, "480p", 1, 0);
+    return usd == null ? base : `${base} · ~${formatEstimateUsd(usd)}/s at 480p`;
   }
   return appendLocalTag(presetLabel || entry?.name || modelId, entry);
 }

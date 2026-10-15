@@ -1,6 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Building2,
+  Clapperboard,
+  Film,
   UserRound,
   Users,
   Cloud,
@@ -236,6 +238,21 @@ export const MANAGER_NAV_SECTIONS: ManagerNavSection[] = [
             label: "Meta",
             description: "Feed ads from WordPress page copy and Neo Digital creative",
             icon: Megaphone,
+          },
+        ],
+      },
+      {
+        id: "tools-video",
+        value: "video",
+        label: "Video",
+        description: "Storyboard and video generation",
+        icon: Clapperboard,
+        children: [
+          {
+            value: "video-generator",
+            label: "Generator",
+            description: "Brief, storyboard, HeyGen render with narration",
+            icon: Film,
           },
         ],
       },

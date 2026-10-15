@@ -7,8 +7,8 @@ import type { PipelineAgentKind } from "@/lib/agent-pipeline-cost-estimates";
 
 export type { OpenRouterModelCatalogEntry };
 
-const SESSION_KEY = "neo-pulse-or-models-catalog-v2";
-const SESSION_AT_KEY = "neo-pulse-or-models-catalog-v2-at";
+const SESSION_KEY = "neo-pulse-or-models-catalog-v3";
+const SESSION_AT_KEY = "neo-pulse-or-models-catalog-v3-at";
 const CLIENT_TTL_MS = 23 * 60 * 60 * 1000;
 
 let memoryCache: { models: OpenRouterModelCatalogEntry[]; cachedAt: string } | null = null;
@@ -83,6 +83,9 @@ export function filterCatalogForAgentKind(
 ): OpenRouterModelCatalogEntry[] {
   if (kind === "image") {
     return catalog.filter((entry) => entry.imageOutput === true);
+  }
+  if (kind === "video") {
+    return catalog.filter((entry) => entry.videoOutput === true);
   }
   return catalog.filter((entry) => entry.textOutput === true);
 }

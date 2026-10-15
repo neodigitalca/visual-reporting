@@ -19,6 +19,7 @@ import { SocialCreatorCampaignWorkspace } from "@/components/social/creator/Soci
 import { SitemapOptimizerResearchTab } from "@/components/research/sitemap-optimizer/SitemapOptimizerResearchTab";
 import { VerticalBenchmarkShell } from "@/components/vertical-benchmark/VerticalBenchmarkShell";
 import { PulseHostTabContent } from "@/components/hosting/PulseHostTabContent";
+import { VideoGeneratorTabContent } from "@/components/video-generator/VideoGeneratorTabContent";
 
 const ApiDocsTabContent = lazy(() =>
   import("@/components/api-docs/ApiDocsTabContent").then((m) => ({ default: m.ApiDocsTabContent })),
@@ -494,6 +495,13 @@ export const ManagerWorkspace: React.FC<ManagerWorkspaceProps> = ({
           className={cn(embeddedTabPanelTopClass, "data-[state=inactive]:hidden", embeddedTabPanelStretch)}
         >
           <PulseHostTabContent />
+        </TabsContent>
+
+        <TabsContent
+          value="video-generator"
+          className={cn(embeddedTabPanelTopClass, "data-[state=inactive]:hidden", embeddedTabPanelStretch)}
+        >
+          <VideoGeneratorTabContent apiKey={apiKey} />
         </TabsContent>
 
         <TabsContent value="api" className={cn(embeddedTabPanelTopClass, "data-[state=inactive]:hidden", embeddedTabPanelStretch)}>

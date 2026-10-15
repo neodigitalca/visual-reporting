@@ -1,4 +1,5 @@
 import { DEFAULT_IMAGE_MODEL } from "@/lib/image-model-defaults";
+import { DEFAULT_VIDEO_MODEL } from "@/lib/video-generator/video-model-defaults";
 
 export interface OptimizationSettings {
   /** Blog agent: harness sections, title, meta description */
@@ -13,6 +14,8 @@ export interface OptimizationSettings {
   adsModel: string;
   /** Image agent: OpenRouter image generation */
   imageModel: string;
+  /** Video agent: OpenRouter video generation (HeyGen Video) */
+  videoModel: string;
   customModels: string[];
   temperature: number;
   maxTokens: number;
@@ -26,6 +29,7 @@ export const DEFAULT_SETTINGS: OptimizationSettings = {
   reportModel: "deepseek/deepseek-v4.1-flash",
   adsModel: "deepseek/deepseek-v4.1-flash",
   imageModel: DEFAULT_IMAGE_MODEL,
+  videoModel: DEFAULT_VIDEO_MODEL,
   customModels: [],
   temperature: 1.0,
   maxTokens: 4000,

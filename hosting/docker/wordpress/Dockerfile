@@ -1,7 +1,7 @@
 FROM wordpress:6.7.2-php8.3-apache
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends less mariadb-client curl \
+  && apt-get install -y --no-install-recommends less mariadb-client curl ffmpeg \
   && curl -fsSL https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /usr/local/bin/wp \
   && chmod +x /usr/local/bin/wp \
   && rm -rf /var/lib/apt/lists/*

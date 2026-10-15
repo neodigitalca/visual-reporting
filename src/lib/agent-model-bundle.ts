@@ -5,6 +5,7 @@ import {
   getProductionModel,
   getReportModel,
   getResearchModel,
+  getVideoModel,
 } from "@/lib/optimization-settings-storage";
 
 /** Run-scoped OpenRouter model ids (resolved once per pipeline). */
@@ -15,6 +16,7 @@ export type AgentModelBundle = {
   report: string;
   ads: string;
   image: string;
+  video: string;
 };
 
 export function resolveAgentModelsForSite(siteId?: string | null): AgentModelBundle {
@@ -25,5 +27,6 @@ export function resolveAgentModelsForSite(siteId?: string | null): AgentModelBun
     report: getReportModel(siteId),
     ads: getAdsModel(siteId),
     image: getImageModel(siteId),
+    video: getVideoModel(siteId),
   };
 }

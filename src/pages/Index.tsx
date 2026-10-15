@@ -123,6 +123,7 @@ const VALID_MANAGER_TABS = new Set([
   "pulse-forge",
   "organic-reporting",
   "pulse-host",
+  "video-generator",
 ]);
 
 const Index = () => {

@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, type ReactNode } from "react";
 import { ImagePlus, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -30,7 +30,7 @@ export function ImageReferenceUploadPanel({
           type="button"
           variant="secondary"
           size="sm"
-          className="text-base"
+          className="min-w-[9.5rem] text-base"
           disabled={controlsDisabled}
           onClick={() => inputRef.current?.click()}
         >
@@ -70,29 +70,46 @@ export function ImageReferenceUploadPanel({
       {manualReferences.length ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {manualReferences.map((ref) => (
-            <div key={ref.id} className="relative space-y-2 bg-black p-3">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-1 top-1 h-8 w-8 text-muted-foreground hover:text-foreground"
-                disabled={controlsDisabled}
-                aria-label={`Remove ${ref.fileName}`}
-                onClick={() => onRemoveReference(ref.id)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-              <img
-                src={ref.dataUrl}
-                alt={`Reference ${ref.fileName}`}
-                className="max-h-40 w-full object-contain"
-              />
-              <p className="truncate text-base text-foreground">{ref.fileName}</p>
-              <p className="text-base text-muted-foreground">Manual upload</p>
-            </div>
+            <UploadTile key={ref.id} fileName={ref.fileName} caption="Manual upload" disabled={controlsDisabled} onRemove={() => onRemoveReference(ref.id)}>
+              <img src={ref.dataUrl} alt={`Reference ${ref.fileName}`} className="absolute inset-0 h-full w-full object-contain" />
+            </UploadTile>
           ))}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/** One uploaded file: fixed 16:9 media box (children fill it absolutely) over two fixed-height caption lines, so grid rows never shift. */
+export function UploadTile({
+  fileName,
+  caption,
+  disabled,
+  onRemove,
+  children,
+}: {
+  fileName: string;
+  caption: string;
+  disabled: boolean;
+  onRemove: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="relative flex flex-col gap-2 bg-black p-3">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="absolute right-1 top-1 z-10 h-8 w-8 text-muted-foreground hover:text-foreground"
+        disabled={disabled}
+        aria-label={`Remove ${fileName}`}
+        onClick={onRemove}
+      >
+        <X className="h-4 w-4" />
+      </Button>
+      <div className="relative aspect-video w-full">{children}</div>
+      <p className="h-6 truncate leading-6 text-base text-foreground">{fileName}</p>
+      <p className="h-6 leading-6 text-base text-muted-foreground">{caption}</p>
     </div>
   );
 }

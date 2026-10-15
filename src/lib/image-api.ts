@@ -14,26 +14,17 @@ export interface ImageGenerationRequest {
   apiKey: string;
   prompt: string;
   model?: string;
+  /** Sent as OpenRouter `image_config.aspect_ratio`; without it Gemini copies the aspect of the reference images. */
   aspectRatio?: AspectRatio;
-  size?: string; // Will be calculated from aspectRatio
   /** When set, sent as multimodal image_url so the model can replicate the photo. */
   referenceImageDataUrl?: string;
   /** Multiple SERP reference data URLs (place + product, etc.). */
   referenceImageDataUrls?: string[];
+  /** How many references to attach (default `MAX_REFERENCE_IMAGES`); the video storyboard sends harness + hero + scene upload. */
+  maxReferenceImages?: number;
   /** @internal One retry without refs when multimodal output is empty. */
   _retryWithoutRefs?: boolean;
 }
-
-// Map aspect ratios to dimensions
-const ASPECT_RATIO_SIZES: Record<AspectRatio, string> = {
-  '1:1': '1024x1024',
-  '16:9': '1792x1024',
-  '9:16': '1024x1792',
-  '4:3': '1344x1024',
-  '3:4': '1024x1344',
-  '21:9': '2048x1024',
-  '9:19': '1024x2160',
-};
 
 export interface ImageGenerationResponse {
   imageUrl?: string;
@@ -50,13 +41,11 @@ export const generateImage = async ({
   prompt,
   model = DEFAULT_IMAGE_MODEL,
   aspectRatio = '1:1',
-  size,
   referenceImageDataUrl,
   referenceImageDataUrls,
+  maxReferenceImages = MAX_REFERENCE_IMAGES,
   _retryWithoutRefs = false,
 }: ImageGenerationRequest): Promise<ImageGenerationResponse> => {
-  // Calculate size from aspect ratio if not provided
-  const imageSize = size || ASPECT_RATIO_SIZES[aspectRatio];
   const contentParts: Array<
     | { type: 'text'; text: string }
     | { type: 'image_url'; image_url: { url: string } }
@@ -70,7 +59,7 @@ export const generateImage = async ({
   if (single.startsWith('data:image/') && !refs.includes(single)) {
     refs.push(single);
   }
-  for (const ref of refs.slice(0, MAX_REFERENCE_IMAGES)) {
+  for (const ref of refs.slice(0, maxReferenceImages)) {
     contentParts.push({ type: 'image_url', image_url: { url: ref } });
   }
   const hadReferenceAttachments = refs.length > 0;
@@ -87,7 +76,7 @@ export const generateImage = async ({
             content: contentParts,
           },
         ],
-        size: imageSize,
+        image_config: { aspect_ratio: aspectRatio },
         max_tokens: 8192,
       }),
     });
@@ -607,7 +596,6 @@ return { imageUrl: part.url };
         prompt,
         model,
         aspectRatio,
-        size,
         referenceImageDataUrl: undefined,
         referenceImageDataUrls: undefined,
         _retryWithoutRefs: true,

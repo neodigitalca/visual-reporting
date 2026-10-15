@@ -224,6 +224,12 @@ class Neo_Pulse_App_Api_Dispatcher {
 			return;
 		}
 
+		if ( 0 === strpos( $route, 'video/' ) ) {
+			@set_time_limit( 300 );
+			Neo_Pulse_App_Video_Route_Handlers::dispatch_http( substr( $route, 6 ), $method, $body );
+			return;
+		}
+
 		if ( 0 === strpos( $route, 'elementor/' ) ) {
 			@set_time_limit( 180 );
 			Neo_Pulse_App_Elementor_Route_Handlers::dispatch_http( substr( $route, 10 ), $method, $body );

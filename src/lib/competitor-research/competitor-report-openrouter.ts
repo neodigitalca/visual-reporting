@@ -1,5 +1,5 @@
 import { REPORT_TEMPERATURE } from "@/lib/competitor-research/competitor-report-openrouter-limits";
-import { postOpenRouterAppChat, type OpenRouterAppResponseFormat } from "@/lib/openrouter-app-api";
+import { postOpenRouterAppChat, type OpenRouterAppReasoning, type OpenRouterAppResponseFormat } from "@/lib/openrouter-app-api";
 
 export async function callOpenRouterChatCompletion(args: {
   apiKey: string;
@@ -12,6 +12,7 @@ export async function callOpenRouterChatCompletion(args: {
   temperature?: number;
   /** When set, requests JSON-only output on models that support OpenAI-style response_format. */
   responseFormat?: OpenRouterAppResponseFormat;
+  reasoning?: OpenRouterAppReasoning;
 }): Promise<{
   raw: unknown;
   content: string;
@@ -28,5 +29,6 @@ export async function callOpenRouterChatCompletion(args: {
     signal: args.signal,
     temperature: args.temperature ?? REPORT_TEMPERATURE,
     responseFormat: args.responseFormat,
+    reasoning: args.reasoning,
   });
 }

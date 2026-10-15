@@ -285,6 +285,12 @@ class Neo_Pulse_App_Loader {
 
 		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/images/class-openrouter-image.php';
 		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/images/class-images-route-handlers.php';
+		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/video/class-openrouter-video.php';
+		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/video/class-openrouter-speech.php';
+		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/video/class-video-render-store.php';
+		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/video/class-video-stitch.php';
+		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/video/class-video-brainstorm.php';
+		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/video/class-video-route-handlers.php';
 		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/bulk/class-validate-internal-links.php';
 		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/proxy/class-wikipedia-proxy.php';
 		require_once NEO_PULSE_APP_PLUGIN_DIR . 'includes/proxy/class-url-text-proxy.php';

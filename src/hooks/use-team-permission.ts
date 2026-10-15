@@ -52,6 +52,7 @@ export function managerTabToArea(tab: string): TeamPermissionArea | null {
     users: "teams",
     support: "teams",
     "pulse-host": "hosting",
+    "video-generator": "generator",
   };
   return map[tab] ?? null;
 }

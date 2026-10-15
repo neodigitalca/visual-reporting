@@ -1,5 +1,6 @@
 import { DEFAULT_SETTINGS } from "@/lib/optimization-settings-defaults";
 import { DEFAULT_IMAGE_MODEL, IMAGE_MODEL_PRESETS } from "@/lib/image-model-defaults";
+import { DEFAULT_VIDEO_MODEL, VIDEO_MODEL_PRESETS } from "@/lib/video-generator/video-model-defaults";
 import { coerceOpenRouterModelId } from "@/lib/openrouter-model-id";
 
 /** Must match {@link NEO_PULSE_LLM_MODEL_KEY} in manager-cloud-settings-snapshot (legacy blog default). */
@@ -17,6 +18,8 @@ export const NEO_PULSE_AGENT_META_MODEL_KEY = "neo-pulse-agent-meta-model";
 export const NEO_PULSE_AGENT_REPORT_MODEL_KEY = "neo-pulse-agent-report-model";
 /** Global Ads agent (PPC reporting). */
 export const NEO_PULSE_AGENT_ADS_MODEL_KEY = "neo-pulse-agent-ads-model";
+/** Global Video agent (HeyGen video generation). */
+export const NEO_PULSE_AGENT_VIDEO_MODEL_KEY = "neo-pulse-agent-video-model";
 
 const GLOBAL_RESEARCH_MODEL_KEY = "global_research_model";
 
@@ -29,7 +32,7 @@ export const TEXT_AGENT_MODEL_PRESETS: { value: string; label: string }[] = [
   { value: "openai/gpt-5", label: "GPT-5" },
 ];
 
-export { IMAGE_MODEL_PRESETS };
+export { IMAGE_MODEL_PRESETS, VIDEO_MODEL_PRESETS };
 
 function readStorageKey(key: string): string | undefined {
   if (typeof window === "undefined") return undefined;
@@ -87,6 +90,22 @@ export function readGlobalImageAgentModel(): string {
     persistStorageKey(NEO_PULSE_AGENT_IMAGE_MODEL_KEY, resolved);
   }
   return resolved;
+}
+
+export function readGlobalVideoAgentModel(): string {
+  const raw = readStorageKey(NEO_PULSE_AGENT_VIDEO_MODEL_KEY);
+  const resolved = coerceOpenRouterModelId(raw, DEFAULT_VIDEO_MODEL);
+  if (raw && raw !== resolved) {
+    persistStorageKey(NEO_PULSE_AGENT_VIDEO_MODEL_KEY, resolved);
+  }
+  return resolved;
+}
+
+export function writeGlobalVideoAgentModel(model: string): void {
+  if (typeof window === "undefined") return;
+  const id = model.trim();
+  if (!id) return;
+  persistStorageKey(NEO_PULSE_AGENT_VIDEO_MODEL_KEY, id);
 }
 
 export function writeGlobalResearchAgentModel(model: string): void {

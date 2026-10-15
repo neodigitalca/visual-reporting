@@ -10,7 +10,9 @@ defined( 'ABSPATH' ) || exit;
 class Neo_Pulse_App_Openrouter_Models_Catalog_Route {
 
 	const MODELS_URL     = 'https://openrouter.ai/api/v1/models';
-	const TRANSIENT_KEY  = 'neo_pulse_openrouter_models_catalog_v1';
+	/** Video generation models are not in the base catalog; OpenRouter lists them only with this filter. */
+	const VIDEO_MODELS_URL = 'https://openrouter.ai/api/v1/models?output_modalities=video';
+	const TRANSIENT_KEY  = 'neo_pulse_openrouter_models_catalog_v2';
 	const TRANSIENT_TTL  = 82800; // 23 hours
 
 	/**
@@ -71,6 +73,38 @@ class Neo_Pulse_App_Openrouter_Models_Catalog_Route {
 		}
 
 		$models = self::normalize_models_payload( $decoded );
+
+		$video_response = wp_remote_get(
+			self::VIDEO_MODELS_URL,
+			array(
+				'timeout' => 60,
+				'headers' => $headers,
+			)
+		);
+		if ( is_wp_error( $video_response ) ) {
+			Neo_Pulse_App_Api_Dispatcher::send_json(
+				array(
+					'ok'    => false,
+					'error' => $video_response->get_error_message(),
+				),
+				502
+			);
+			return;
+		}
+		$video_code    = (int) wp_remote_retrieve_response_code( $video_response );
+		$video_decoded = json_decode( (string) wp_remote_retrieve_body( $video_response ), true );
+		if ( $video_code < 200 || $video_code >= 300 || ! is_array( $video_decoded ) ) {
+			Neo_Pulse_App_Api_Dispatcher::send_json(
+				array(
+					'ok'    => false,
+					'error' => 'OpenRouter video models HTTP ' . $video_code,
+				),
+				502
+			);
+			return;
+		}
+		$models = array_merge( $models, self::normalize_models_payload( $video_decoded ) );
+
 		$cached_at = gmdate( 'c' );
 		set_transient(
 			self::TRANSIENT_KEY,
@@ -117,6 +151,7 @@ class Neo_Pulse_App_Openrouter_Models_Catalog_Route {
 				: array();
 			$text_output  = count( $output ) === 0 || in_array( 'text', $output, true );
 			$image_output = in_array( 'image', $output, true );
+			$video_output = in_array( 'video', $output, true );
 			$context      = isset( $row['context_length'] ) ? (int) $row['context_length'] : null;
 
 			$out[] = array(
@@ -128,6 +163,7 @@ class Neo_Pulse_App_Openrouter_Models_Catalog_Route {
 				'contextLength'          => $context > 0 ? $context : null,
 				'textOutput'             => $text_output,
 				'imageOutput'            => $image_output,
+				'videoOutput'            => $video_output,
 			);
 		}
 		return $out;

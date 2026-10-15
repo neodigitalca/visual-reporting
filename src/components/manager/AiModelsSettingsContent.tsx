@@ -18,6 +18,8 @@ export type AiModelsSettingsContentProps = {
   setReportModel: (model: string) => void;
   adsModel: string;
   setAdsModel: (model: string) => void;
+  videoModel: string;
+  setVideoModel: (model: string) => void;
   temperature: number;
   setTemperature: (value: number) => void;
   maxTokens: number;
@@ -48,6 +50,8 @@ export function AiModelsSettingsContent(props: AiModelsSettingsContentProps) {
           onReportModelChange={props.setReportModel}
           adsModel={props.adsModel}
           onAdsModelChange={props.setAdsModel}
+          videoModel={props.videoModel}
+          onVideoModelChange={props.setVideoModel}
           temperature={props.temperature}
           onTemperatureChange={props.setTemperature}
           maxTokens={props.maxTokens}

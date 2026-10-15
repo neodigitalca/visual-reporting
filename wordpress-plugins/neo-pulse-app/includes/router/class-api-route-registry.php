@@ -37,6 +37,12 @@ class Neo_Pulse_App_Api_Route_Registry {
 			array( 'method' => 'POST', 'path' => 'gmb/performance' ),
 			array( 'method' => 'POST', 'path' => 'knowledge-model/auto-graph' ),
 			array( 'method' => 'POST', 'path' => 'site-scraper/scrape' ),
+			array( 'method' => 'POST', 'path' => 'video/render' ),
+			array( 'method' => 'POST', 'path' => 'video/render/{id}/frame' ),
+			array( 'method' => 'POST', 'path' => 'video/render/{id}/start' ),
+			array( 'method' => 'GET', 'path' => 'video/render/{id}' ),
+			array( 'method' => 'POST', 'path' => 'video/brainstorm/frames' ),
+			array( 'method' => 'POST', 'path' => 'video/brainstorm/{id}/beats' ),
 		);
 	}
 

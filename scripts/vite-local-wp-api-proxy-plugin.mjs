@@ -39,6 +39,11 @@ function upstreamRequest(url, options, body) {
         rejectUnauthorized: parsed.protocol === "https:" ? false : undefined,
       },
       (res) => {
+        // SSE must reach the browser as it arrives; everything else is buffered for the redirect handling below.
+        if (String(res.headers["content-type"] ?? "").startsWith("text/event-stream")) {
+          resolve({ status: res.statusCode ?? 502, headers: res.headers, body: undefined, stream: res });
+          return;
+        }
         const chunks = [];
         res.on("data", (chunk) => chunks.push(chunk));
         res.on("end", () => {
@@ -266,6 +271,11 @@ export function localWpApiProxyPlugin() {
             res.setHeader(key, value);
           }
 
+          if (upstream.stream) {
+            res.flushHeaders();
+            upstream.stream.pipe(res);
+            return;
+          }
           res.end(upstream.body);
         } catch (error) {
           res.statusCode = 502;

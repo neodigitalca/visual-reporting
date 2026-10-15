@@ -98,8 +98,8 @@ class Neo_Pulse_App_Openrouter_Chat_Completion_Route {
 		if ( isset( $body['modalities'] ) && is_array( $body['modalities'] ) ) {
 			$payload['modalities'] = $body['modalities'];
 		}
-		if ( isset( $body['size'] ) && is_string( $body['size'] ) && trim( $body['size'] ) !== '' ) {
-			$payload['size'] = trim( $body['size'] );
+		if ( isset( $body['image_config'] ) && is_array( $body['image_config'] ) ) {
+			$payload['image_config'] = $body['image_config'];
 		}
 		if ( isset( $body['tools'] ) && is_array( $body['tools'] ) ) {
 			$payload['tools'] = $body['tools'];
@@ -108,6 +108,9 @@ class Neo_Pulse_App_Openrouter_Chat_Completion_Route {
 			$payload['tool_choice'] = $body['tool_choice'];
 		} elseif ( isset( $body['toolChoice'] ) ) {
 			$payload['tool_choice'] = $body['toolChoice'];
+		}
+		if ( isset( $body['reasoning'] ) && is_array( $body['reasoning'] ) ) {
+			$payload['reasoning'] = $body['reasoning'];
 		}
 		if ( isset( $body['webSearchOptions'] ) && is_array( $body['webSearchOptions'] ) ) {
 			$payload['web_search_options'] = $body['webSearchOptions'];
@@ -286,13 +289,15 @@ class Neo_Pulse_App_Openrouter_Chat_Completion_Route {
 				}
 			}
 		}
+		$finish = isset( $raw['choices'][0]['finish_reason'] ) ? (string) $raw['choices'][0]['finish_reason'] : '';
 		if ( $structured && $parsed === null && $content !== '' && ! self::text_is_json_object( $content ) ) {
 			throw new Exception(
-				'OpenRouter returned prose instead of JSON for structured output. Use a model that supports response_format json_object.'
+				$finish === 'length'
+					? 'OpenRouter cut the structured reply at max_tokens (finish_reason=length); raise the token budget for this call.'
+					: 'OpenRouter returned prose instead of JSON for structured output (finish_reason=' . $finish . '). Use a model that supports response_format json_object.'
 			);
 		}
 		if ( $content === '' && $parsed === null && ! $has_tool_calls && empty( $message['images'] ) && empty( $payload['modalities'] ) ) {
-			$finish = isset( $raw['choices'][0]['finish_reason'] ) ? (string) $raw['choices'][0]['finish_reason'] : '';
 			throw new Exception(
 				'OpenRouter returned empty content'
 				. ( $finish !== '' ? ' (finish_reason=' . $finish . ')' : '' )
@@ -461,7 +466,7 @@ class Neo_Pulse_App_Openrouter_Chat_Completion_Route {
 		while ( ob_get_level() > 0 ) {
 			ob_end_clean();
 		}
-		@set_time_limit( 300 );
+		@set_time_limit( 0 );
 		ignore_user_abort( true );
 		status_header( 200 );
 		header( 'Content-Type: text/event-stream' );
@@ -483,7 +488,10 @@ class Neo_Pulse_App_Openrouter_Chat_Completion_Route {
 		curl_setopt( $ch, CURLOPT_POST, true );
 		curl_setopt( $ch, CURLOPT_HTTPHEADER, $curl_headers );
 		curl_setopt( $ch, CURLOPT_POSTFIELDS, wp_json_encode( $payload ) );
-		curl_setopt( $ch, CURLOPT_TIMEOUT, 300 );
+		// A long completion is expected while streaming; only give up when no bytes arrive for two minutes.
+		curl_setopt( $ch, CURLOPT_CONNECTTIMEOUT, 30 );
+		curl_setopt( $ch, CURLOPT_LOW_SPEED_LIMIT, 1 );
+		curl_setopt( $ch, CURLOPT_LOW_SPEED_TIME, 120 );
 		curl_setopt( $ch, CURLOPT_RETURNTRANSFER, false );
 		curl_setopt(
 			$ch,

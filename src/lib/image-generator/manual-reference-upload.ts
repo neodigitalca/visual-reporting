@@ -25,13 +25,17 @@ export function readFileAsDataUrl(file: File): Promise<string> {
 }
 
 export async function prepareManualReference(file: File): Promise<ManualImageReference> {
-  const rawDataUrl = await readFileAsDataUrl(file);
+  return manualReferenceFromDataUrl(file.name, await readFileAsDataUrl(file));
+}
+
+/** Size-gates `rawDataUrl` on the server and wraps it as a manual reference (uploads and server-cut video frames alike). */
+export async function manualReferenceFromDataUrl(fileName: string, rawDataUrl: string): Promise<ManualImageReference> {
   const prepared = await prepareLocalImageDataUrl(rawDataUrl);
-  const id = `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const id = `${fileName}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
   return {
     id,
-    fileName: file.name,
+    fileName,
     dataUrl: prepared.dataUrl,
     imageUrl: "",
     query: "manual upload",

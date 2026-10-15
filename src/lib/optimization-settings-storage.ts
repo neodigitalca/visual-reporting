@@ -1,6 +1,7 @@
 import type { OptimizationSettings } from "@/lib/optimization-settings-defaults";
 import { DEFAULT_SETTINGS } from "@/lib/optimization-settings-defaults";
 import { DEFAULT_IMAGE_MODEL } from "@/lib/image-model-defaults";
+import { DEFAULT_VIDEO_MODEL } from "@/lib/video-generator/video-model-defaults";
 import {
   readGlobalAdsAgentModel,
   readGlobalBlogAgentModel,
@@ -8,6 +9,7 @@ import {
   readGlobalMetaAgentModel,
   readGlobalReportAgentModel,
   readGlobalResearchAgentModel,
+  readGlobalVideoAgentModel,
 } from "@/lib/global-agent-models";
 import { coerceOpenRouterModelId } from "@/lib/openrouter-model-id";
 
@@ -77,6 +79,7 @@ const SITE_MODEL_FIELDS = [
   "reportModel",
   "adsModel",
   "imageModel",
+  "videoModel",
 ] as const;
 
 function sanitizeOptimizationSettings(settings: OptimizationSettings): OptimizationSettings {
@@ -88,6 +91,7 @@ function sanitizeOptimizationSettings(settings: OptimizationSettings): Optimizat
     reportModel: coerceOpenRouterModelId(settings.reportModel, DEFAULT_SETTINGS.reportModel),
     adsModel: coerceOpenRouterModelId(settings.adsModel, DEFAULT_SETTINGS.adsModel),
     imageModel: coerceOpenRouterModelId(settings.imageModel, DEFAULT_SETTINGS.imageModel),
+    videoModel: coerceOpenRouterModelId(settings.videoModel, DEFAULT_SETTINGS.videoModel),
   };
 }
 
@@ -146,6 +150,19 @@ export function getImageModel(siteId?: string | null): string {
     return readGlobalImageAgentModel();
   }
   return DEFAULT_IMAGE_MODEL;
+}
+
+export function getVideoModel(siteId?: string | null): string {
+  if (siteId) {
+    const siteSettings = getOptimizationSettings(siteId);
+    if (siteSettings.videoModel) {
+      return coerceOpenRouterModelId(siteSettings.videoModel, DEFAULT_SETTINGS.videoModel);
+    }
+  }
+  if (typeof window !== "undefined") {
+    return readGlobalVideoAgentModel();
+  }
+  return DEFAULT_VIDEO_MODEL;
 }
 
 export function getMetaModel(siteId?: string | null): string {

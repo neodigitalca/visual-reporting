@@ -6,11 +6,15 @@ import {
   getMetaModel,
   getReportModel,
   getResearchModel,
+  getVideoModel,
 } from "@/lib/optimization-settings-storage";
 import {
   postOpenRouterAppChat,
+  streamOpenRouterAppChat,
   type OpenRouterAppMessage,
+  type OpenRouterAppReasoning,
   type OpenRouterAppResponseFormat,
+  type OpenRouterAppStreamDelta,
 } from "@/lib/openrouter-app-api";
 
 export type AgentOpenRouterCategory =
@@ -19,7 +23,8 @@ export type AgentOpenRouterCategory =
   | "image"
   | "meta"
   | "report"
-  | "ads";
+  | "ads"
+  | "video";
 
 export function resolveModelForAgentCategory(
   category: AgentOpenRouterCategory,
@@ -38,11 +43,39 @@ export function resolveModelForAgentCategory(
       return getReportModel(siteId);
     case "ads":
       return getAdsModel(siteId);
+    case "video":
+      return getVideoModel(siteId);
     default: {
       const _exhaustive: never = category;
       return _exhaustive;
     }
   }
+}
+
+/** Streaming variant: the category model's reasoning and content deltas arrive through `onDelta` as they are written. */
+export function streamAgentCategoryOpenRouterChat(args: {
+  category: AgentOpenRouterCategory;
+  siteId?: string | null;
+  apiKey: string;
+  messages: OpenRouterAppMessage[];
+  maxTokens?: number;
+  temperature?: number;
+  responseFormat?: OpenRouterAppResponseFormat;
+  reasoning?: OpenRouterAppReasoning;
+  signal?: AbortSignal;
+  onDelta: (delta: OpenRouterAppStreamDelta) => void;
+}): Promise<{ content: string; reasoning: string; finishReason?: string }> {
+  return streamOpenRouterAppChat({
+    apiKey: args.apiKey.trim(),
+    model: resolveModelForAgentCategory(args.category, args.siteId),
+    messages: args.messages,
+    temperature: args.temperature,
+    maxTokens: args.maxTokens,
+    responseFormat: args.responseFormat,
+    reasoning: args.reasoning,
+    signal: args.signal,
+    onDelta: args.onDelta,
+  });
 }
 
 export async function callAgentCategoryOpenRouterChat(args: {
@@ -55,6 +88,7 @@ export async function callAgentCategoryOpenRouterChat(args: {
   maxTokens?: number;
   temperature?: number;
   responseFormat?: OpenRouterAppResponseFormat;
+  reasoning?: OpenRouterAppReasoning;
   signal?: AbortSignal;
 }): Promise<{
   raw: unknown;
@@ -73,6 +107,7 @@ export async function callAgentCategoryOpenRouterChat(args: {
       temperature: args.temperature,
       maxTokens: args.maxTokens,
       responseFormat: args.responseFormat,
+      reasoning: args.reasoning,
       signal: args.signal,
     });
   }
@@ -89,6 +124,7 @@ export async function callAgentCategoryOpenRouterChat(args: {
     maxTokens: args.maxTokens ?? 4096,
     temperature: args.temperature,
     responseFormat: args.responseFormat,
+    reasoning: args.reasoning,
     signal: args.signal,
   });
 }
